@@ -3,14 +3,14 @@ package xyz.angames.astolfoclient.client.effects;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_243;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.module.modules.render.ParticlesModule;
 
 @Environment(EnvType.CLIENT)
 public class Particle {
-   public class_243 position;
-   public class_243 prevPosition;
-   public class_243 velocity;
+   public Vec3 position;
+   public Vec3 prevPosition;
+   public Vec3 velocity;
    public final long creationTime = System.currentTimeMillis();
    public final float rotation;
    public final float scale;
@@ -19,11 +19,11 @@ public class Particle {
    public final long lifespan;
    public final Color color;
    public final Particle.ParticleAnimation animation;
-   public final class_243 origin;
+   public final Vec3 origin;
    public double extraData1;
    public double extraData2;
 
-   public Particle(class_243 position, class_243 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan) {
+   public Particle(Vec3 position, Vec3 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan) {
       this(
          position,
          velocity,
@@ -38,7 +38,7 @@ public class Particle {
       );
    }
 
-   public Particle(class_243 position, class_243 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan, Color color) {
+   public Particle(Vec3 position, Vec3 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan, Color color) {
       this(
          position,
          velocity,
@@ -54,14 +54,14 @@ public class Particle {
    }
 
    public Particle(
-      class_243 position,
-      class_243 velocity,
+      Vec3 position,
+      Vec3 velocity,
       ParticlesModule.ParticleType type,
       boolean hasPhysics,
       long lifespan,
       Color color,
       Particle.ParticleAnimation animation,
-      class_243 origin,
+      Vec3 origin,
       double extraData1,
       double extraData2
    ) {

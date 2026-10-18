@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -41,20 +41,20 @@ public class BindCommand extends Command {
                this.setBind(moduleName, keyCode, keyName);
                break;
             case "list":
-               sendMessage(class_124.field_1065 + "--- Key Binds ---");
+               sendMessage(ChatFormatting.GOLD + "--- Key Binds ---");
                if (AstolfoclientClient.clickGuiKeyCode != -1) {
-                  sendMessage(class_124.field_1080 + "ClickGUI: " + class_124.field_1075 + KeyUtils.getKeyName(AstolfoclientClient.clickGuiKeyCode));
+                  sendMessage(ChatFormatting.GRAY + "ClickGUI: " + ChatFormatting.AQUA + KeyUtils.getKeyName(AstolfoclientClient.clickGuiKeyCode));
                }
 
                if (AstolfoclientClient.hudEditorKeyCode != -1) {
-                  sendMessage(class_124.field_1080 + "HudEditor: " + class_124.field_1075 + KeyUtils.getKeyName(AstolfoclientClient.hudEditorKeyCode));
+                  sendMessage(ChatFormatting.GRAY + "HudEditor: " + ChatFormatting.AQUA + KeyUtils.getKeyName(AstolfoclientClient.hudEditorKeyCode));
                }
 
                AstolfoclientClient.moduleManager
                   .getModules()
                   .stream()
                   .filter(m -> m.getKeyCode() != -1)
-                  .forEach(m -> sendMessage(class_124.field_1080 + m.getName() + ": " + class_124.field_1075 + KeyUtils.getKeyName(m.getKeyCode())));
+                  .forEach(m -> sendMessage(ChatFormatting.GRAY + m.getName() + ": " + ChatFormatting.AQUA + KeyUtils.getKeyName(m.getKeyCode())));
                break;
             case "reset":
                if (args.length != 2) {
@@ -66,7 +66,7 @@ public class BindCommand extends Command {
                break;
             case "clear":
                AstolfoclientClient.moduleManager.getModules().forEach(m -> m.setKeyCode(-1));
-               sendMessage(class_124.field_1060 + "Cleared all module keybinds! (ClickGUI and HudEditor were kept safe)");
+               sendMessage(ChatFormatting.GREEN + "Cleared all module keybinds! (ClickGUI and HudEditor were kept safe)");
                break;
             default:
                this.sendError("Unknown action: " + action);
@@ -78,17 +78,17 @@ public class BindCommand extends Command {
       boolean found = false;
       if (name.equalsIgnoreCase("clickgui")) {
          AstolfoclientClient.clickGuiKeyCode = key;
-         sendMessage(class_124.field_1060 + "Bound ClickGUI to " + (key == -1 ? "NONE" : keyName));
+         sendMessage(ChatFormatting.GREEN + "Bound ClickGUI to " + (key == -1 ? "NONE" : keyName));
          found = true;
       } else if (name.equalsIgnoreCase("hudeditor")) {
          AstolfoclientClient.hudEditorKeyCode = key;
-         sendMessage(class_124.field_1060 + "Bound HudEditor to " + (key == -1 ? "NONE" : keyName));
+         sendMessage(ChatFormatting.GREEN + "Bound HudEditor to " + (key == -1 ? "NONE" : keyName));
          found = true;
       } else {
          Module module = AstolfoclientClient.moduleManager.getModuleByName(name);
          if (module != null) {
             module.setKeyCode(key);
-            sendMessage(class_124.field_1060 + "Bound " + module.getName() + " to " + (key == -1 ? "NONE" : keyName));
+            sendMessage(ChatFormatting.GREEN + "Bound " + module.getName() + " to " + (key == -1 ? "NONE" : keyName));
             found = true;
          } else {
             this.sendError("Module not found: " + name);

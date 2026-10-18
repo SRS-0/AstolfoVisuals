@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
+import net.minecraft.client.Minecraft;
 import xyz.angames.astolfoclient.client.gui.ClickGuiScreen;
 import xyz.angames.astolfoclient.client.module.modules.BoyKisserModule;
 import xyz.angames.astolfoclient.client.module.modules.FullBrightModule;
@@ -104,8 +104,8 @@ public class ModuleManager {
       if (module != null) {
          modules.removeIf(m -> m.getName().equalsIgnoreCase(module.getName()));
          modules.add(module);
-         class_310 mc = class_310.method_1551();
-         if (mc != null && mc.field_1755 instanceof ClickGuiScreen clickGui) {
+         Minecraft mc = Minecraft.getInstance();
+         if (mc != null && mc.gui.screen() instanceof ClickGuiScreen clickGui) {
             clickGui.refreshModuleButtons();
          }
       }
@@ -116,8 +116,8 @@ public class ModuleManager {
          module.setEnabled(false);
          modules.remove(module);
          modules.removeIf(m -> m.getName().equalsIgnoreCase(module.getName()));
-         class_310 mc = class_310.method_1551();
-         if (mc != null && mc.field_1755 instanceof ClickGuiScreen clickGui) {
+         Minecraft mc = Minecraft.getInstance();
+         if (mc != null && mc.gui.screen() instanceof ClickGuiScreen clickGui) {
             clickGui.refreshModuleButtons();
          }
       }

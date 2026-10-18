@@ -2,10 +2,10 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
-import net.minecraft.class_2561;
-import net.minecraft.class_5250;
-import net.minecraft.class_640;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,15 +13,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.angames.astolfoclient.client.util.FriendManager;
 
 @Environment(EnvType.CLIENT)
-@Mixin(class_640.class)
+@Mixin(PlayerInfo.class)
 public class MixinPlayerListEntry {
-   @Inject(method = "getDisplayName", at = @At("RETURN"), cancellable = true)
-   private void astolfo$formatFriendName(CallbackInfoReturnable<class_2561> cir) {
-      class_640 entry = (class_640)this;
-      if (entry.method_2966() != null && entry.method_2966().getName() != null) {
-         String playerName = entry.method_2966().getName();
+   @Inject(method = "getTabListDisplayName", at = @At("RETURN"), cancellable = true)
+   private void astolfo$formatFriendName(CallbackInfoReturnable<Component> cir) {
+      PlayerInfo entry = (PlayerInfo)(Object)this;
+      if (entry.getProfile() != null && entry.getProfile().name() != null) {
+         String playerName = entry.getProfile().name();
          if (FriendManager.isFriend(playerName)) {
-            class_5250 friendName = class_2561.method_43470(playerName).method_27695(new class_124[]{class_124.field_1060, class_124.field_1067});
+            MutableComponent friendName = Component.literal(playerName).withStyle(new ChatFormatting[]{ChatFormatting.GREEN, ChatFormatting.BOLD});
             cir.setReturnValue(friendName);
          }
       }

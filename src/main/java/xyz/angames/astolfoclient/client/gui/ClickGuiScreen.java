@@ -1,5 +1,11 @@
 package xyz.angames.astolfoclient.client.gui;
 
+import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.input.MouseButtonInfo;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.CharacterEvent;
+
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import dev.sxmurxy.mre.builders.Builder;
 import dev.sxmurxy.mre.builders.states.QuadColorState;
@@ -17,16 +23,16 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1044;
-import net.minecraft.class_2561;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_3532;
-import net.minecraft.class_4184;
-import net.minecraft.class_437;
-import net.minecraft.class_4587;
-import net.minecraft.class_757;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
+import net.minecraft.client.Camera;
+import net.minecraft.client.gui.screens.Screen;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.GameRenderer;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.DiscordRpcManager;
@@ -48,7 +54,7 @@ import xyz.angames.astolfoclient.client.util.DiscordAvatarManager;
 import xyz.angames.astolfoclient.client.util.ModSounds;
 
 @Environment(EnvType.CLIENT)
-public class ClickGuiScreen extends class_437 {
+public class ClickGuiScreen extends Screen {
    private final List<ModuleButton> allModuleButtons;
    private static Method renderHandMethod = null;
    private ClickGuiScreen.NavTab activeTab = ClickGuiScreen.NavTab.RENDER;
@@ -119,7 +125,7 @@ public class ClickGuiScreen extends class_437 {
 
    public float getColorPickerY(float winY) {
       float popY = this.getSettingsModalY(winY);
-      return class_3532.method_15363(popY - 10.0F, winY + 38.0F, winY + 380.0F - 94.0F - 8.0F);
+      return Mth.clamp(popY - 10.0F, winY + 38.0F, winY + 380.0F - 94.0F - 8.0F);
    }
 
    public float getSoundSettingsX(float winX) {
@@ -128,7 +134,7 @@ public class ClickGuiScreen extends class_437 {
 
    public float getSoundSettingsY(float winY) {
       float popY = this.getSettingsModalY(winY);
-      return class_3532.method_15363(popY - 16.0F, winY + 38.0F, winY + 380.0F - 190.0F - 8.0F);
+      return Mth.clamp(popY - 16.0F, winY + 38.0F, winY + 380.0F - 190.0F - 8.0F);
    }
 
    public float getScaleSettingsX(float winX) {
@@ -137,7 +143,7 @@ public class ClickGuiScreen extends class_437 {
 
    public float getScaleSettingsY(float winY) {
       float popY = this.getSettingsModalY(winY);
-      return class_3532.method_15363(popY - 10.0F, winY + 38.0F, winY + 380.0F - 162.0F - 8.0F);
+      return Mth.clamp(popY - 10.0F, winY + 38.0F, winY + 380.0F - 162.0F - 8.0F);
    }
 
    public boolean isAnyModalOpen() {
@@ -155,7 +161,7 @@ public class ClickGuiScreen extends class_437 {
    }
 
    public ClickGuiScreen() {
-      super(class_2561.method_43470("AstolfoClient"));
+      super(Component.literal("AstolfoClient"));
       this.allModuleButtons = AstolfoclientClient.moduleManager.getModules().stream().map(m -> new ModuleButton(m, 205.0F)).collect(Collectors.toList());
 
       for (ClickGuiScreen.NavTab tab : ClickGuiScreen.NavTab.values()) {
@@ -173,7 +179,8 @@ public class ClickGuiScreen extends class_437 {
       DiscordAvatarManager.update(username, userId, avatarHash);
    }
 
-   protected void method_25426() {
+   @Override
+   protected void init() {
       this.initTime = System.currentTimeMillis();
       this.lastFrameTime = System.currentTimeMillis();
       this.openAnimProgress = 0.0F;
@@ -270,15 +277,18 @@ public class ClickGuiScreen extends class_437 {
       }
    }
 
-   public boolean method_25421() {
+   @Override
+   public boolean isPauseScreen() {
       return false;
    }
 
-   public boolean method_25422() {
+   @Override
+   public boolean shouldCloseOnEsc() {
       return false;
    }
 
-   public void method_25419() {
+   @Override
+   public void onClose() {
       this.settingsModalOpen = false;
       this.colorPickerOpen = false;
       this.soundSettingsOpen = false;
@@ -286,10 +296,11 @@ public class ClickGuiScreen extends class_437 {
       ModePopupState.close();
       SubSettingsPopupState.close();
       MultiSelectPopupState.close();
-      super.method_25419();
+      super.onClose();
    }
 
-   public void method_25394(class_332 context, int mouseX, int mouseY, float delta) {
+   @Override
+   public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
       this.renderHandLogic(context, delta);
       long now = System.currentTimeMillis();
       if (this.lastFrameTime == 0L) {
@@ -298,20 +309,20 @@ public class ClickGuiScreen extends class_437 {
 
       float deltaTime = (float)(now - this.lastFrameTime) / 1000.0F;
       this.lastFrameTime = now;
-      deltaTime = class_3532.method_15363(deltaTime, 5.0E-4F, 0.1F);
+      deltaTime = Mth.clamp(deltaTime, 5.0E-4F, 0.1F);
 
       for (ModuleButton mb : this.allModuleButtons) {
          mb.isVisible = false;
       }
 
-      float sm = GuiUtils.getScaleModifier(this.field_22787) * GuiScaleSettings.getScale();
+      float sm = GuiUtils.getScaleModifier(this.minecraft) * GuiScaleSettings.getScale();
       int adjMouseX = (int)(mouseX / sm);
       int adjMouseY = (int)(mouseY / sm);
-      context.method_51448().method_22903();
-      context.method_51448().method_22905(sm, sm, 1.0F);
-      Matrix4f mx = context.method_51448().method_23760().method_23761();
-      float scaledWidth = this.field_22789 / sm;
-      float scaledHeight = this.field_22790 / sm;
+      context.pose().pushMatrix();
+      context.pose().scale(sm, sm);
+      Matrix4f mx = GuiCompat.matrix4f(context);
+      float scaledWidth = this.width / sm;
+      float scaledHeight = this.height / sm;
       this.openAnimProgress = GuiUtils.animate(this.openAnimProgress, 1.0F, 14.0F, deltaTime);
       float alpha = this.openAnimProgress;
       float winX = (scaledWidth - 580.0F) / 2.0F;
@@ -320,10 +331,10 @@ public class ClickGuiScreen extends class_437 {
          float cx = winX + 290.0F;
          float cy = winY + 190.0F;
          float scale = 0.92F + 0.08F * this.openAnimProgress;
-         context.method_51448().method_46416(cx, cy, 0.0F);
-         context.method_51448().method_22905(scale, scale, 1.0F);
-         context.method_51448().method_46416(-cx, -cy, 0.0F);
-         mx = context.method_51448().method_23760().method_23761();
+         context.pose().translate(cx, cy);
+         context.pose().scale(scale, scale);
+         context.pose().translate(-cx, -cy);
+         mx = GuiCompat.matrix4f(context);
       }
 
       Color themeColor = new Color(ThemeManager.getThemedColor(System.currentTimeMillis() / 10L));
@@ -360,10 +371,10 @@ public class ClickGuiScreen extends class_437 {
       ModePopupState.renderActive(context, winX, winY, 580.0F, 380.0F, adjMouseX, adjMouseY, deltaTime, alpha, themeColor);
       SubSettingsPopupState.renderActive(context, winX, winY, 580.0F, 380.0F, adjMouseX, adjMouseY, deltaTime, alpha, themeColor);
       MultiSelectPopupState.renderActive(context, winX, winY, 580.0F, 380.0F, adjMouseX, adjMouseY, deltaTime, alpha, themeColor);
-      context.method_51448().method_22909();
+      context.pose().popMatrix();
    }
 
-   private void drawSidebar(class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+   private void drawSidebar(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
       Builder.rectangle()
          .size(new SizeState(1.0F, 380.0F))
          .radius(new QuadRadiusState(0.0F))
@@ -441,7 +452,7 @@ public class ClickGuiScreen extends class_437 {
       }
 
       if (this.renderExpandAnim > 0.01F) {
-         context.method_44379((int)winX, (int)(renderTabY + tabH), (int)(winX + 138.0F), (int)(renderTabY + tabH + currentSubHeight + 3.0F));
+         context.enableScissor((int)winX, (int)(renderTabY + tabH), (int)(winX + 138.0F), (int)(renderTabY + tabH + currentSubHeight + 3.0F));
          float trunkX = tabX + 14.0F;
          float subStartY = renderTabY + tabH + 3.0F;
          float subItemX = tabX + 26.0F;
@@ -515,7 +526,7 @@ public class ClickGuiScreen extends class_437 {
             GuiUtils.renderTextSafely(mx, countStr, subItemX + subItemW - countW - 6.0F, itemCenterY - 3.3F, countCol, 6.5F);
          }
 
-         context.method_44380();
+         context.disableScissor();
       }
 
       this.drawNavTabButton(mx, ClickGuiScreen.NavTab.MISC, tabX, miscTabY, tabW, tabH, mouseX, mouseY, popupsActive, deltaTime, alpha, themeColor, iconFont);
@@ -559,10 +570,10 @@ public class ClickGuiScreen extends class_437 {
       float avY = profCenterY - avSize / 2.0F;
       float avRadius = avSize / 2.0F;
       boolean drawnAvatar = false;
-      class_2960 avTex = DiscordAvatarManager.getAvatarTexture();
+      Identifier avTex = DiscordAvatarManager.getAvatarTexture();
       if (avTex != null) {
          try {
-            class_1044 tex = class_310.method_1551().method_1531().method_4619(avTex);
+            AbstractTexture tex = Minecraft.getInstance().getTextureManager().getTexture(avTex);
             if (tex != null) {
                Builder.texture()
                   .size(new SizeState(avSize, avSize))
@@ -577,11 +588,11 @@ public class ClickGuiScreen extends class_437 {
          }
       }
 
-      if (!drawnAvatar && this.field_22787.field_1724 != null) {
+      if (!drawnAvatar && this.minecraft.player != null) {
          try {
-            class_2960 skinTex = this.field_22787.field_1724.method_52814().comp_1626();
+            Identifier skinTex = this.minecraft.player.getSkin().body().texturePath();
             if (skinTex != null) {
-               class_1044 tex = this.field_22787.method_1531().method_4619(skinTex);
+               AbstractTexture tex = this.minecraft.getTextureManager().getTexture(skinTex);
                if (tex != null) {
                   Builder.texture()
                      .size(new SizeState(avSize, avSize))
@@ -615,7 +626,7 @@ public class ClickGuiScreen extends class_437 {
 
       String name = discordUsername != null && !discordUsername.isEmpty()
          ? discordUsername
-         : (this.field_22787.field_1724 != null ? this.field_22787.field_1724.method_5477().getString() : "User");
+         : (this.minecraft.player != null ? this.minecraft.player.getName().getString() : "User");
       float userTextX = avX + avSize + 7.0F;
       GuiUtils.renderTextSafely(mx, "User: " + name, userTextX, profCenterY - 4.0F, GuiUtils.withAlpha(Color.WHITE, alpha), 8.5F);
       float gearX = winX + 138.0F - 22.0F;
@@ -681,7 +692,7 @@ public class ClickGuiScreen extends class_437 {
       GuiUtils.renderTextSafely(mx, tab.title, textX, textY, GuiUtils.withAlpha(Color.WHITE, alpha), 8.8F);
    }
 
-   private void drawTopBar(class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+   private void drawTopBar(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
       float topBarX = winX + 138.0F;
       float topBarW = 442.0F;
       float topBarH = 36.0F;
@@ -714,7 +725,7 @@ public class ClickGuiScreen extends class_437 {
          .color(new QuadColorState(GuiUtils.withAlpha(searchBg, alpha)))
          .build()
          .render(mx, searchX, searchY);
-      context.method_44379((int)(searchX + 6.0F), (int)searchY, (int)(searchX + searchW - 18.0F), (int)(searchY + searchH));
+      context.enableScissor((int)(searchX + 6.0F), (int)searchY, (int)(searchX + searchW - 18.0F), (int)(searchY + searchH));
       float maxTextW = searchW - 24.0F;
       float textStartX = searchX + 8.0F;
       if (this.isSearching) {
@@ -729,7 +740,7 @@ public class ClickGuiScreen extends class_437 {
          GuiUtils.renderTextSafely(mx, "Search...", textStartX, searchY + 5.5F, GuiUtils.withAlpha(new Color(110, 110, 125), alpha), 8.5F);
       }
 
-      context.method_44380();
+      context.disableScissor();
       MsdfFont iconFont = (MsdfFont)ClickGuiIcons.CLICKGUI_ICONS.get();
       if (iconFont != null) {
          try {
@@ -745,23 +756,23 @@ public class ClickGuiScreen extends class_437 {
       }
    }
 
-   private void drawMainContent(class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+   private void drawMainContent(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
       float contentX = winX + 138.0F;
       float contentY = winY + 36.0F;
       float contentW = 442.0F;
       float contentH = 344.0F;
-      context.method_44379((int)contentX, (int)contentY, (int)(contentX + contentW), (int)(contentY + contentH));
+      context.enableScissor((int)contentX, (int)contentY, (int)(contentX + contentW), (int)(contentY + contentH));
       if (this.activeTab == ClickGuiScreen.NavTab.CONFIGS && !this.isSearching) {
          this.drawConfigsView(context, mx, contentX, contentY, contentW, contentH, mouseX, mouseY, deltaTime, alpha, themeColor);
       } else {
          this.drawModulesView(context, mx, contentX, contentY, contentW, contentH, mouseX, mouseY, deltaTime, alpha, themeColor);
       }
 
-      context.method_44380();
+      context.disableScissor();
    }
 
    private void drawModulesView(
-      class_332 context,
+      GuiGraphicsExtractor context,
       Matrix4f mx,
       float contentX,
       float contentY,
@@ -879,7 +890,7 @@ public class ClickGuiScreen extends class_437 {
       float maxColumnY = Math.max(col1Y, col2Y) - scroll;
       float totalContentH = maxColumnY - (contentY + 10.0F);
       float maxScroll = Math.max(0.0F, totalContentH - (contentH - 20.0F));
-      this.targetScrollOffsets.put(this.activeTab, class_3532.method_15363(targetScroll, -maxScroll, 0.0F));
+      this.targetScrollOffsets.put(this.activeTab, Mth.clamp(targetScroll, -maxScroll, 0.0F));
       if (totalContentH > contentH - 20.0F) {
          float scrollbarW = 3.0F;
          float scrollbarX = contentX + contentW - 5.0F;
@@ -888,7 +899,7 @@ public class ClickGuiScreen extends class_437 {
          float thumbRatio = (contentH - 20.0F) / totalContentH;
          float thumbH = Math.max(20.0F, scrollbarTrackH * thumbRatio);
          float scrollProgress = -scroll / maxScroll;
-         float thumbY = scrollbarTrackY + (scrollbarTrackH - thumbH) * class_3532.method_15363(scrollProgress, 0.0F, 1.0F);
+         float thumbY = scrollbarTrackY + (scrollbarTrackH - thumbH) * Mth.clamp(scrollProgress, 0.0F, 1.0F);
          Builder.rectangle()
             .size(new SizeState(scrollbarW, thumbH))
             .radius(new QuadRadiusState(1.5F))
@@ -899,7 +910,7 @@ public class ClickGuiScreen extends class_437 {
    }
 
    private void drawConfigsView(
-      class_332 context,
+      GuiGraphicsExtractor context,
       Matrix4f mx,
       float contentX,
       float contentY,
@@ -1076,7 +1087,7 @@ public class ClickGuiScreen extends class_437 {
    }
 
    private void drawSettingsModal(
-      class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor
+      GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor
    ) {
       float sm = this.settingsModalAnim;
       float ease = 1.0F - (float)Math.pow(1.0F - sm, 3.0);
@@ -1086,16 +1097,16 @@ public class ClickGuiScreen extends class_437 {
       float popH = 106.0F;
       float popX = this.getSettingsModalX(winX);
       float popY = this.getSettingsModalY(winY);
-      context.method_51448().method_22903();
+      context.pose().pushMatrix();
       if (scale < 0.999F) {
          float scx = popX + popW / 2.0F;
          float scy = popY + popH / 2.0F;
-         context.method_51448().method_46416(scx, scy, 0.0F);
-         context.method_51448().method_22905(scale, scale, 1.0F);
-         context.method_51448().method_46416(-scx, -scy, 0.0F);
+         context.pose().translate(scx, scy);
+         context.pose().scale(scale, scale);
+         context.pose().translate(-scx, -scy);
       }
 
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
+      Matrix4f matrix = GuiCompat.matrix4f(context);
 
       for (int i = 6; i >= 0; i--) {
          float progress = i / 6.0F;
@@ -1190,10 +1201,10 @@ public class ClickGuiScreen extends class_437 {
       float hudTw = medFont != null ? medFont.getWidth("Hud editor", 7.5F) : 38.0F;
       float hudTx = rX + (contentW - hudTw) / 2.0F;
       GuiUtils.renderTextSafely(matrix, "Hud editor", hudTx, r4Y + 6.0F, GuiUtils.withAlpha(Color.WHITE, modalAlpha), 7.5F);
-      context.method_51448().method_22909();
+      context.pose().popMatrix();
    }
 
-   private void drawSoundsModal(class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+   private void drawSoundsModal(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
       float sndEase = 1.0F - (float)Math.pow(1.0F - this.soundSettingsAnim, 3.0);
       float sndScale = 0.9F + 0.1F * sndEase;
       float sndAlpha = alpha * sndEase;
@@ -1201,16 +1212,16 @@ public class ClickGuiScreen extends class_437 {
       float sndH = 190.0F;
       float sndX = this.getSoundSettingsX(winX);
       float sndY = this.getSoundSettingsY(winY);
-      context.method_51448().method_22903();
+      context.pose().pushMatrix();
       if (sndScale < 0.999F) {
          float scx = sndX + sndW / 2.0F;
          float scy = sndY + sndH / 2.0F;
-         context.method_51448().method_46416(scx, scy, 0.0F);
-         context.method_51448().method_22905(sndScale, sndScale, 1.0F);
-         context.method_51448().method_46416(-scx, -scy, 0.0F);
+         context.pose().translate(scx, scy);
+         context.pose().scale(sndScale, sndScale);
+         context.pose().translate(-scx, -scy);
       }
 
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
+      Matrix4f matrix = GuiCompat.matrix4f(context);
 
       for (int i = 6; i >= 0; i--) {
          float progress = i / 6.0F;
@@ -1233,10 +1244,10 @@ public class ClickGuiScreen extends class_437 {
          .build()
          .render(matrix, sndX, sndY);
       SoundSettingsPopup.render(context, sndX, sndY, sndW, sndH, mouseX, mouseY, deltaTime, sndAlpha, themeColor);
-      context.method_51448().method_22909();
+      context.pose().popMatrix();
    }
 
-   private void drawScaleModal(class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+   private void drawScaleModal(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
       float scaleEase = 1.0F - (float)Math.pow(1.0F - this.scaleModalAnim, 3.0);
       float scaleScale = 0.9F + 0.1F * scaleEase;
       float scaleAlpha = alpha * scaleEase;
@@ -1244,16 +1255,16 @@ public class ClickGuiScreen extends class_437 {
       float scH = 162.0F;
       float scX = this.getScaleSettingsX(winX);
       float scY = this.getScaleSettingsY(winY);
-      context.method_51448().method_22903();
+      context.pose().pushMatrix();
       if (scaleScale < 0.999F) {
          float scx = scX + scW / 2.0F;
          float scy = scY + scH / 2.0F;
-         context.method_51448().method_46416(scx, scy, 0.0F);
-         context.method_51448().method_22905(scaleScale, scaleScale, 1.0F);
-         context.method_51448().method_46416(-scx, -scy, 0.0F);
+         context.pose().translate(scx, scy);
+         context.pose().scale(scaleScale, scaleScale);
+         context.pose().translate(-scx, -scy);
       }
 
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
+      Matrix4f matrix = GuiCompat.matrix4f(context);
 
       for (int i = 6; i >= 0; i--) {
          float progress = i / 6.0F;
@@ -1276,11 +1287,11 @@ public class ClickGuiScreen extends class_437 {
          .build()
          .render(matrix, scX, scY);
       ScaleSettingsPopup.render(context, scX, scY, scW, scH, mouseX, mouseY, deltaTime, scaleAlpha, themeColor);
-      context.method_51448().method_22909();
+      context.pose().popMatrix();
    }
 
    private void drawColorPickerModal(
-      class_332 context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor
+      GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor
    ) {
       float cpEase = 1.0F - (float)Math.pow(1.0F - this.colorPickerAnim, 3.0);
       float cpScale = 0.9F + 0.1F * cpEase;
@@ -1289,16 +1300,16 @@ public class ClickGuiScreen extends class_437 {
       float cpH = 94.0F;
       float cpX = this.getColorPickerX(winX);
       float cpY = this.getColorPickerY(winY);
-      context.method_51448().method_22903();
+      context.pose().pushMatrix();
       if (cpScale < 0.999F) {
          float scx = cpX + cpW / 2.0F;
          float scy = cpY + cpH / 2.0F;
-         context.method_51448().method_46416(scx, scy, 0.0F);
-         context.method_51448().method_22905(cpScale, cpScale, 1.0F);
-         context.method_51448().method_46416(-scx, -scy, 0.0F);
+         context.pose().translate(scx, scy);
+         context.pose().scale(cpScale, cpScale);
+         context.pose().translate(-scx, -scy);
       }
 
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
+      Matrix4f matrix = GuiCompat.matrix4f(context);
 
       for (int i = 6; i >= 0; i--) {
          float progress = i / 6.0F;
@@ -1326,7 +1337,7 @@ public class ClickGuiScreen extends class_437 {
       this.themePicker.height = cpH;
       this.themePicker.animate(deltaTime);
       this.themePicker.render(matrix, mouseX, mouseY, cpAlpha);
-      context.method_51448().method_22909();
+      context.pose().popMatrix();
    }
 
    private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
@@ -1349,16 +1360,41 @@ public class ClickGuiScreen extends class_437 {
       }
    }
 
-   public boolean method_25402(double mouseX, double mouseY, int button) {
-      float sm = GuiUtils.getScaleModifier(this.field_22787) * GuiScaleSettings.getScale();
+   @Override
+   public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+      return this.mouseClicked(event.x(), event.y(), xyz.angames.astolfoclient.client.compat.KeyMap.sdlButtonToGlfw(event.button()));
+   }
+
+   @Override
+   public boolean mouseReleased(MouseButtonEvent event) {
+      return this.mouseReleased(event.x(), event.y(), xyz.angames.astolfoclient.client.compat.KeyMap.sdlButtonToGlfw(event.button()));
+   }
+
+   @Override
+   public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+      return this.mouseDragged(event.x(), event.y(), xyz.angames.astolfoclient.client.compat.KeyMap.sdlButtonToGlfw(event.button()), dx, dy);
+   }
+
+   @Override
+   public boolean keyPressed(KeyEvent event) {
+      return this.keyPressed(xyz.angames.astolfoclient.client.compat.KeyMap.sdlToGlfw(event.key()), event.keycode(), xyz.angames.astolfoclient.client.compat.KeyMap.glfwMods(event));
+   }
+
+   @Override
+   public boolean charTyped(CharacterEvent event) {
+      return this.charTyped((char)event.codepoint(), 0);
+   }
+
+   public boolean mouseClicked(double mouseX, double mouseY, int button) {
+      float sm = GuiUtils.getScaleModifier(this.minecraft) * GuiScaleSettings.getScale();
       float adjMouseX = (float)(mouseX / sm);
       float adjMouseY = (float)(mouseY / sm);
       if (System.currentTimeMillis() - this.initTime < 150L) {
          return true;
       }
 
-      float scaledWidth = this.field_22789 / sm;
-      float scaledHeight = this.field_22790 / sm;
+      float scaledWidth = this.width / sm;
+      float scaledHeight = this.height / sm;
       float winX = (scaledWidth - 580.0F) / 2.0F;
       float winY = (scaledHeight - 380.0F) / 2.0F;
       if (ModePopupState.mouseClicked(adjMouseX, adjMouseY, button, winX, winY, 580.0F, 380.0F)) {
@@ -1455,7 +1491,7 @@ public class ClickGuiScreen extends class_437 {
 
          if (GuiUtils.isMouseOver(adjMouseX, adjMouseY, rX, r4Y, contentW, rowH)) {
             ModSounds.playModeOpen();
-            this.field_22787.method_1507(new HudEditorScreen());
+            this.minecraft.gui.setScreen(new HudEditorScreen());
             return true;
          }
 
@@ -1683,18 +1719,18 @@ public class ClickGuiScreen extends class_437 {
                   }
                }
 
-               return super.method_25402(mouseX, mouseY, button);
+               return super.mouseClicked(new MouseButtonEvent(mouseX, mouseY, new MouseButtonInfo(button + 1, 0)), false);
             }
          }
       }
    }
 
-   public boolean method_25403(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-      float sm = GuiUtils.getScaleModifier(this.field_22787) * GuiScaleSettings.getScale();
+   public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+      float sm = GuiUtils.getScaleModifier(this.minecraft) * GuiScaleSettings.getScale();
       float adjMouseX = (float)(mouseX / sm);
       float adjMouseY = (float)(mouseY / sm);
-      float winX = (this.field_22789 / sm - 580.0F) / 2.0F;
-      float winY = (this.field_22790 / sm - 380.0F) / 2.0F;
+      float winX = (this.width / sm - 580.0F) / 2.0F;
+      float winY = (this.height / sm - 380.0F) / 2.0F;
       if (SubSettingsPopupState.mouseDragged(adjMouseX, adjMouseY, button, winX, winY, 580.0F, 380.0F)) {
          return true;
       }
@@ -1719,11 +1755,11 @@ public class ClickGuiScreen extends class_437 {
          }
       }
 
-      return super.method_25403(mouseX, mouseY, button, deltaX, deltaY);
+      return super.mouseDragged(new MouseButtonEvent(mouseX, mouseY, new MouseButtonInfo(button + 1, 0)), deltaX, deltaY);
    }
 
-   public boolean method_25406(double mouseX, double mouseY, int button) {
-      float sm = GuiUtils.getScaleModifier(this.field_22787) * GuiScaleSettings.getScale();
+   public boolean mouseReleased(double mouseX, double mouseY, int button) {
+      float sm = GuiUtils.getScaleModifier(this.minecraft) * GuiScaleSettings.getScale();
       float adjX = (float)(mouseX / sm);
       float adjY = (float)(mouseY / sm);
       this.themePicker.mouseReleased();
@@ -1734,15 +1770,16 @@ public class ClickGuiScreen extends class_437 {
          mb.mouseReleased();
       }
 
-      return super.method_25406(mouseX, mouseY, button);
+      return super.mouseReleased(new MouseButtonEvent(mouseX, mouseY, new MouseButtonInfo(button + 1, 0)));
    }
 
-   public boolean method_25401(double mouseX, double mouseY, double hAm, double vAm) {
-      float sm = GuiUtils.getScaleModifier(this.field_22787) * GuiScaleSettings.getScale();
+   @Override
+   public boolean mouseScrolled(double mouseX, double mouseY, double hAm, double vAm) {
+      float sm = GuiUtils.getScaleModifier(this.minecraft) * GuiScaleSettings.getScale();
       float adjX = (float)(mouseX / sm);
       float adjY = (float)(mouseY / sm);
-      float winX = (this.field_22789 / sm - 580.0F) / 2.0F;
-      float winY = (this.field_22790 / sm - 380.0F) / 2.0F;
+      float winX = (this.width / sm - 580.0F) / 2.0F;
+      float winY = (this.height / sm - 380.0F) / 2.0F;
       if (ModePopupState.mouseScrolled(adjX, adjY, vAm, winX, winY, 580.0F, 380.0F)) {
          return true;
       } else if (MultiSelectPopupState.mouseScrolled(adjX, adjY, vAm, winX, winY, 580.0F, 380.0F)) {
@@ -1756,11 +1793,11 @@ public class ClickGuiScreen extends class_437 {
          this.targetScrollOffsets.put(this.activeTab, target + (float)vAm * 32.0F);
          return true;
       } else {
-         return super.method_25401(mouseX, mouseY, hAm, vAm);
+         return super.mouseScrolled(mouseX, mouseY, hAm, vAm);
       }
    }
 
-   public boolean method_25400(char chr, int mod) {
+   public boolean charTyped(char chr, int mod) {
       if (this.isSearching) {
          if (this.searchText.length() < 30 && chr >= ' ' && chr != 127) {
             this.searchText = this.searchText + chr;
@@ -1775,11 +1812,11 @@ public class ClickGuiScreen extends class_437 {
 
          return true;
       } else {
-         return super.method_25400(chr, mod);
+         return super.charTyped(new CharacterEvent(chr));
       }
    }
 
-   public boolean method_25404(int key, int scan, int mod) {
+   public boolean keyPressed(int key, int scan, int mod) {
       if (MultiSelectPopupState.isOpen() && key == 256) {
          MultiSelectPopupState.close();
          return true;
@@ -1848,7 +1885,7 @@ public class ClickGuiScreen extends class_437 {
       } else {
          boolean isCloseKey = key == 256 || key == 260 || key == 344 || key == AstolfoclientClient.clickGuiKeyCode;
          if (!isCloseKey) {
-            return super.method_25404(key, scan, mod);
+            return super.keyPressed(new KeyEvent(xyz.angames.astolfoclient.client.compat.KeyMap.glfwToSdl(key), scan, 0));
          }
 
          if (key == 256) {
@@ -1883,26 +1920,15 @@ public class ClickGuiScreen extends class_437 {
          }
 
          if (System.currentTimeMillis() - this.initTime >= 150L) {
-            this.method_25419();
+            this.onClose();
          }
 
          return true;
       }
    }
 
-   private void renderHandLogic(class_332 ctx, float delta) {
-      boolean renderingHand = this.allModuleButtons.stream().anyMatch(mb -> mb.isVisible && mb.module instanceof HandPositionModule);
-      if (renderingHand && this.field_22787.field_1773 != null) {
-         try {
-            if (renderHandMethod == null) {
-               renderHandMethod = class_757.class.getDeclaredMethod("renderHand", class_4587.class, class_4184.class, float.class);
-               renderHandMethod.setAccessible(true);
-            }
-
-            renderHandMethod.invoke(this.field_22787.field_1773, ctx.method_51448(), this.field_22787.field_1773.method_19418(), delta);
-         } catch (Exception var5) {
-         }
-      }
+   private void renderHandLogic(GuiGraphicsExtractor ctx, float delta) {
+      // The hand preview used GameRenderer#renderHand, which no longer exists in the deferred 26.x renderer.
    }
 
    @Environment(EnvType.CLIENT)

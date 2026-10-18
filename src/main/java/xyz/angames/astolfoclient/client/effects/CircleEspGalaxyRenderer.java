@@ -1,23 +1,24 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.platform.GlStateManager.class_4534;
-import com.mojang.blaze3d.platform.GlStateManager.class_4535;
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.Vtx;
+import xyz.angames.astolfoclient.client.compat.DestFactor;
+import xyz.angames.astolfoclient.client.compat.SourceFactor;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import java.awt.Color;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.minecraft.class_10142;
-import net.minecraft.class_1297;
-import net.minecraft.class_286;
-import net.minecraft.class_287;
-import net.minecraft.class_289;
-import net.minecraft.class_290;
-import net.minecraft.class_2960;
-import net.minecraft.class_4587;
-import net.minecraft.class_7833;
-import net.minecraft.class_293.class_5596;
+import xyz.angames.astolfoclient.client.compat.WorldRenderContext;
+import xyz.angames.astolfoclient.client.compat.CoreShaders;
+import net.minecraft.world.entity.Entity;
+import xyz.angames.astolfoclient.client.compat.BufferUploader;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import xyz.angames.astolfoclient.client.compat.Tesselator;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.resources.Identifier;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -26,7 +27,7 @@ import xyz.angames.astolfoclient.client.util.TargetUtils;
 
 @Environment(EnvType.CLIENT)
 public class CircleEspGalaxyRenderer {
-   private static final class_2960 BLOOM_TEXTURE = class_2960.method_60655("astolfoclient", "textures/effects/bloom.png");
+   private static final Identifier BLOOM_TEXTURE = Identifier.fromNamespaceAndPath("astolfoclient", "textures/effects/bloom.png");
    private final CircleEspManager manager;
 
    public CircleEspGalaxyRenderer(CircleEspManager manager) {
@@ -42,8 +43,8 @@ public class CircleEspGalaxyRenderer {
             RenderSystem.enableDepthTest();
             RenderSystem.depthFunc(515);
             RenderSystem.depthMask(false);
-            RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE);
-            class_289 tessellator = class_289.method_1348();
+            RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
+            Tesselator tessellator = Tesselator.getInstance();
             long currentTime = System.currentTimeMillis();
             int rgb = ThemeManager.getThemedColor(0L);
             Color c = new Color(rgb);
@@ -52,19 +53,19 @@ public class CircleEspGalaxyRenderer {
             float b = c.getBlue() / 255.0F;
 
             for (CircleEspManager.CircleEspEffect effect : validEffects) {
-               class_1297 target = effect.target;
-               if (target.method_5805() && !TargetUtils.isInvisible(target)) {
+               Entity target = effect.target;
+               if (target.isAlive() && !TargetUtils.isInvisible(target)) {
                   long timeSinceHit = currentTime - effect.lastHitTime;
                   float fadeProgress = (float)timeSinceHit / 450.0F;
                   float alpha = 1.0F - Math.max(0.0F, (fadeProgress - 0.5F) * 2.0F);
                   if (!(alpha <= 0.05F)) {
                      float animTime = (float)(currentTime - effect.startTime) / 1000.0F;
-                     float tickDelta = context.tickCounter().method_60637(true);
-                     double tX = target.field_6038 + (target.method_23317() - target.field_6038) * tickDelta;
-                     double tY = target.field_5971 + (target.method_23318() - target.field_5971) * tickDelta;
-                     double tZ = target.field_5989 + (target.method_23321() - target.field_5989) * tickDelta;
-                     float height = target.method_17682();
-                     float radius = target.method_17681() * 0.8F;
+                     float tickDelta = context.tickCounter().getGameTimeDeltaPartialTick(true);
+                     double tX = target.xOld + (target.getX() - target.xOld) * tickDelta;
+                     double tY = target.yOld + (target.getY() - target.yOld) * tickDelta;
+                     double tZ = target.zOld + (target.getZ() - target.zOld) * tickDelta;
+                     float height = target.getBbHeight();
+                     float radius = target.getBbWidth() * 0.8F;
                      if (timeSinceHit > 400L) {
                         float endProgress = (float)(timeSinceHit - 400L) / 200.0F;
                         radius *= Math.max(0.0F, 1.0F - endProgress);
@@ -76,29 +77,29 @@ public class CircleEspGalaxyRenderer {
                      float velocity = (float)Math.cos(animTime * scanSpeed);
                      float maxTailLength = height * 0.4F;
                      float tailOffset = -velocity * maxTailLength;
-                     class_4587 matrices = context.matrixStack();
-                     matrices.method_22903();
-                     matrices.method_22904(
-                        tX - context.camera().method_19326().field_1352,
-                        tY - context.camera().method_19326().field_1351,
-                        tZ - context.camera().method_19326().field_1350
+                     PoseStack matrices = context.matrixStack();
+                     matrices.pushPose();
+                     matrices.translate(
+                        tX - context.camera().position().x,
+                        tY - context.camera().position().y,
+                        tZ - context.camera().position().z
                      );
-                     matrices.method_22907(class_7833.field_40716.rotationDegrees(animTime * 45.0F));
+                     matrices.rotate(Axis.YP.rotationDegrees(animTime * 45.0F));
                      RenderSystem.setShaderTexture(0, BLOOM_TEXTURE);
-                     RenderSystem.setShader(class_10142.field_53880);
-                     class_287 bbBloom = tessellator.method_60827(class_5596.field_27382, class_290.field_1575);
+                     RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+                     BufferBuilder bbBloom = tessellator.begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                      this.drawHorizontalBloom(matrices, bbBloom, scanY, radius * 2.5F, r, g, b, alpha * 0.5F);
-                     class_286.method_43433(bbBloom.method_60800());
-                     RenderSystem.setShader(class_10142.field_53876);
-                     class_287 bbTail = tessellator.method_60827(class_5596.field_27382, class_290.field_1576);
+                     BufferUploader.drawWithShader(bbBloom.buildOrThrow());
+                     RenderSystem.setShader(CoreShaders.POSITION_COLOR);
+                     BufferBuilder bbTail = tessellator.begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
                      this.drawGradientCylinder(matrices, bbTail, radius, scanY, scanY + tailOffset, r, g, b, alpha * 0.45F, 0.0F);
-                     class_286.method_43433(bbTail.method_60800());
+                     BufferUploader.drawWithShader(bbTail.buildOrThrow());
                      RenderSystem.lineWidth(2.5F);
-                     class_287 bbRing = tessellator.method_60827(class_5596.field_29345, class_290.field_1576);
+                     BufferBuilder bbRing = tessellator.begin(PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
                      this.drawCrispRing(matrices, bbRing, radius, scanY, r, g, b, alpha * 0.9F);
-                     class_286.method_43433(bbRing.method_60800());
+                     BufferUploader.drawWithShader(bbRing.buildOrThrow());
                      RenderSystem.lineWidth(1.0F);
-                     matrices.method_22909();
+                     matrices.popPose();
                   }
                }
             }
@@ -112,18 +113,18 @@ public class CircleEspGalaxyRenderer {
       }
    }
 
-   private void drawHorizontalBloom(class_4587 stack, class_287 buffer, float y, float size, float r, float g, float b, float a) {
-      Matrix4f m = stack.method_23760().method_23761();
-      buffer.method_22918(m, -size, y, -size).method_22913(0.0F, 0.0F).method_22915(r, g, b, a);
-      buffer.method_22918(m, -size, y, size).method_22913(0.0F, 1.0F).method_22915(r, g, b, a);
-      buffer.method_22918(m, size, y, size).method_22913(1.0F, 1.0F).method_22915(r, g, b, a);
-      buffer.method_22918(m, size, y, -size).method_22913(1.0F, 0.0F).method_22915(r, g, b, a);
+   private void drawHorizontalBloom(PoseStack stack, BufferBuilder buffer, float y, float size, float r, float g, float b, float a) {
+      Matrix4f m = stack.last().pose();
+      Vtx.vertex(buffer, m, -size, y, -size).setUv(0.0F, 0.0F).setColor(r, g, b, a);
+      Vtx.vertex(buffer, m, -size, y, size).setUv(0.0F, 1.0F).setColor(r, g, b, a);
+      Vtx.vertex(buffer, m, size, y, size).setUv(1.0F, 1.0F).setColor(r, g, b, a);
+      Vtx.vertex(buffer, m, size, y, -size).setUv(1.0F, 0.0F).setColor(r, g, b, a);
    }
 
    private void drawGradientCylinder(
-      class_4587 stack, class_287 buffer, float radius, float yStart, float yEnd, float r, float g, float b, float aStart, float aEnd
+      PoseStack stack, BufferBuilder buffer, float radius, float yStart, float yEnd, float r, float g, float b, float aStart, float aEnd
    ) {
-      Matrix4f m = stack.method_23760().method_23761();
+      Matrix4f m = stack.last().pose();
       int segments = 40;
 
       for (int i = 0; i < segments; i++) {
@@ -133,22 +134,22 @@ public class CircleEspGalaxyRenderer {
          float z1 = (float)Math.sin(angle1) * radius;
          float x2 = (float)Math.cos(angle2) * radius;
          float z2 = (float)Math.sin(angle2) * radius;
-         buffer.method_22918(m, x1, yStart, z1).method_22915(r, g, b, aStart);
-         buffer.method_22918(m, x1, yEnd, z1).method_22915(r, g, b, aEnd);
-         buffer.method_22918(m, x2, yEnd, z2).method_22915(r, g, b, aEnd);
-         buffer.method_22918(m, x2, yStart, z2).method_22915(r, g, b, aStart);
+         Vtx.vertex(buffer, m, x1, yStart, z1).setColor(r, g, b, aStart);
+         Vtx.vertex(buffer, m, x1, yEnd, z1).setColor(r, g, b, aEnd);
+         Vtx.vertex(buffer, m, x2, yEnd, z2).setColor(r, g, b, aEnd);
+         Vtx.vertex(buffer, m, x2, yStart, z2).setColor(r, g, b, aStart);
       }
    }
 
-   private void drawCrispRing(class_4587 stack, class_287 buffer, float radius, float y, float r, float g, float b, float a) {
-      Matrix4f m = stack.method_23760().method_23761();
+   private void drawCrispRing(PoseStack stack, BufferBuilder buffer, float radius, float y, float r, float g, float b, float a) {
+      Matrix4f m = stack.last().pose();
       int segments = 40;
 
       for (int i = 0; i <= segments; i++) {
          float angle = (float)(i * Math.PI * 2.0 / segments);
          float x = (float)Math.cos(angle) * radius;
          float z = (float)Math.sin(angle) * radius;
-         buffer.method_22918(m, x, y, z).method_22915(r, g, b, a);
+         Vtx.vertex(buffer, m, x, y, z).setColor(r, g, b, a);
       }
    }
 }

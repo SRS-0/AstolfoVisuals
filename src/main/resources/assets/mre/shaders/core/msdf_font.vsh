@@ -1,14 +1,16 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-in vec3 Position; // POSITION_TEXTURE_COLOR vertex attributes
-in vec2 UV0;
-in vec4 Color;
+#include <minecraft:dynamictransforms.glsl>
+#include <minecraft:projection.glsl>
 
-uniform mat4 ModelViewMat;
-uniform mat4 ProjMat;
+layout(location = 0) in vec3 Position; // POSITION_TEXTURE_COLOR vertex attributes
+layout(location = 1) in vec2 UV0;
+layout(location = 2) in vec4 Color;
 
-out vec2 TexCoord;
-out vec4 FragColor;
+
+layout(location = 0) out vec2 TexCoord;
+layout(location = 1) out vec4 FragColor;
 
 void main() {
     TexCoord = UV0;

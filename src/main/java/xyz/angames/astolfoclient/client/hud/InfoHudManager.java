@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -10,9 +11,9 @@ import dev.sxmurxy.mre.msdf.MsdfFont;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -28,8 +29,8 @@ public class InfoHudManager {
    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("interface_icons_infohud")
-         .data(class_2960.method_60655("mre", "icons/interface/interface.json"))
-         .atlas(class_2960.method_60655("mre", "icons/interface/interface.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/interface/interface.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/interface/interface.png"))
          .glyphMapper(g -> {
             int idx = g.index();
             if (idx == 3) {
@@ -65,10 +66,10 @@ public class InfoHudManager {
    private final InfoHudManager.AnimatedString coordZAnim = new InfoHudManager.AnimatedString();
    private final InfoHudManager.AnimatedString bpsAnim = new InfoHudManager.AnimatedString();
 
-   public void render(class_332 context, float tickDelta) {
-      class_310 client = class_310.method_1551();
-      if (client.field_1687 != null && client.field_1724 != null && AstolfoclientClient.moduleManager != null) {
-         boolean isEditing = client.field_1755 instanceof HudEditorScreen;
+   public void render(GuiGraphicsExtractor context, float tickDelta) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.level != null && client.player != null && AstolfoclientClient.moduleManager != null) {
+         boolean isEditing = client.gui.screen() instanceof HudEditorScreen;
          InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
          boolean isSettingEnabled = interfaceMod != null && interfaceMod.infoHud.get();
          boolean shouldShow = interfaceMod != null && interfaceMod.isEnabled() && isSettingEnabled || isEditing;
@@ -88,14 +89,14 @@ public class InfoHudManager {
          this.animationProgress = this.animationProgress
             + ((shouldShow ? 1.0F : 0.0F) - this.animationProgress) * (float)(1.0 - Math.exp(-interpolationSpeed * deltaSeconds));
          if (!(this.animationProgress < 0.01F)) {
-            double px = client.field_1724.method_23317();
-            double py = client.field_1724.method_23318();
-            double pz = client.field_1724.method_23321();
+            double px = client.player.getX();
+            double py = client.player.getY();
+            double pz = client.player.getZ();
             int ix = (int)px;
             int iy = (int)py;
             int iz = (int)pz;
-            double deltaX = client.field_1724.method_23317() - client.field_1724.field_6014;
-            double deltaZ = client.field_1724.method_23321() - client.field_1724.field_5969;
+            double deltaX = client.player.getX() - client.player.xo;
+            double deltaZ = client.player.getZ() - client.player.zo;
             double targetBps = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ) * 20.0;
             this.animatedBps = this.animatedBps + (targetBps - this.animatedBps) * (1.0 - Math.exp(-8.0 * deltaSeconds));
             if (this.animatedBps < 0.01) {
@@ -131,11 +132,11 @@ public class InfoHudManager {
             float targetWidth = paddingX + coordsIconW + iconGap + coordsTextW + elementGap + dotSize + elementGap + bpsIconW + iconGap + bpsTextW + paddingX;
             this.currentWidth = this.currentWidth + (targetWidth - this.currentWidth) * (float)(1.0 - Math.exp(-15.0 * deltaSeconds));
             float scaleModifier = this.getScaleModifier();
-            context.method_51448().method_22903();
-            context.method_51448().method_46416(this.x, this.y, 0.0F);
-            context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-            context.method_51448().method_46416(-this.x, -this.y, 0.0F);
-            Matrix4f matrix = context.method_51448().method_23760().method_23761();
+            context.pose().pushMatrix();
+            context.pose().translate(this.x, this.y);
+            context.pose().scale(scaleModifier, scaleModifier);
+            context.pose().translate(-this.x, -this.y);
+            Matrix4f matrix = GuiCompat.matrix4f(context);
             long themeTime = (long)(nowNs / 1000000.0);
             Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
             Color whiteText = GuiUtils.withAlpha(Color.WHITE, this.animationProgress);
@@ -192,7 +193,7 @@ public class InfoHudManager {
                Builder.text().font(semibold).text(" BPS").color(whiteText).size(infoSize).build().render(matrix, currentX, centerY - 2.5F);
             }
 
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
          }
       }
    }
@@ -244,8 +245,8 @@ public class InfoHudManager {
    }
 
    private float getScaleModifier() {
-      class_310 mc = class_310.method_1551();
-      double currentGuiScale = mc.method_22683().method_4495();
+      Minecraft mc = Minecraft.getInstance();
+      double currentGuiScale = mc.getWindow().getGuiScale();
       if (currentGuiScale <= 0.0) {
          currentGuiScale = 2.0;
       }
@@ -254,8 +255,8 @@ public class InfoHudManager {
    }
 
    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-      class_310 mc = class_310.method_1551();
-      boolean isEditing = mc.field_1755 instanceof HudEditorScreen;
+      Minecraft mc = Minecraft.getInstance();
+      boolean isEditing = mc.gui.screen() instanceof HudEditorScreen;
       InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
       boolean isSettingEnabled = interfaceMod != null && interfaceMod.infoHud.get();
       if (isEditing || interfaceMod != null && isSettingEnabled && interfaceMod.isEnabled()) {
@@ -277,10 +278,10 @@ public class InfoHudManager {
 
    public boolean onMouseDragged(double mouseX, double mouseY, int button) {
       if (this.dragging && button == 0) {
-         class_310 mc = class_310.method_1551();
+         Minecraft mc = Minecraft.getInstance();
          float scaleModifier = this.getScaleModifier();
-         float screenW = mc.method_22683().method_4486();
-         float screenH = mc.method_22683().method_4502();
+         float screenW = mc.getWindow().getGuiScaledWidth();
+         float screenH = mc.getWindow().getGuiScaledHeight();
          float effectiveW = this.currentWidth * scaleModifier;
          float effectiveH = height * scaleModifier;
          float targetX = (float)(mouseX - this.dragOffsetX);

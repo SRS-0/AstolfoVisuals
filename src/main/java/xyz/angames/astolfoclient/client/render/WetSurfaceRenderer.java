@@ -1,6 +1,7 @@
 package xyz.angames.astolfoclient.client.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.GlCompat;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -10,19 +11,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1041;
-import net.minecraft.class_243;
-import net.minecraft.class_276;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_4184;
+import com.mojang.blaze3d.platform.Window;
+import net.minecraft.world.phys.Vec3;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Camera;
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
-import org.lwjgl.glfw.GLFW;
+import xyz.angames.astolfoclient.client.compat.GLFW;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL20;
+import xyz.angames.astolfoclient.client.compat.GL20;
 import org.lwjgl.opengl.GL30;
 
 @Environment(EnvType.CLIENT)
@@ -46,21 +47,21 @@ public final class WetSurfaceRenderer implements AutoCloseable {
       return INSTANCE;
    }
 
-   public void apply(class_310 mc, class_4184 camera, Matrix4f viewMatrix, Matrix4f projectionMatrix, WetSurfaceRenderer.Parameters parameters) {
+   public void apply(Minecraft mc, Camera camera, Matrix4f viewMatrix, Matrix4f projectionMatrix, WetSurfaceRenderer.Parameters parameters) {
       if (!this.disabled && mc != null && camera != null && viewMatrix != null && projectionMatrix != null && parameters != null) {
-         if (mc.field_1687 != null
-            && mc.field_1724 != null
+         if (mc.level != null
+            && mc.player != null
             && isWindowValid(mc)
             && !(parameters.wetness <= 1.0E-4F)
             && !(parameters.reflectionStrength <= 1.0E-4F)) {
-            class_1041 window = mc.method_22683();
-            int width = window.method_4489();
-            int height = window.method_4506();
+            Window window = mc.getWindow();
+            int width = window.getWidth();
+            int height = window.getHeight();
             if (width > 1 && height > 1) {
-               class_276 framebuffer = mc.method_1522();
+               RenderTarget framebuffer = mc.gameRenderer.mainRenderTarget();
                if (framebuffer != null) {
-                  int colorTexture = framebuffer.method_30277();
-                  int depthTexture = framebuffer.method_30278();
+                  int colorTexture = GlCompat.colorId(framebuffer);
+                  int depthTexture = GlCompat.depthId(framebuffer);
                   if (colorTexture > 0 && depthTexture > 0) {
                      int prevProgram = GL11.glGetInteger(35725);
                      int prevReadFbo = GL11.glGetInteger(36010);
@@ -86,13 +87,13 @@ public final class WetSurfaceRenderer implements AutoCloseable {
                         if (!this.disabled && this.ensureScene(width, height) && this.copyColorToScene(colorTexture, width, height)) {
                            Matrix4f inverseProjection = new Matrix4f(projectionMatrix).invert();
                            Matrix4f inverseView = new Matrix4f(viewMatrix).invert();
-                           class_243 cameraPos = camera.method_19326();
-                           inverseView.m30((float)cameraPos.field_1352);
-                           inverseView.m31((float)cameraPos.field_1351);
-                           inverseView.m32((float)cameraPos.field_1350);
-                           parameters.cameraX = (float)cameraPos.field_1352;
-                           parameters.cameraY = (float)cameraPos.field_1351;
-                           parameters.cameraZ = (float)cameraPos.field_1350;
+                           Vec3 cameraPos = camera.position();
+                           inverseView.m30((float)cameraPos.x);
+                           inverseView.m31((float)cameraPos.y);
+                           inverseView.m32((float)cameraPos.z);
+                           parameters.cameraX = (float)cameraPos.x;
+                           parameters.cameraY = (float)cameraPos.y;
+                           parameters.cameraZ = (float)cameraPos.z;
                            attached = this.renderPass(
                               colorTexture, depthTexture, width, height, viewMatrix, projectionMatrix, inverseProjection, inverseView, parameters
                            );
@@ -350,7 +351,7 @@ public final class WetSurfaceRenderer implements AutoCloseable {
       try {
          InputStream stream = WetSurfaceRenderer.class.getClassLoader().getResourceAsStream("assets/astolfoclient/" + relativePath);
          if (stream == null) {
-            stream = class_310.method_1551().method_1478().open(class_2960.method_60655("astolfoclient", relativePath));
+            stream = Minecraft.getInstance().getResourceManager().open(Identifier.fromNamespaceAndPath("astolfoclient", relativePath));
          }
 
          if (stream != null) {
@@ -435,9 +436,9 @@ public final class WetSurfaceRenderer implements AutoCloseable {
       this.disabled = false;
    }
 
-   private static boolean isWindowValid(class_310 mc) {
-      class_1041 window = mc == null ? null : mc.method_22683();
-      return window != null && window.method_4489() > 0 && window.method_4506() > 0;
+   private static boolean isWindowValid(Minecraft mc) {
+      Window window = mc == null ? null : mc.getWindow();
+      return window != null && window.getWidth() > 0 && window.getHeight() > 0;
    }
 
    private static float clamp(float value, float min, float max) {

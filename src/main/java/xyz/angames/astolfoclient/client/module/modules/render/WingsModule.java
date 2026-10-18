@@ -1,27 +1,28 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.platform.GlStateManager.class_4534;
-import com.mojang.blaze3d.platform.GlStateManager.class_4535;
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.Vtx;
+import xyz.angames.astolfoclient.client.compat.DestFactor;
+import xyz.angames.astolfoclient.client.compat.SourceFactor;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.Last;
-import net.minecraft.class_10142;
-import net.minecraft.class_1297;
-import net.minecraft.class_1304;
-import net.minecraft.class_1657;
-import net.minecraft.class_1802;
-import net.minecraft.class_243;
-import net.minecraft.class_286;
-import net.minecraft.class_287;
-import net.minecraft.class_289;
-import net.minecraft.class_290;
-import net.minecraft.class_310;
-import net.minecraft.class_3532;
-import net.minecraft.class_4587;
-import net.minecraft.class_7833;
-import net.minecraft.class_293.class_5596;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents.Last;
+import xyz.angames.astolfoclient.client.compat.CoreShaders;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.Vec3;
+import xyz.angames.astolfoclient.client.compat.BufferUploader;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import xyz.angames.astolfoclient.client.compat.Tesselator;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -32,7 +33,7 @@ import xyz.angames.astolfoclient.client.util.FriendManager;
 
 @Environment(EnvType.CLIENT)
 public class WingsModule extends Module {
-   private final class_310 mc = class_310.method_1551();
+   private final Minecraft mc = Minecraft.getInstance();
    private static final float DEFAULT_SPREAD = 8.0F;
    private static final int DEFAULT_ALPHA = 220;
    private static final WingsModule.WingPoint[] SHAPE = new WingsModule.WingPoint[]{
@@ -64,29 +65,29 @@ public class WingsModule extends Module {
       WorldRenderEvents.LAST
          .register(
             (Last)context -> {
-               if (this.isEnabled() && this.mc.field_1724 != null && this.mc.field_1687 != null && this.mc.field_1773 != null) {
-                  class_4587 stack = context.matrixStack();
-                  float tickDelta = context.tickCounter().method_60637(true);
-                  class_243 camera = this.mc.field_1773.method_19418().method_19326();
-                  stack.method_22903();
+               if (this.isEnabled() && this.mc.player != null && this.mc.level != null && this.mc.gameRenderer != null) {
+                  PoseStack stack = context.matrixStack();
+                  float tickDelta = context.tickCounter().getGameTimeDeltaPartialTick(true);
+                  Vec3 camera = this.mc.gameRenderer.mainCamera().position();
+                  stack.pushPose();
                   RenderSystem.enableBlend();
                   RenderSystem.disableCull();
                   RenderSystem.enableDepthTest();
                   RenderSystem.depthMask(false);
-                  RenderSystem.setShader(class_10142.field_53876);
+                  RenderSystem.setShader(CoreShaders.POSITION_COLOR);
                   if (this.self.get()
-                     && !this.mc.field_1690.method_31044().method_31034()
-                     && this.mc.field_1724.method_5805()
-                     && !this.hasElytra(this.mc.field_1724)) {
+                     && !this.mc.options.getCameraType().isFirstPerson()
+                     && this.mc.player.isAlive()
+                     && !this.hasElytra(this.mc.player)) {
                      try {
-                        this.renderWings(stack, this.mc.field_1724, tickDelta, camera);
+                        this.renderWings(stack, this.mc.player, tickDelta, camera);
                      } catch (Exception var10) {
                      }
                   }
 
                   if (this.players.get()) {
-                     for (class_1297 entity : this.mc.field_1687.method_18112()) {
-                        if (entity instanceof class_1657 player && player != this.mc.field_1724 && player.method_5805() && !this.hasElytra(player)) {
+                     for (Entity entity : this.mc.level.entitiesForRendering()) {
+                        if (entity instanceof Player player && player != this.mc.player && player.isAlive() && !this.hasElytra(player)) {
                            try {
                               this.renderWings(stack, player, tickDelta, camera);
                            } catch (Exception var9) {
@@ -98,9 +99,9 @@ public class WingsModule extends Module {
                   RenderSystem.depthMask(true);
                   RenderSystem.enableCull();
                   RenderSystem.disableBlend();
-                  RenderSystem.blendFuncSeparate(class_4535.SRC_ALPHA, class_4534.ONE_MINUS_SRC_ALPHA, class_4535.ONE, class_4534.ZERO);
+                  RenderSystem.blendFuncSeparate(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA, SourceFactor.ONE, DestFactor.ZERO);
                   RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-                  stack.method_22909();
+                  stack.popPose();
                }
             }
          );
@@ -111,15 +112,15 @@ public class WingsModule extends Module {
       this.selfBodyYawInitialized = false;
    }
 
-   private void renderWings(class_4587 stack, class_1657 player, float tickDelta, class_243 camera) {
-      double x = class_3532.method_16436(tickDelta, player.field_6014, player.method_23317()) - camera.field_1352;
-      double y = class_3532.method_16436(tickDelta, player.field_6036, player.method_23318()) - camera.field_1351;
-      double z = class_3532.method_16436(tickDelta, player.field_5969, player.method_23321()) - camera.field_1350;
+   private void renderWings(PoseStack stack, Player player, float tickDelta, Vec3 camera) {
+      double x = Mth.lerp(tickDelta, player.xo, player.getX()) - camera.x;
+      double y = Mth.lerp(tickDelta, player.yo, player.getY()) - camera.y;
+      double z = Mth.lerp(tickDelta, player.zo, player.getZ()) - camera.z;
       float bodyYaw = this.resolveBodyYaw(player, tickDelta);
-      float move = class_3532.method_15363(player.field_42108.method_48570(tickDelta), 0.0F, 1.0F);
+      float move = Mth.clamp(player.walkAnimation.speed(tickDelta), 0.0F, 1.0F);
       WingsModule.WingPose pose = this.resolvePose(player, tickDelta);
       if (pose != null) {
-         float flap = (float)Math.sin((player.field_6012 + tickDelta) * pose.flapSpeed) * pose.flapAmplitude;
+         float flap = (float)Math.sin((player.tickCount + tickDelta) * pose.flapSpeed) * pose.flapAmplitude;
          float open = (8.0F + flap + move * pose.motionSpreadBoost) * pose.openMultiplier;
          float wingScale = (float)this.size.get() * pose.scaleMultiplier;
          int baseColor = this.resolveBaseColor();
@@ -127,60 +128,60 @@ public class WingsModule extends Module {
          int coreColor = this.resolveCoreColor(baseColor);
          boolean isBaby = false;
          if (BabyPlayerModule.INSTANCE != null && BabyPlayerModule.INSTANCE.isEnabled()) {
-            if (player == this.mc.field_1724 && BabyPlayerModule.INSTANCE.self.get()) {
+            if (player == this.mc.player && BabyPlayerModule.INSTANCE.self.get()) {
                isBaby = true;
-            } else if (player != this.mc.field_1724 && BabyPlayerModule.INSTANCE.friends.get() && FriendManager.isFriend(player.method_5477().getString())) {
+            } else if (player != this.mc.player && BabyPlayerModule.INSTANCE.friends.get() && FriendManager.isFriend(player.getName().getString())) {
                isBaby = true;
             }
          }
 
-         stack.method_22903();
-         stack.method_22904(x, y, z);
+         stack.pushPose();
+         stack.translate(x, y, z);
          if (isBaby) {
-            stack.method_22905(0.5F, 0.5F, 0.5F);
+            stack.scale(0.5F, 0.5F, 0.5F);
          }
 
-         stack.method_22907(class_7833.field_40716.rotationDegrees(180.0F - bodyYaw));
+         stack.rotate(Axis.YP.rotationDegrees(180.0F - bodyYaw));
          if (pose.preTranslateY != 0.0F || pose.preTranslateZ != 0.0F) {
-            stack.method_46416(0.0F, pose.preTranslateY, pose.preTranslateZ);
+            stack.translate(0.0F, pose.preTranslateY, pose.preTranslateZ);
          }
 
          if (pose.pitchRotation != 0.0F) {
-            stack.method_22907(class_7833.field_40714.rotationDegrees(pose.pitchRotation));
+            stack.rotate(Axis.XP.rotationDegrees(pose.pitchRotation));
          }
 
          if (pose.rollRotation != 0.0F) {
-            stack.method_22907(class_7833.field_40718.rotationDegrees(pose.rollRotation));
+            stack.rotate(Axis.ZP.rotationDegrees(pose.rollRotation));
          }
 
-         stack.method_46416(0.0F, pose.anchorY, pose.anchorZ);
-         stack.method_22905(wingScale, wingScale, wingScale);
+         stack.translate(0.0F, pose.anchorY, pose.anchorZ);
+         stack.scale(wingScale, wingScale, wingScale);
          this.renderWingSide(stack, -1.0F, open, baseColor, glowColor, coreColor, pose);
          this.renderWingSide(stack, 1.0F, open, baseColor, glowColor, coreColor, pose);
-         stack.method_22909();
+         stack.popPose();
       }
    }
 
-   private void renderWingSide(class_4587 stack, float side, float open, int baseColor, int glowColor, int coreColor, WingsModule.WingPose pose) {
-      stack.method_22903();
-      stack.method_46416(side * pose.sideOffset, pose.sideYOffset, pose.sideZOffset);
-      stack.method_22907(class_7833.field_40716.rotationDegrees(side * open));
-      stack.method_22907(class_7833.field_40718.rotationDegrees(side * pose.sideRoll));
-      stack.method_22907(class_7833.field_40714.rotationDegrees(pose.sidePitch));
-      RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE);
+   private void renderWingSide(PoseStack stack, float side, float open, int baseColor, int glowColor, int coreColor, WingsModule.WingPose pose) {
+      stack.pushPose();
+      stack.translate(side * pose.sideOffset, pose.sideYOffset, pose.sideZOffset);
+      stack.rotate(Axis.YP.rotationDegrees(side * open));
+      stack.rotate(Axis.ZP.rotationDegrees(side * pose.sideRoll));
+      stack.rotate(Axis.XP.rotationDegrees(pose.sidePitch));
+      RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
       this.drawWingLayer(stack, side, 1.22F, setAlpha(glowColor, 48), setAlpha(glowColor, 0));
       this.drawWingLayer(stack, side, 0.84F, setAlpha(coreColor, 57), setAlpha(coreColor, 0));
-      RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE_MINUS_SRC_ALPHA);
+      RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA);
       this.drawWingLayer(stack, side, 1.0F, setAlpha(baseColor, 220), setAlpha(baseColor, 10));
-      RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE);
+      RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
       this.drawWingOutline(stack, side, 1.0F, setAlpha(baseColor, 136));
       this.drawWingRibs(stack, side, 0.96F, setAlpha(glowColor, 44));
-      stack.method_22909();
+      stack.popPose();
    }
 
-   private void drawWingLayer(class_4587 stack, float side, float scale, int rootColor, int edgeColor) {
-      Matrix4f matrix = stack.method_23760().method_23761();
-      class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27379, class_290.field_1576);
+   private void drawWingLayer(PoseStack stack, float side, float scale, int rootColor, int edgeColor) {
+      Matrix4f matrix = stack.last().pose();
+      BufferBuilder buffer = Tesselator.getInstance().begin(PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
 
       for (int i = 0; i < SHAPE.length; i++) {
          WingsModule.WingPoint cur = SHAPE[i];
@@ -190,29 +191,29 @@ public class WingsModule extends Module {
          this.vertex(buffer, matrix, side * next.x * scale, next.y * scale, 0.0F, this.applyPointAlpha(edgeColor, next.alphaMul));
       }
 
-      class_286.method_43433(buffer.method_60800());
+      BufferUploader.drawWithShader(buffer.buildOrThrow());
    }
 
-   private void drawWingOutline(class_4587 stack, float side, float scale, int color) {
-      Matrix4f matrix = stack.method_23760().method_23761();
+   private void drawWingOutline(PoseStack stack, float side, float scale, int color) {
+      Matrix4f matrix = stack.last().pose();
       RenderSystem.lineWidth(1.35F);
       GL11.glEnable(2848);
-      class_287 buffer = class_289.method_1348().method_60827(class_5596.field_29345, class_290.field_1576);
+      BufferBuilder buffer = Tesselator.getInstance().begin(PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
 
       for (WingsModule.WingPoint point : SHAPE) {
          this.vertex(buffer, matrix, side * point.x * scale, point.y * scale, 0.0F, color);
       }
 
       this.vertex(buffer, matrix, side * SHAPE[0].x * scale, SHAPE[0].y * scale, 0.0F, color);
-      class_286.method_43433(buffer.method_60800());
+      BufferUploader.drawWithShader(buffer.buildOrThrow());
       GL11.glDisable(2848);
    }
 
-   private void drawWingRibs(class_4587 stack, float side, float scale, int color) {
-      Matrix4f matrix = stack.method_23760().method_23761();
+   private void drawWingRibs(PoseStack stack, float side, float scale, int color) {
+      Matrix4f matrix = stack.last().pose();
       int[] ribIndices = new int[]{2, 4, 7, 9, 11};
       RenderSystem.lineWidth(0.9F);
-      class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27377, class_290.field_1576);
+      BufferBuilder buffer = Tesselator.getInstance().begin(PrimitiveTopology.LINES, DefaultVertexFormat.POSITION_COLOR);
 
       for (int idx : ribIndices) {
          WingsModule.WingPoint point = SHAPE[idx];
@@ -220,7 +221,7 @@ public class WingsModule extends Module {
          this.vertex(buffer, matrix, side * point.x * scale, point.y * scale, 0.0F, this.applyPointAlpha(color, point.alphaMul));
       }
 
-      class_286.method_43433(buffer.method_60800());
+      BufferUploader.drawWithShader(buffer.buildOrThrow());
    }
 
    private int resolveBaseColor() {
@@ -254,11 +255,11 @@ public class WingsModule extends Module {
    }
 
    private static int packARGB(int r, int g, int b, int a) {
-      return class_3532.method_15340(a, 0, 255) << 24 | r << 16 | g << 8 | b;
+      return Mth.clamp(a, 0, 255) << 24 | r << 16 | g << 8 | b;
    }
 
    private static int setAlpha(int color, int a) {
-      return class_3532.method_15340(a, 0, 255) << 24 | color & 16777215;
+      return Mth.clamp(a, 0, 255) << 24 | color & 16777215;
    }
 
    private static int alpha(int color) {
@@ -281,15 +282,15 @@ public class WingsModule extends Module {
       return setAlpha(color, Math.max(0, Math.min(255, (int)(alpha(color) * multiplier))));
    }
 
-   private void vertex(class_287 buffer, Matrix4f matrix, float x, float y, float z, int color) {
-      buffer.method_22918(matrix, x, y, z).method_22915(red(color) / 255.0F, green(color) / 255.0F, blue(color) / 255.0F, alpha(color) / 255.0F);
+   private void vertex(BufferBuilder buffer, Matrix4f matrix, float x, float y, float z, int color) {
+      Vtx.vertex(buffer, matrix, x, y, z).setColor(red(color) / 255.0F, green(color) / 255.0F, blue(color) / 255.0F, alpha(color) / 255.0F);
    }
 
-   private float resolveBodyYaw(class_1657 player, float tickDelta) {
-      float target = class_3532.method_17821(tickDelta, player.field_6220, player.field_6283);
-      if (player != this.mc.field_1724) {
+   private float resolveBodyYaw(Player player, float tickDelta) {
+      float target = Mth.rotLerp(tickDelta, player.yBodyRotO, player.yBodyRot);
+      if (player != this.mc.player) {
          return target;
-      } else if (this.selfBodyYawInitialized && player.field_6012 >= 2) {
+      } else if (this.selfBodyYawInitialized && player.tickCount >= 2) {
          this.selfBodyYaw = approachDegrees(this.selfBodyYaw, target, 14.0F);
          return this.selfBodyYaw;
       } else {
@@ -300,29 +301,29 @@ public class WingsModule extends Module {
    }
 
    private static float approachDegrees(float current, float target, float maxDelta) {
-      float delta = class_3532.method_15393(target - current);
-      delta = class_3532.method_15363(delta, -maxDelta, maxDelta);
+      float delta = Mth.wrapDegrees(target - current);
+      delta = Mth.clamp(delta, -maxDelta, maxDelta);
       return current + delta;
    }
 
-   private WingsModule.WingPose resolvePose(class_1657 player, float tickDelta) {
-      float pitch = class_3532.method_16439(tickDelta, player.field_6004, player.method_36455());
-      if (player.method_6128()) {
-         float flightTicks = player.method_6003() + tickDelta;
-         float flightProgress = class_3532.method_15363(flightTicks * flightTicks / 100.0F, 0.0F, 1.0F);
+   private WingsModule.WingPose resolvePose(Player player, float tickDelta) {
+      float pitch = Mth.lerp(tickDelta, player.xRotO, player.getXRot());
+      if (player.isFallFlying()) {
+         float flightTicks = player.getFallFlyingTicks() + tickDelta;
+         float flightProgress = Mth.clamp(flightTicks * flightTicks / 100.0F, 0.0F, 1.0F);
          float pitchRotation = flightProgress * (-90.0F - pitch);
          return new WingsModule.WingPose(0.34F, 0.46F, 0.0F, 0.0F, pitchRotation, 0.0F, 0.76F, 0.92F, 0.1F, 0.58F, 0.05F, 0.06F, -5.0F, -2.0F, 0.13F);
-      } else if (player.method_5799()) {
+      } else if (player.isInWater()) {
          return null;
       } else {
-         return player.method_5715()
+         return player.isShiftKeyDown()
             ? new WingsModule.WingPose(0.0F, 0.0F, 0.96F, 0.1F, 18.0F, 0.0F, 1.0F, 1.0F, 0.18F, 4.5F, 0.06F, 0.02F, -11.0F, -4.0F, 0.12F)
             : new WingsModule.WingPose(0.0F, 0.0F, 1.38F, 0.1F, 0.0F, 0.0F, 1.0F, 1.0F, 0.18F, 4.5F, 0.06F, 0.02F, -11.0F, -4.0F, 0.12F);
       }
    }
 
-   private boolean hasElytra(class_1657 player) {
-      return player.method_6118(class_1304.field_6174).method_31574(class_1802.field_8833);
+   private boolean hasElytra(Player player) {
+      return player.getItemBySlot(EquipmentSlot.CHEST).is(Items.ELYTRA);
    }
 
    @Override

@@ -2,10 +2,10 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_266;
-import net.minecraft.class_2960;
-import net.minecraft.class_329;
-import net.minecraft.class_332;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.gui.Hud;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,32 +13,32 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.angames.astolfoclient.client.module.modules.render.NoRenderModule;
 
 @Environment(EnvType.CLIENT)
-@Mixin(class_329.class)
+@Mixin(Hud.class)
 public class MixinInGameHud {
    @Inject(
-      method = "renderScoreboardSidebar(Lnet/minecraft/client/gui/DrawContext;Lnet/minecraft/scoreboard/ScoreboardObjective;)V",
+      method = "displayScoreboardSidebar",
       at = @At("HEAD"),
       cancellable = true
    )
-   private void onRenderScoreboard(class_332 context, class_266 objective, CallbackInfo ci) {
+   private void onRenderScoreboard(GuiGraphicsExtractor context, Objective objective, CallbackInfo ci) {
       NoRenderModule noRender = NoRenderModule.getInstance();
       if (noRender != null && noRender.isEnabled() && noRender.scoreboard.get()) {
          ci.cancel();
       }
    }
 
-   @Inject(method = "renderPortalOverlay", at = @At("HEAD"), cancellable = true)
-   private void onRenderPortalOverlay(class_332 context, float f, CallbackInfo ci) {
+   @Inject(method = "extractPortalOverlay", at = @At("HEAD"), cancellable = true)
+   private void onRenderPortalOverlay(GuiGraphicsExtractor context, float f, CallbackInfo ci) {
       NoRenderModule noRender = NoRenderModule.getInstance();
       if (noRender != null && noRender.isEnabled() && noRender.portal.get()) {
          ci.cancel();
       }
    }
 
-   @Inject(method = "renderOverlay", at = @At("HEAD"), cancellable = true)
-   private void onRenderPumpkinOverlay(class_332 context, class_2960 texture, float opacity, CallbackInfo ci) {
+   @Inject(method = "extractTextureOverlay", at = @At("HEAD"), cancellable = true)
+   private void onRenderPumpkinOverlay(GuiGraphicsExtractor context, Identifier texture, float opacity, CallbackInfo ci) {
       NoRenderModule noRender = NoRenderModule.getInstance();
-      if (noRender != null && noRender.isEnabled() && noRender.pumpkin.get() && texture.method_12832().contains("pumpkin")) {
+      if (noRender != null && noRender.isEnabled() && noRender.pumpkin.get() && texture.getPath().contains("pumpkin")) {
          ci.cancel();
       }
    }

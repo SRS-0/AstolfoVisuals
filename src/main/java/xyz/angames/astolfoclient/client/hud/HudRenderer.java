@@ -2,8 +2,8 @@ package xyz.angames.astolfoclient.client.hud;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
@@ -16,15 +16,15 @@ public class HudRenderer {
       return this.logoRenderer;
    }
 
-   public void render(class_332 context, float tickDelta) {
+   public void render(GuiGraphicsExtractor context, float tickDelta) {
       InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
       if (interfaceMod != null && interfaceMod.isEnabled() && interfaceMod.logo.get()) {
          this.logoRenderer.render(context);
       }
 
-      class_310 client = class_310.method_1551();
+      Minecraft client = Minecraft.getInstance();
       Module boyKisserModule = AstolfoclientClient.moduleManager.getModuleByName("BoyKisser");
-      if (boyKisserModule != null && boyKisserModule.isEnabled() && client.field_1755 == null) {
+      if (boyKisserModule != null && boyKisserModule.isEnabled() && client.gui.screen() == null) {
          AstolfoclientClient.boyKisserManager.render(context, tickDelta);
       }
    }

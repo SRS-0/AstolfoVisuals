@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import dev.sxmurxy.mre.builders.Builder;
 import dev.sxmurxy.mre.builders.states.QuadColorState;
@@ -11,12 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1799;
-import net.minecraft.class_1802;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFW;
+import xyz.angames.astolfoclient.client.compat.GLFW;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
@@ -25,6 +26,11 @@ import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
 @Environment(EnvType.CLIENT)
 public class ArmorHudManager {
+   private static final net.minecraft.world.entity.EquipmentSlot[] ARMOR_SLOTS = {
+      net.minecraft.world.entity.EquipmentSlot.FEET, net.minecraft.world.entity.EquipmentSlot.LEGS,
+      net.minecraft.world.entity.EquipmentSlot.CHEST, net.minecraft.world.entity.EquipmentSlot.HEAD
+   };
+
    private static final Supplier<MsdfFont> BOLD_FONT = LogoRenderer.BOLD_FONT;
    private static final Supplier<MsdfFont> MEDIUM_FONT = LogoRenderer.MEDIUM_FONT;
    private static final Supplier<MsdfFont> SP_FONT = LogoRenderer.SP_FONT;
@@ -51,7 +57,7 @@ public class ArmorHudManager {
    private boolean wasRightMouseDown = false;
    private Object lastScreen = null;
    private long lastFrameTime = System.currentTimeMillis();
-   private final class_310 client = class_310.method_1551();
+   private final Minecraft client = Minecraft.getInstance();
 
    public static boolean isVertical() {
       return layout != null && layout.equalsIgnoreCase("VERTICAL");
@@ -65,13 +71,13 @@ public class ArmorHudManager {
       return isVertical() ? 78.0F : 18.0F;
    }
 
-   public void render(class_332 context) {
+   public void render(GuiGraphicsExtractor context) {
       InterfaceModule interfaceMod = getInterfaceModule();
-      boolean isEditing = this.client.field_1755 instanceof HudEditorScreen;
-      boolean inScreen = this.client.field_1755 != null;
+      boolean isEditing = this.client.gui.screen() instanceof HudEditorScreen;
+      boolean inScreen = this.client.gui.screen() != null;
       if (interfaceMod != null) {
          if (isEditing || interfaceMod.isEnabled() && interfaceMod.armorHud.get()) {
-            if (this.client.field_1724 != null) {
+            if (this.client.player != null) {
                long now = System.currentTimeMillis();
                float deltaTime = (float)(now - this.lastFrameTime) / 1000.0F;
                this.lastFrameTime = now;
@@ -86,61 +92,61 @@ public class ArmorHudManager {
                boolean vertical = isVertical();
                float curW = vertical ? 18.0F : 78.0F;
                float curH = vertical ? 78.0F : 18.0F;
-               double currentGuiScale = this.client.method_22683().method_4495();
+               double currentGuiScale = this.client.getWindow().getGuiScale();
                if (currentGuiScale <= 0.0) {
                   currentGuiScale = 2.0;
                }
 
                float scaleModifier = (float)(2.0 / currentGuiScale);
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(this.x, this.y, 0.0F);
-               context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-               context.method_51448().method_46416(-this.x, -this.y, 0.0F);
-               List<class_1799> armorList = new ArrayList<>();
+               context.pose().pushMatrix();
+               context.pose().translate(this.x, this.y);
+               context.pose().scale(scaleModifier, scaleModifier);
+               context.pose().translate(-this.x, -this.y);
+               List<ItemStack> armorList = new ArrayList<>();
                boolean hasArmor = false;
 
                for (int i = 0; i < 4; i++) {
-                  class_1799 stack = (class_1799)this.client.field_1724.method_31548().field_7548.get(i);
+                  ItemStack stack = (ItemStack)this.client.player.getItemBySlot(ARMOR_SLOTS[i]);
                   armorList.add(stack);
-                  if (!stack.method_7960()) {
+                  if (!stack.isEmpty()) {
                      hasArmor = true;
                   }
                }
 
                if (isEditing && !hasArmor) {
-                  armorList.set(0, new class_1799(class_1802.field_8285));
-                  armorList.set(1, new class_1799(class_1802.field_8348));
-                  class_1799 damagedChest = new class_1799(class_1802.field_8058);
-                  damagedChest.method_7974(damagedChest.method_7936() - 10);
+                  armorList.set(0, new ItemStack(Items.DIAMOND_BOOTS));
+                  armorList.set(1, new ItemStack(Items.DIAMOND_LEGGINGS));
+                  ItemStack damagedChest = new ItemStack(Items.DIAMOND_CHESTPLATE);
+                  damagedChest.setDamageValue(damagedChest.getMaxDamage() - 10);
                   armorList.set(2, damagedChest);
-                  armorList.set(3, new class_1799(class_1802.field_8805));
+                  armorList.set(3, new ItemStack(Items.DIAMOND_HELMET));
                }
 
                float startX = this.x;
                float startY = this.y;
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(0.0F, 0.0F, 1.0F);
+               context.pose().pushMatrix();
+               context.pose().translate(0.0F, 0.0F);
 
                for (int i = 3; i >= 0; i--) {
-                  class_1799 stack = armorList.get(i);
-                  if (!stack.method_7960()) {
+                  ItemStack stack = armorList.get(i);
+                  if (!stack.isEmpty()) {
                      int index = 3 - i;
                      float drawX = vertical ? startX : startX + index * 20;
                      float drawY = vertical ? startY + index * 20 : startY;
                      boolean almostBroken = false;
-                     if (warningGlow && stack.method_7963() && stack.method_7936() > 0) {
-                        float durabilityPercent = (float)(stack.method_7936() - stack.method_7919()) / stack.method_7936();
+                     if (warningGlow && stack.isDamageableItem() && stack.getMaxDamage() > 0) {
+                        float durabilityPercent = (float)(stack.getMaxDamage() - stack.getDamageValue()) / stack.getMaxDamage();
                         if (durabilityPercent <= 0.15F) {
                            almostBroken = true;
                         }
                      }
 
-                     context.method_51448().method_22903();
+                     context.pose().pushMatrix();
                      if (almostBroken) {
                         float pulseAlpha = (float)Math.abs(Math.sin(System.nanoTime() / 2.0E8));
                         float bounceOffset = pulseAlpha * -3.0F;
-                        context.method_51448().method_46416(0.0F, bounceOffset, 0.0F);
-                        Matrix4f glowMat = context.method_51448().method_23760().method_23761();
+                        context.pose().translate(0.0F, bounceOffset);
+                        Matrix4f glowMat = GuiCompat.matrix4f(context);
 
                         for (int j = 0; j < 4; j++) {
                            float expand = (j + 1) * 2.0F;
@@ -156,15 +162,15 @@ public class ArmorHudManager {
                         }
                      }
 
-                     context.method_51427(stack, (int)drawX, (int)drawY);
-                     context.method_51431(this.client.field_1772, stack, (int)drawX, (int)drawY);
-                     context.method_51448().method_22909();
+                     context.item(stack, (int)drawX, (int)drawY);
+                     context.itemDecorations(this.client.font, stack, (int)drawX, (int)drawY);
+                     context.pose().popMatrix();
                   }
                }
 
-               context.method_51448().method_22909();
-               context.method_51448().method_22909();
-               Object activeScreen = this.client.field_1755;
+               context.pose().popMatrix();
+               context.pose().popMatrix();
+               Object activeScreen = this.client.gui.screen();
                if (activeScreen != this.lastScreen) {
                   this.wasMouseDown = false;
                   this.wasRightMouseDown = false;
@@ -176,15 +182,15 @@ public class ArmorHudManager {
                   double mouseScaledY = -9999.0;
                   boolean isMouseDown = false;
                   boolean isRightMouseDown = false;
-                  long win = this.client.method_22683().method_4490();
+                  long win = this.client.getWindow().handle();
                   if (win != 0L) {
                      double[] mx = new double[1];
                      double[] my = new double[1];
                      GLFW.glfwGetCursorPos(win, mx, my);
-                     double screenWidth = this.client.method_22683().method_4489();
-                     double screenHeight = this.client.method_22683().method_4506();
-                     float guiWidth = this.client.method_22683().method_4486();
-                     float guiHeight = this.client.method_22683().method_4502();
+                     double screenWidth = this.client.getWindow().getWidth();
+                     double screenHeight = this.client.getWindow().getHeight();
+                     float guiWidth = this.client.getWindow().getGuiScaledWidth();
+                     float guiHeight = this.client.getWindow().getGuiScaledHeight();
                      if (screenWidth > 0.0 && screenHeight > 0.0) {
                         mouseScaledX = mx[0] / screenWidth * guiWidth;
                         mouseScaledY = my[0] / screenHeight * guiHeight;
@@ -194,7 +200,7 @@ public class ArmorHudManager {
                      isRightMouseDown = GLFW.glfwGetMouseButton(win, 1) == 1;
                   }
 
-                  if (isRightMouseDown && !this.wasRightMouseDown && !(this.client.field_1755 instanceof HudEditorScreen)) {
+                  if (isRightMouseDown && !this.wasRightMouseDown && !(this.client.gui.screen() instanceof HudEditorScreen)) {
                      float visMinX = this.x;
                      float visMinY = this.y;
                      float visMaxX = this.x + curW * scaleModifier;
@@ -215,8 +221,8 @@ public class ArmorHudManager {
                      curW,
                      curH,
                      scaleModifier,
-                     this.client.method_22683().method_4486(),
-                     this.client.method_22683().method_4502(),
+                     this.client.getWindow().getGuiScaledWidth(),
+                     this.client.getWindow().getGuiScaledHeight(),
                      themeColor,
                      mouseScaledX,
                      mouseScaledY,
@@ -243,7 +249,7 @@ public class ArmorHudManager {
    }
 
    private void drawAnimatedContextPanel(
-      class_332 context,
+      GuiGraphicsExtractor context,
       float aX,
       float aY,
       float aW,
@@ -297,16 +303,16 @@ public class ArmorHudManager {
          MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
          float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
          float mainScale = 0.88F + 0.12F * mainEase;
-         context.method_51448().method_22903();
+         context.pose().pushMatrix();
          if (mainScale < 0.999F) {
             float cx = pX + mainW / 2.0F;
             float cy = pY + mainH / 2.0F;
-            context.method_51448().method_46416(cx, cy, 0.0F);
-            context.method_51448().method_22905(mainScale, mainScale, 1.0F);
-            context.method_51448().method_46416(-cx, -cy, 0.0F);
+            context.pose().translate(cx, cy);
+            context.pose().scale(mainScale, mainScale);
+            context.pose().translate(-cx, -cy);
          }
 
-         Matrix4f matrix = context.method_51448().method_23760().method_23761();
+         Matrix4f matrix = GuiCompat.matrix4f(context);
 
          for (int i = 6; i >= 0; i--) {
             float progress = i / 6.0F;
@@ -350,7 +356,7 @@ public class ArmorHudManager {
          if (closeHover && isMouseDown && !wasMouseDown) {
             this.panelOpen = false;
             this.activeSubmenu = ArmorHudManager.SubmenuType.NONE;
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
          } else {
             float c1X = pX + 4.0F;
             float c1Y = pY + 20.0F;
@@ -483,22 +489,22 @@ public class ArmorHudManager {
                warningGlow = !warningGlow;
             }
 
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
             if (this.subPanelAnim > 0.005F) {
                float subEase = 1.0F - (float)Math.pow(1.0F - this.subPanelAnim, 3.0);
                float subScale = 0.88F + 0.12F * subEase;
                float sX = pX + mainW + 5.0F;
                float sY = pY;
-               context.method_51448().method_22903();
+               context.pose().pushMatrix();
                if (subScale < 0.999F) {
                   float scx = sX + subW / 2.0F;
                   float scy = sY + subH / 2.0F;
-                  context.method_51448().method_46416(scx, scy, 0.0F);
-                  context.method_51448().method_22905(subScale, subScale, 1.0F);
-                  context.method_51448().method_46416(-scx, -scy, 0.0F);
+                  context.pose().translate(scx, scy);
+                  context.pose().scale(subScale, subScale);
+                  context.pose().translate(-scx, -scy);
                }
 
-               matrix = context.method_51448().method_23760().method_23761();
+               matrix = GuiCompat.matrix4f(context);
 
                for (int i = 6; i >= 0; i--) {
                   float progress = i / 6.0F;
@@ -561,14 +567,14 @@ public class ArmorHudManager {
                   }
                }
 
-               context.method_51448().method_22909();
+               context.pose().popMatrix();
             }
          }
       }
    }
 
    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-      boolean isEditing = this.client.field_1755 instanceof HudEditorScreen;
+      boolean isEditing = this.client.gui.screen() instanceof HudEditorScreen;
       InterfaceModule interfaceMod = getInterfaceModule();
       if (interfaceMod == null) {
          return false;
@@ -577,7 +583,7 @@ public class ArmorHudManager {
       if (isEditing || interfaceMod.isEnabled() && interfaceMod.armorHud.get()) {
          float w = this.getWidth();
          float h = this.getHeight();
-         double currentGuiScale = this.client.method_22683().method_4495();
+         double currentGuiScale = this.client.getWindow().getGuiScale();
          if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
          }
@@ -595,8 +601,8 @@ public class ArmorHudManager {
             boolean hasSub = this.activeSubmenu != ArmorHudManager.SubmenuType.NONE;
             float pX = this.x;
             float pY = this.y + h * scaleModifier + 6.0F;
-            float guiWidth = this.client.method_22683().method_4486();
-            float guiHeight = this.client.method_22683().method_4502();
+            float guiWidth = this.client.getWindow().getGuiScaledWidth();
+            float guiHeight = this.client.getWindow().getGuiScaledHeight();
             if (pX + mainW + (hasSub ? subW + 5.0F : 0.0F) > guiWidth - 6.0F) {
                pX = guiWidth - mainW - (hasSub ? subW + 5.0F : 0.0F) - 6.0F;
             }
@@ -644,14 +650,14 @@ public class ArmorHudManager {
 
    public void onMouseDragged(double mouseX, double mouseY, int button) {
       if (this.dragging && button == 0) {
-         double currentGuiScale = this.client.method_22683().method_4495();
+         double currentGuiScale = this.client.getWindow().getGuiScale();
          if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
          }
 
          float scaleModifier = (float)(2.0 / currentGuiScale);
-         float screenW = this.client.method_22683().method_4486();
-         float screenH = this.client.method_22683().method_4502();
+         float screenW = this.client.getWindow().getGuiScaledWidth();
+         float screenH = this.client.getWindow().getGuiScaledHeight();
          float w = this.getWidth();
          float h = this.getHeight();
          float targetX = (float)(mouseX - this.dragOffsetX);

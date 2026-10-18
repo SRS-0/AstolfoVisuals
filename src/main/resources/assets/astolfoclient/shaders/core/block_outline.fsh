@@ -1,24 +1,28 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-in vec4 vertexColor;
-in vec2 texCoord0;
-in vec3 worldPos;
+#include <minecraft:dynamictransforms.glsl>
+layout(std140) uniform CustomUniforms {
+    float uTime;
+    vec3 uColor1;
+    vec3 uColor2;
+    vec3 uBlockCenter;
+    float uGlowIntensity;
+    float uPulseSpeed;
+    float uPulseWidth;
+    float uDistortion;
+    float uChromatic;
+    float uFadeAlpha;
+    float uFillAlpha;
+    int uMode;
+};
 
-uniform vec4 ColorModulator;
-uniform float uTime;
-uniform vec3 uColor1;
-uniform vec3 uColor2;
-uniform vec3 uBlockCenter;
-uniform float uGlowIntensity;
-uniform float uPulseSpeed;
-uniform float uPulseWidth;
-uniform float uDistortion;
-uniform float uChromatic;
-uniform float uFadeAlpha;
-uniform float uFillAlpha;
-uniform int uMode;
+layout(location = 0) in vec4 vertexColor;
+layout(location = 1) in vec2 texCoord0;
+layout(location = 2) in vec3 worldPos;
 
-out vec4 fragColor;
+
+layout(location = 0) out vec4 fragColor;
 
 // Convert HSV to RGB for Rainbow mode
 vec3 hsv2rgb(vec3 c) {

@@ -21,7 +21,7 @@ import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.class_310;
+import net.minecraft.client.Minecraft;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.hud.ArmorHudManager;
 import xyz.angames.astolfoclient.client.hud.LogoRenderer;
@@ -138,7 +138,7 @@ public class ConfigManager {
                return false;
             }
 
-            class_310.method_1551().execute(() -> {
+            Minecraft.getInstance().execute(() -> {
                this.applyModuleData(config);
                if (config.specialBinds != null) {
                   AstolfoclientClient.clickGuiKeyCode = config.specialBinds.getOrDefault("clickgui", 260);

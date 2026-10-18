@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
-import net.minecraft.class_640;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.util.FriendManager;
@@ -37,7 +37,7 @@ public class FriendCommand extends Command {
                } else {
                   FriendManager.addFriend(nameToAdd);
                   AstolfoclientClient.configManager.saveFriends();
-                  sendMessage(class_124.field_1060 + "Added " + class_124.field_1075 + nameToAdd + class_124.field_1060 + " to friends list.");
+                  sendMessage(ChatFormatting.GREEN + "Added " + ChatFormatting.AQUA + nameToAdd + ChatFormatting.GREEN + " to friends list.");
                }
                break;
             case "remove":
@@ -52,24 +52,24 @@ public class FriendCommand extends Command {
                } else {
                   FriendManager.removeFriend(nameToRemove);
                   AstolfoclientClient.configManager.saveFriends();
-                  sendMessage(class_124.field_1061 + "Removed " + class_124.field_1075 + nameToRemove + class_124.field_1061 + " from friends list.");
+                  sendMessage(ChatFormatting.RED + "Removed " + ChatFormatting.AQUA + nameToRemove + ChatFormatting.RED + " from friends list.");
                }
                break;
             case "list":
                if (FriendManager.getFriends().isEmpty()) {
-                  sendMessage(class_124.field_1080 + "Your friends list is currently empty.");
+                  sendMessage(ChatFormatting.GRAY + "Your friends list is currently empty.");
                } else {
-                  sendMessage(class_124.field_1065 + "--- Friends List ---");
+                  sendMessage(ChatFormatting.GOLD + "--- Friends List ---");
 
                   for (String friend : FriendManager.getFriends()) {
-                     sendMessage(class_124.field_1080 + "- " + class_124.field_1075 + friend);
+                     sendMessage(ChatFormatting.GRAY + "- " + ChatFormatting.AQUA + friend);
                   }
                }
                break;
             case "clear":
                FriendManager.clearFriends();
                AstolfoclientClient.configManager.saveFriends();
-               sendMessage(class_124.field_1060 + "Cleared all friends from the list.");
+               sendMessage(ChatFormatting.GREEN + "Cleared all friends from the list.");
                break;
             default:
                this.sendError("Unknown action: " + action);
@@ -85,13 +85,13 @@ public class FriendCommand extends Command {
 
       if (args.length == 2) {
          if (args[0].equalsIgnoreCase("add")) {
-            if (this.mc.method_1562() != null) {
+            if (this.mc.getConnection() != null) {
                return this.mc
-                  .method_1562()
-                  .method_2880()
+                  .getConnection()
+                  .getOnlinePlayers()
                   .stream()
-                  .<GameProfile>map(class_640::method_2966)
-                  .map(profile -> profile.getName())
+                  .<GameProfile>map(PlayerInfo::getProfile)
+                  .map(profile -> profile.name())
                   .filter(name -> !FriendManager.isFriend(name))
                   .collect(Collectors.toList());
             }

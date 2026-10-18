@@ -1,17 +1,21 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-in vec4 vertexColor;
-in vec2 texCoord0;
-in vec3 worldPos;
+layout(std140) uniform CustomUniforms {
+    vec2 uResolution;
+    float uTime;
+    vec3 uColor1;
+    vec3 uColor2;
+    vec3 uBlockCenter;
+    float uAlphaMode;
+};
 
-uniform vec2 uResolution;
-uniform float uTime;
-uniform vec3 uColor1;
-uniform vec3 uColor2;
-uniform vec3 uBlockCenter;
-uniform float uAlphaMode;
+layout(location = 0) in vec4 vertexColor;
+layout(location = 1) in vec2 texCoord0;
+layout(location = 2) in vec3 worldPos;
 
-out vec4 fragColor;
+
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     // Wrap time to avoid float precision issues over long runs (infinite loop safety)

@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -10,11 +11,11 @@ import dev.sxmurxy.mre.msdf.MsdfFont;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1044;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_3532;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -27,7 +28,7 @@ public class MusicHudManager {
    private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
    private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
    private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
-   private static final class_2960 LOGO_TEXTURE = class_2960.method_60655("astolfoclient", "textures/gui/logo.png");
+   private static final Identifier LOGO_TEXTURE = Identifier.fromNamespaceAndPath("astolfoclient", "textures/gui/logo.png");
    public float x = 10.0F;
    public float y = 150.0F;
    private boolean dragging = false;
@@ -49,13 +50,13 @@ public class MusicHudManager {
    private int lyricsOffset = 0;
    private long lastUpdateTimeNs = -1L;
 
-   public void render(class_332 context, float tickDelta) {
-      class_310 client = class_310.method_1551();
-      if (client.field_1687 != null && AstolfoclientClient.moduleManager != null) {
+   public void render(GuiGraphicsExtractor context, float tickDelta) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.level != null && AstolfoclientClient.moduleManager != null) {
          InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
          if (interfaceMod != null) {
             boolean isSettingEnabled = interfaceMod.musicHud.get();
-            boolean isEditing = client.field_1755 instanceof HudEditorScreen;
+            boolean isEditing = client.gui.screen() instanceof HudEditorScreen;
             boolean shouldShow = interfaceMod.isEnabled() && isSettingEnabled || isEditing;
             long nowNs = System.nanoTime();
             if (this.lastUpdateTimeNs == -1L) {
@@ -117,13 +118,13 @@ public class MusicHudManager {
                   extendingRatio = (this.currentWidth - 69.0F) / 22.0F;
                }
 
-               extendingRatio = class_3532.method_15363(extendingRatio, 0.0F, 1.0F);
+               extendingRatio = Mth.clamp(extendingRatio, 0.0F, 1.0F);
                float scaleModifier = this.getScaleModifier();
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(this.x, this.y, 0.0F);
-               context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-               context.method_51448().method_46416(-this.x, -this.y, 0.0F);
-               Matrix4f matrix = context.method_51448().method_23760().method_23761();
+               context.pose().pushMatrix();
+               context.pose().translate(this.x, this.y);
+               context.pose().scale(scaleModifier, scaleModifier);
+               context.pose().translate(-this.x, -this.y);
+               Matrix4f matrix = GuiCompat.matrix4f(context);
                long themeTime = (long)(nowNs / 1000000.0);
                Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
                Color whiteText = GuiUtils.withAlpha(Color.WHITE, this.animationProgress);
@@ -143,12 +144,12 @@ public class MusicHudManager {
                float artCenterX = artworkX + artworkSize / 2.0F;
                float artCenterY = artworkY + artworkSize / 2.0F;
                this.drawIconGlowShadow(matrix, artCenterX, artCenterY, artworkSize / 2.0F, themeColor, 0.12F * this.animationProgress);
-               class_2960 artIdent = MusicTracker.getArtworkTexture(artworkBytes);
+               Identifier artIdent = MusicTracker.getArtworkTexture(artworkBytes);
                if (artIdent == null) {
                   artIdent = LOGO_TEXTURE;
                }
 
-               class_1044 artTexture = client.method_1531().method_4619(artIdent);
+               AbstractTexture artTexture = client.getTextureManager().getTexture(artIdent);
                if (artTexture != null) {
                   Builder.texture()
                      .size(new SizeState(artworkSize, artworkSize))
@@ -177,7 +178,7 @@ public class MusicHudManager {
 
                this.drawClippedText(bold != null ? bold : semibold, matrix, title, textX, titleY, whiteText, titleSize, maxTextW);
                if (extendingRatio > 0.4F) {
-                  float artistAlpha = class_3532.method_15363((extendingRatio - 0.4F) / 0.6F, 0.0F, 1.0F) * this.animationProgress;
+                  float artistAlpha = Mth.clamp((extendingRatio - 0.4F) / 0.6F, 0.0F, 1.0F) * this.animationProgress;
                   Color artistColor = GuiUtils.withAlpha(grayText, artistAlpha);
                   this.drawClippedText(medium != null ? medium : semibold, matrix, artist, textX, this.y + 31.5F, artistColor, artistSize, maxTextW);
                }
@@ -200,7 +201,7 @@ public class MusicHudManager {
                }
 
                if (extendingRatio > 0.6F) {
-                  float expAlpha = class_3532.method_15363((extendingRatio - 0.6F) / 0.4F, 0.0F, 1.0F) * this.animationProgress;
+                  float expAlpha = Mth.clamp((extendingRatio - 0.6F) / 0.4F, 0.0F, 1.0F) * this.animationProgress;
                   float barWidth = this.lerp(0.0F, 78.0F, extendingRatio);
                   float barX = this.x + (this.currentWidth - barWidth) / 2.0F;
                   float barY = this.y + this.currentHeight - 15.0F;
@@ -249,8 +250,8 @@ public class MusicHudManager {
 
                if (extendingRatio > 0.7F) {
                   float controlAlpha = (extendingRatio - 0.7F) / 0.3F * this.animationProgress;
-                  float screenMouseX = (float)(client.field_1729.method_1603() * client.method_22683().method_4486() / client.method_22683().method_4480());
-                  float screenMouseY = (float)(client.field_1729.method_1604() * client.method_22683().method_4502() / client.method_22683().method_4507());
+                  float screenMouseX = (float)(client.mouseHandler.xpos() * client.getWindow().getGuiScaledWidth() / client.getWindow().getScreenWidth());
+                  float screenMouseY = (float)(client.mouseHandler.ypos() * client.getWindow().getGuiScaledHeight() / client.getWindow().getScreenHeight());
                   float mouseScaledX = (screenMouseX - this.x) / scaleModifier + this.x;
                   float mouseScaledY = (screenMouseY - this.y) / scaleModifier + this.y;
                   float buttonY = this.y + this.currentHeight - 9.5F;
@@ -259,37 +260,37 @@ public class MusicHudManager {
                   this.hoverPause = this.hoverPause + ((isPlayHovered ? 1.0F : 0.0F) - this.hoverPause) * (float)(1.0 - Math.exp(-15.0 * deltaSeconds));
                   Color playColor = GuiUtils.withAlpha(whiteText, (0.6F + 0.4F * this.hoverPause) * controlAlpha);
                   String playSymbol = isPlaying ? "⏸" : "▶";
-                  context.method_51448().method_22903();
-                  context.method_51448().method_46416(playX + 5.0F, buttonY + 4.5F, 0.0F);
-                  context.method_51448().method_22905(0.85F, 0.85F, 1.0F);
-                  context.method_51448().method_46416(-(playX + 5.0F), -(buttonY + 4.5F), 0.0F);
-                  float symW = client.field_1772.method_1727(playSymbol);
-                  context.method_51433(client.field_1772, playSymbol, (int)(playX + 5.0F - symW / 2.0F), (int)(buttonY + 1.5F), playColor.getRGB(), false);
-                  context.method_51448().method_22909();
+                  context.pose().pushMatrix();
+                  context.pose().translate(playX + 5.0F, buttonY + 4.5F);
+                  context.pose().scale(0.85F, 0.85F);
+                  context.pose().translate(-(playX + 5.0F), -(buttonY + 4.5F));
+                  float symW = client.font.width(playSymbol);
+                  context.text(client.font, playSymbol, (int)(playX + 5.0F - symW / 2.0F), (int)(buttonY + 1.5F), playColor.getRGB(), false);
+                  context.pose().popMatrix();
                   float repX = this.x + 10.0F;
                   boolean isRepHovered = this.isHovered(repX, buttonY, 8.0, 8.0, mouseScaledX, mouseScaledY);
                   Color repColor = MusicTracker.getCycle() > 0 ? themeColor : grayText;
                   repColor = GuiUtils.withAlpha(repColor, (0.7F + 0.3F * (isRepHovered ? 1.0F : 0.0F)) * controlAlpha);
                   String repText = MusicTracker.getCycle() == 2 ? "⟳¹" : "⟳";
-                  context.method_51448().method_22903();
-                  context.method_51448().method_46416(repX + 4.0F, buttonY + 4.5F, 0.0F);
-                  context.method_51448().method_22905(0.8F, 0.8F, 1.0F);
-                  context.method_51448().method_46416(-(repX + 4.0F), -(buttonY + 4.5F), 0.0F);
-                  float repW = client.field_1772.method_1727(repText);
-                  context.method_51433(client.field_1772, repText, (int)(repX + 4.0F - repW / 2.0F), (int)(buttonY + 1.5F), repColor.getRGB(), false);
-                  context.method_51448().method_22909();
+                  context.pose().pushMatrix();
+                  context.pose().translate(repX + 4.0F, buttonY + 4.5F);
+                  context.pose().scale(0.8F, 0.8F);
+                  context.pose().translate(-(repX + 4.0F), -(buttonY + 4.5F));
+                  float repW = client.font.width(repText);
+                  context.text(client.font, repText, (int)(repX + 4.0F - repW / 2.0F), (int)(buttonY + 1.5F), repColor.getRGB(), false);
+                  context.pose().popMatrix();
                   float lyrX = this.x + this.currentWidth - 18.0F;
                   boolean isLyrHovered = this.isHovered(lyrX, buttonY, 8.0, 8.0, mouseScaledX, mouseScaledY);
                   Color lyrColor = this.showLyrics ? themeColor : grayText;
                   lyrColor = GuiUtils.withAlpha(lyrColor, (0.7F + 0.3F * (isLyrHovered ? 1.0F : 0.0F)) * controlAlpha);
                   String lyrText = "\ud83d\udcdd";
-                  context.method_51448().method_22903();
-                  context.method_51448().method_46416(lyrX + 4.0F, buttonY + 4.5F, 0.0F);
-                  context.method_51448().method_22905(0.8F, 0.8F, 1.0F);
-                  context.method_51448().method_46416(-(lyrX + 4.0F), -(buttonY + 4.5F), 0.0F);
-                  float lyrW = client.field_1772.method_1727(lyrText);
-                  context.method_51433(client.field_1772, lyrText, (int)(lyrX + 4.0F - lyrW / 2.0F), (int)(buttonY + 1.5F), lyrColor.getRGB(), false);
-                  context.method_51448().method_22909();
+                  context.pose().pushMatrix();
+                  context.pose().translate(lyrX + 4.0F, buttonY + 4.5F);
+                  context.pose().scale(0.8F, 0.8F);
+                  context.pose().translate(-(lyrX + 4.0F), -(buttonY + 4.5F));
+                  float lyrW = client.font.width(lyrText);
+                  context.text(client.font, lyrText, (int)(lyrX + 4.0F - lyrW / 2.0F), (int)(buttonY + 1.5F), lyrColor.getRGB(), false);
+                  context.pose().popMatrix();
                   if (medium != null) {
                      Builder.text()
                         .font(medium)
@@ -331,7 +332,7 @@ public class MusicHudManager {
 
                this.totalHeight = this.currentHeight;
                this.lastFrameTotalMaxWidth = this.currentWidth;
-               context.method_51448().method_22909();
+               context.pose().popMatrix();
             }
          }
       }
@@ -390,7 +391,7 @@ public class MusicHudManager {
    }
 
    private float lerp(float start, float end, float delta) {
-      return start + (end - start) * class_3532.method_15363(delta, 0.0F, 1.0F);
+      return start + (end - start) * Mth.clamp(delta, 0.0F, 1.0F);
    }
 
    private String formatTime(long totalSeconds) {
@@ -447,8 +448,8 @@ public class MusicHudManager {
    }
 
    private float getScaleModifier() {
-      class_310 mc = class_310.method_1551();
-      double currentGuiScale = mc.method_22683().method_4495();
+      Minecraft mc = Minecraft.getInstance();
+      double currentGuiScale = mc.getWindow().getGuiScale();
       if (currentGuiScale <= 0.0) {
          currentGuiScale = 2.0;
       }
@@ -457,8 +458,8 @@ public class MusicHudManager {
    }
 
    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-      class_310 mc = class_310.method_1551();
-      boolean isEditing = mc.field_1755 instanceof HudEditorScreen;
+      Minecraft mc = Minecraft.getInstance();
+      boolean isEditing = mc.gui.screen() instanceof HudEditorScreen;
       InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
       boolean isSettingEnabled = interfaceMod != null && interfaceMod.musicHud.get();
       if (isEditing || interfaceMod != null && isSettingEnabled && interfaceMod.isEnabled()) {
@@ -514,10 +515,10 @@ public class MusicHudManager {
 
    public void onMouseDragged(double mouseX, double mouseY, int button) {
       if (this.dragging && button == 0) {
-         class_310 mc = class_310.method_1551();
+         Minecraft mc = Minecraft.getInstance();
          float scaleModifier = this.getScaleModifier();
-         float screenW = mc.method_22683().method_4486();
-         float screenH = mc.method_22683().method_4502();
+         float screenW = mc.getWindow().getGuiScaledWidth();
+         float screenH = mc.getWindow().getGuiScaledHeight();
          float effectiveW = this.lastFrameTotalMaxWidth * scaleModifier;
          float effectiveH = this.totalHeight * scaleModifier;
          float targetX = (float)(mouseX - this.dragOffsetX);

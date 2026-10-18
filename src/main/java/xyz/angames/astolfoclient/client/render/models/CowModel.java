@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.render.models;
 
+import xyz.angames.astolfoclient.client.compat.Vtx;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -10,21 +11,21 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_10055;
-import net.minecraft.class_1921;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_4587;
-import net.minecraft.class_4588;
-import net.minecraft.class_4597;
-import net.minecraft.class_4608;
-import net.minecraft.class_7833;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 
 @Environment(EnvType.CLIENT)
 public class CowModel {
-   private static final class_2960 MODEL_LOCATION = class_2960.method_60655("astolfoclient", "models/cow_mesh.json");
-   private static final class_2960 TEXTURE_LOCATION = class_2960.method_60655("astolfoclient", "textures/models/cow.png");
+   private static final Identifier MODEL_LOCATION = Identifier.fromNamespaceAndPath("astolfoclient", "models/cow_mesh.json");
+   private static final Identifier TEXTURE_LOCATION = Identifier.fromNamespaceAndPath("astolfoclient", "textures/models/cow.png");
    private static final float MODEL_SCALE = 0.48F;
    private final List<CowModel.MeshTriangle> triangles = new ArrayList<>();
    private boolean loaded;
@@ -34,33 +35,32 @@ public class CowModel {
    private float minY;
    private float bodyPivotY;
 
-   public void render(class_4587 matrixStack, class_4597 vertexConsumers, class_10055 state, int light) {
+   public void render(PoseStack matrixStack, SubmitNodeCollector collector, AvatarRenderState state, int light) {
       this.ensureLoaded();
       if (!this.failed && !this.triangles.isEmpty()) {
-         float ageInTicks = state.field_53328;
-         float walkAmount = Math.min(state.field_53451, 1.0F);
-         float bob = (float)Math.sin(state.field_53450 * 0.6662F) * walkAmount * 0.035F + (float)Math.sin(ageInTicks * 0.08F) * 0.01F;
+         float ageInTicks = state.ageInTicks;
+         float walkAmount = Math.min(state.walkAnimationSpeed, 1.0F);
+         float bob = (float)Math.sin(state.walkAnimationPos * 0.6662F) * walkAmount * 0.035F + (float)Math.sin(ageInTicks * 0.08F) * 0.01F;
          float sway = (float)Math.sin(ageInTicks * 0.05F) * 0.9F;
          float pitch = -2.0F + walkAmount * 5.5F + (float)Math.cos(ageInTicks * 0.07F) * 0.6F;
-         class_4588 buffer = vertexConsumers.getBuffer(class_1921.method_23580(TEXTURE_LOCATION));
-         matrixStack.method_22903();
-         matrixStack.method_22904(0.0, bob, 0.0);
-         matrixStack.method_22907(class_7833.field_40716.rotationDegrees(state.field_53446));
-         matrixStack.method_22905(0.48F, 0.48F, 0.48F);
-         matrixStack.method_46416(this.centerX, this.bodyPivotY, this.centerZ);
-         matrixStack.method_22907(class_7833.field_40718.rotationDegrees(sway));
-         matrixStack.method_22907(class_7833.field_40714.rotationDegrees(pitch));
-         matrixStack.method_46416(-this.centerX, -this.bodyPivotY, -this.centerZ);
-         matrixStack.method_46416(-this.centerX, -this.minY, -this.centerZ);
-         this.renderTriangles(matrixStack, buffer, light);
-         matrixStack.method_22909();
+         matrixStack.pushPose();
+         matrixStack.translate(0.0, bob, 0.0);
+         matrixStack.rotate(Axis.YP.rotationDegrees(state.bodyRot));
+         matrixStack.scale(0.48F, 0.48F, 0.48F);
+         matrixStack.translate(this.centerX, this.bodyPivotY, this.centerZ);
+         matrixStack.rotate(Axis.ZP.rotationDegrees(sway));
+         matrixStack.rotate(Axis.XP.rotationDegrees(pitch));
+         matrixStack.translate(-this.centerX, -this.bodyPivotY, -this.centerZ);
+         matrixStack.translate(-this.centerX, -this.minY, -this.centerZ);
+         collector.submitCustomGeometry(matrixStack, RenderTypes.entityTranslucent(TEXTURE_LOCATION), (pose, buffer) -> this.renderTriangles(pose.pose(), buffer, light));
+         matrixStack.popPose();
       }
    }
 
    private void ensureLoaded() {
       if (!this.loaded && !this.failed) {
          try (
-            InputStream stream = class_310.method_1551().method_1478().getResourceOrThrow(MODEL_LOCATION).method_14482();
+            InputStream stream = Minecraft.getInstance().getResourceManager().getResourceOrThrow(MODEL_LOCATION).open();
             InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
          ) {
             this.parse(JsonParser.parseReader(reader).getAsJsonObject());
@@ -114,8 +114,7 @@ public class CowModel {
       );
    }
 
-   private void renderTriangles(class_4587 matrixStack, class_4588 buffer, int light) {
-      Matrix4f matrix = matrixStack.method_23760().method_23761();
+   private void renderTriangles(Matrix4f matrix, VertexConsumer buffer, int light) {
 
       for (CowModel.MeshTriangle triangle : this.triangles) {
          this.putVertex(buffer, matrix, triangle.a, light);
@@ -124,13 +123,13 @@ public class CowModel {
       }
    }
 
-   private void putVertex(class_4588 buffer, Matrix4f matrix, CowModel.MeshVertex vertex, int light) {
-      buffer.method_22918(matrix, vertex.x, vertex.y, vertex.z)
-         .method_1336(255, 255, 255, 255)
-         .method_22913(vertex.u, vertex.v)
-         .method_22922(class_4608.field_21444)
-         .method_60803(light)
-         .method_22914(0.0F, 1.0F, 0.0F);
+   private void putVertex(VertexConsumer buffer, Matrix4f matrix, CowModel.MeshVertex vertex, int light) {
+      Vtx.vertex(buffer, matrix, vertex.x, vertex.y, vertex.z)
+         .setColor(255, 255, 255, 255)
+         .setUv(vertex.u, vertex.v)
+         .setOverlay(OverlayTexture.NO_OVERLAY)
+         .setLight(light)
+         .setNormal(0.0F, 1.0F, 0.0F);
    }
 
    @Environment(EnvType.CLIENT)

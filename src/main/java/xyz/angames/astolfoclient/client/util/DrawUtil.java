@@ -7,13 +7,13 @@ import dev.sxmurxy.mre.builders.states.SizeState;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_4587;
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.joml.Matrix4f;
 
 @Environment(EnvType.CLIENT)
 public final class DrawUtil {
    public static void drawLiquidRect(
-      class_4587 matrices,
+      PoseStack matrices,
       float x,
       float y,
       float width,
@@ -29,7 +29,7 @@ public final class DrawUtil {
       float distortStrength,
       float blurRadius
    ) {
-      Matrix4f matrix = matrices.method_23760().method_23761();
+      Matrix4f matrix = matrices.last().pose();
       Color awtColor = new Color(color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha());
       QuadRadiusState radiusState = new QuadRadiusState(
          borderRadius.topLeftRadius(), borderRadius.topRightRadius(), borderRadius.bottomLeftRadius(), borderRadius.bottomRightRadius()

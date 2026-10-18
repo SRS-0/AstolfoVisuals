@@ -4,15 +4,15 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1297;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 
 @Environment(EnvType.CLIENT)
 public class TargetEspManager {
    public static final long LIFESPAN = 450L;
-   private final Map<class_1297, TargetEspEffect> effects = new ConcurrentHashMap<>();
+   private final Map<Entity, TargetEspEffect> effects = new ConcurrentHashMap<>();
 
-   public void addEffect(class_1297 target) {
+   public void addEffect(Entity target) {
       if (target != null && !TargetUtils.isInvisible(target)) {
          this.effects.computeIfAbsent(target, TargetEspEffect::new).registerHit();
       }
@@ -23,13 +23,13 @@ public class TargetEspManager {
          .values()
          .removeIf(
             effect -> System.currentTimeMillis() - effect.lastHitTime > 450L
-               || effect.target.method_31481()
-               || !effect.target.method_5805()
+               || effect.target.isRemoved()
+               || !effect.target.isAlive()
                || TargetUtils.isInvisible(effect.target)
          );
    }
 
-   public Map<class_1297, TargetEspEffect> getEffects() {
+   public Map<Entity, TargetEspEffect> getEffects() {
       return this.effects;
    }
 }

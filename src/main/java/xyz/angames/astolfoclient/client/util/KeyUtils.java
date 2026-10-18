@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_3675.class_306;
-import net.minecraft.class_3675.class_307;
+import com.mojang.blaze3d.platform.InputConstants.Key;
+import com.mojang.blaze3d.platform.InputConstants.Type;
 
 @Environment(EnvType.CLIENT)
 public class KeyUtils {
@@ -34,8 +34,8 @@ public class KeyUtils {
 
       for (int i = 0; i < 350; i++) {
          try {
-            class_306 key = class_307.field_1668.method_1447(i);
-            String name = key.method_1441();
+            Key key = Type.KEYBOARD.getOrCreate(xyz.angames.astolfoclient.client.compat.KeyMap.glfwToSdl(i));
+            String name = key.getName();
             if (name != null && !name.isEmpty() && !name.contains("unknown")) {
                String simpleName = name.replace("key.keyboard.", "").toUpperCase();
                keyNameToCode.put(simpleName, i);

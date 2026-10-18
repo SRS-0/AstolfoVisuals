@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.gui.clickgui;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -10,7 +11,7 @@ import dev.sxmurxy.mre.msdf.MsdfFont;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_332;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 
@@ -32,13 +33,13 @@ public class ThemeSelectorPanel {
       this.height = 40.0F;
    }
 
-   public void render(class_332 context, int mouseX, int mouseY, float delta) {
+   public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
       if (this.isDragging) {
          this.x = mouseX - this.dragOffsetX;
          this.y = mouseY - this.dragOffsetY;
       }
 
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
+      Matrix4f matrix = GuiCompat.matrix4f(context);
       Builder.blur()
          .size(new SizeState(this.width, this.height))
          .radius(new QuadRadiusState(6.0F))

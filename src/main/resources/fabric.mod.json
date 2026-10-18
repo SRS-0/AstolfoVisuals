@@ -27,7 +27,7 @@
   "depends": {
     "fabricloader": "\u003e\u003d0.19.3",
     "fabric-api": "*",
-    "minecraft": "1.21.4"
+    "minecraft": "~26.3"
   },
   "suggests": {
     "modmenu": "*"

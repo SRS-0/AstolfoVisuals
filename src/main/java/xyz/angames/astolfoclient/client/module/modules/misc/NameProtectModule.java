@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_2588;
-import net.minecraft.class_310;
-import net.minecraft.class_5250;
-import net.minecraft.class_7417;
-import net.minecraft.class_8828.class_2585;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.contents.PlainTextContents.LiteralContents;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.util.FriendManager;
@@ -45,7 +45,7 @@ public class NameProtectModule extends Module {
       }
    }
 
-   public static class_2561 getProtectedText(class_2561 original) {
+   public static Component getProtectedText(Component original) {
       if (original == null) {
          return null;
       }
@@ -66,30 +66,30 @@ public class NameProtectModule extends Module {
       }
    }
 
-   private static class_2561 protectTree(class_2561 text) {
+   private static Component protectTree(Component text) {
       if (text == null) {
          return null;
       }
 
-      class_7417 content = text.method_10851();
-      class_7417 newContent = content;
+      ComponentContents content = text.getContents();
+      ComponentContents newContent = content;
       boolean contentChanged = false;
-      if (content instanceof class_2585 literal) {
-         String str = literal.comp_737();
+      if (content instanceof LiteralContents literal) {
+         String str = literal.text();
          String replaced = replaceTargets(str);
          if (!replaced.equals(str)) {
-            newContent = class_2561.method_43470(replaced).method_10851();
+            newContent = Component.literal(replaced).getContents();
             contentChanged = true;
          }
-      } else if (content instanceof class_2588 translatableContent) {
-         Object[] args = translatableContent.method_11023();
+      } else if (content instanceof TranslatableContents translatableContent) {
+         Object[] args = translatableContent.getArgs();
          Object[] newArgs = new Object[args.length];
          boolean argsChanged = false;
 
          for (int i = 0; i < args.length; i++) {
             Object arg = args[i];
-            if (arg instanceof class_2561 argText) {
-               class_2561 protectedArg = protectTree(argText);
+            if (arg instanceof Component argText) {
+               Component protectedArg = protectTree(argText);
                newArgs[i] = protectedArg;
                if (protectedArg != argText) {
                   argsChanged = true;
@@ -106,17 +106,17 @@ public class NameProtectModule extends Module {
          }
 
          if (argsChanged) {
-            newContent = new class_2588(translatableContent.method_11022(), translatableContent.method_48323(), newArgs);
+            newContent = new TranslatableContents(translatableContent.getKey(), translatableContent.getFallback(), newArgs);
             contentChanged = true;
          }
       }
 
-      List<class_2561> siblings = text.method_10855();
-      List<class_2561> newSiblings = new ArrayList<>(siblings.size());
+      List<Component> siblings = text.getSiblings();
+      List<Component> newSiblings = new ArrayList<>(siblings.size());
       boolean siblingsChanged = false;
 
-      for (class_2561 sibling : siblings) {
-         class_2561 protectedSibling = protectTree(sibling);
+      for (Component sibling : siblings) {
+         Component protectedSibling = protectTree(sibling);
          newSiblings.add(protectedSibling);
          if (protectedSibling != sibling) {
             siblingsChanged = true;
@@ -127,10 +127,10 @@ public class NameProtectModule extends Module {
          return text;
       }
 
-      class_5250 result = class_5250.method_43477(newContent).method_10862(text.method_10866());
+      MutableComponent result = MutableComponent.create(newContent).setStyle(text.getStyle());
 
-      for (class_2561 sibling : newSiblings) {
-         result.method_10852(sibling);
+      for (Component sibling : newSiblings) {
+         result.append(sibling);
       }
 
       return result;
@@ -138,9 +138,9 @@ public class NameProtectModule extends Module {
 
    private static List<NameProtectModule.TargetEntry> getActiveTargets() {
       List<NameProtectModule.TargetEntry> targets = new ArrayList<>();
-      class_310 client = class_310.method_1551();
-      if (client.method_1548() != null && client.method_1548().method_1676() != null) {
-         String myName = client.method_1548().method_1676().trim();
+      Minecraft client = Minecraft.getInstance();
+      if (client.getUser() != null && client.getUser().getName() != null) {
+         String myName = client.getUser().getName().trim();
          if (!myName.isEmpty() && !myName.equalsIgnoreCase("astolfoclient.top")) {
             targets.add(new NameProtectModule.TargetEntry(myName, "astolfoclient.top"));
          }

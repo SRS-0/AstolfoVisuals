@@ -3,7 +3,7 @@ package xyz.angames.astolfoclient.client.command.commands;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 
@@ -27,11 +27,11 @@ public class ConfigCommand extends Command {
                }
 
                String saveName = args[1];
-               sendMessage(class_124.field_1080 + "Saving local config...");
+               sendMessage(ChatFormatting.GRAY + "Saving local config...");
                new Thread(() -> {
                   String error = AstolfoclientClient.configManager.saveConfig(saveName);
                   if (error == null) {
-                     sendMessage(class_124.field_1060 + "Successfully saved config: " + class_124.field_1075 + saveName);
+                     sendMessage(ChatFormatting.GREEN + "Successfully saved config: " + ChatFormatting.AQUA + saveName);
                   } else {
                      this.sendError("Failed to save config: " + error);
                   }
@@ -44,26 +44,26 @@ public class ConfigCommand extends Command {
                }
 
                String loadName = args[1];
-               sendMessage(class_124.field_1080 + "Loading local config...");
+               sendMessage(ChatFormatting.GRAY + "Loading local config...");
                new Thread(() -> {
                   if (AstolfoclientClient.configManager.loadConfig(loadName)) {
-                     sendMessage(class_124.field_1060 + "Successfully loaded config: " + class_124.field_1075 + loadName);
+                     sendMessage(ChatFormatting.GREEN + "Successfully loaded config: " + ChatFormatting.AQUA + loadName);
                   } else {
                      this.sendError("Could not find a config named: " + loadName);
                   }
                }).start();
                break;
             case "list":
-               sendMessage(class_124.field_1080 + "Fetching your local configs...");
+               sendMessage(ChatFormatting.GRAY + "Fetching your local configs...");
                new Thread(() -> {
                   List<String> configs = AstolfoclientClient.configManager.getLocalConfigs();
                   if (configs.isEmpty()) {
-                     sendMessage(class_124.field_1080 + "You have no saved configs.");
+                     sendMessage(ChatFormatting.GRAY + "You have no saved configs.");
                   } else {
-                     sendMessage(class_124.field_1065 + "--- Your Configs ---");
+                     sendMessage(ChatFormatting.GOLD + "--- Your Configs ---");
 
                      for (String cfg : configs) {
-                        sendMessage(class_124.field_1080 + "- " + class_124.field_1075 + cfg);
+                        sendMessage(ChatFormatting.GRAY + "- " + ChatFormatting.AQUA + cfg);
                      }
                   }
                }).start();
@@ -80,10 +80,10 @@ public class ConfigCommand extends Command {
                   return;
                }
 
-               sendMessage(class_124.field_1080 + "Deleting config: " + deleteName + "...");
+               sendMessage(ChatFormatting.GRAY + "Deleting config: " + deleteName + "...");
                new Thread(() -> {
                   if (AstolfoclientClient.configManager.deleteConfig(deleteName)) {
-                     sendMessage(class_124.field_1060 + "Successfully deleted config: " + class_124.field_1075 + deleteName);
+                     sendMessage(ChatFormatting.GREEN + "Successfully deleted config: " + ChatFormatting.AQUA + deleteName);
                   } else {
                      this.sendError("Failed to delete config: " + deleteName + ". Ensure it exists.");
                   }

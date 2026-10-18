@@ -1,6 +1,7 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.GlCompat;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -10,24 +11,24 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.AfterEntities;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.Last;
-import net.minecraft.class_1044;
-import net.minecraft.class_243;
-import net.minecraft.class_276;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_3532;
-import net.minecraft.class_6367;
+import xyz.angames.astolfoclient.client.compat.WorldRenderContext;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents.AfterEntities;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents.Last;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.world.phys.Vec3;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL20;
+import xyz.angames.astolfoclient.client.compat.GL20;
 import org.lwjgl.opengl.GL30;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -133,10 +134,10 @@ public class AmbientsModule extends Module {
    private int sphereBlurProgram = -1;
    private int sphereBlurVao = -1;
    private int sphereBlurVbo = -1;
-   private class_276 sphereBlurFbo = null;
-   private class_243 smoothSphereCenter = null;
+   private RenderTarget sphereBlurFbo = null;
+   private Vec3 smoothSphereCenter = null;
    private long lastSphereUpdateTime = 0L;
-   private class_276 saturationFbo = null;
+   private RenderTarget saturationFbo = null;
    private int saturationProgram = -1;
    private int saturationVao = -1;
    private int saturationVbo = -1;
@@ -415,7 +416,7 @@ public class AmbientsModule extends Module {
 
    private String loadShaderSource(String path) {
       try (
-         InputStream is = class_310.method_1551().method_1478().open(class_2960.method_60655("astolfoclient", path));
+         InputStream is = Minecraft.getInstance().getResourceManager().open(Identifier.fromNamespaceAndPath("astolfoclient", path));
          BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));
       ) {
          return reader.lines().collect(Collectors.joining("\n"));
@@ -522,7 +523,7 @@ public class AmbientsModule extends Module {
       if (context.matrixStack() != null) {
          int program = -1;
          boolean isTextureMode = false;
-         class_2960 textureId = null;
+         Identifier textureId = null;
          String mode = this.skyboxMode.get();
          if (mode.equals("Smoke")) {
             this.initSmokeShader();
@@ -560,12 +561,12 @@ public class AmbientsModule extends Module {
                textureIndex = 5;
             }
 
-            textureId = class_2960.method_60655("astolfoclient", "sky/" + textureIndex + ".png");
+            textureId = Identifier.fromNamespaceAndPath("astolfoclient", "sky/" + textureIndex + ".png");
          }
 
          if (program != -1) {
-            class_310 mc = class_310.method_1551();
-            if (mc.field_1724 != null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
                int prevProgram = GL11.glGetInteger(35725);
                int prevVao = GL11.glGetInteger(34229);
                int prevVbo = GL11.glGetInteger(34964);
@@ -578,7 +579,7 @@ public class AmbientsModule extends Module {
                RenderSystem.depthMask(false);
                RenderSystem.enableDepthTest();
                GL20.glUseProgram(program);
-               Matrix4f modelViewMat = new Matrix4f().rotation(new Quaternionf(context.camera().method_23767()).conjugate());
+               Matrix4f modelViewMat = new Matrix4f().rotation(new Quaternionf(context.camera().rotation()).conjugate());
                Matrix4f projMat = context.projectionMatrix();
                float[] modelViewArr = new float[16];
                modelViewMat.get(modelViewArr);
@@ -597,8 +598,8 @@ public class AmbientsModule extends Module {
                if (isTextureMode) {
                   if (textureId != null) {
                      RenderSystem.setShaderTexture(0, textureId);
-                     class_1044 texture = mc.method_1531().method_4619(textureId);
-                     int glId = texture != null ? texture.method_4624() : 0;
+                     AbstractTexture texture = mc.getTextureManager().getTexture(textureId);
+                     int glId = texture != null ? GlCompat.glId(texture.getTexture()) : 0;
                      RenderSystem.activeTexture(33984);
                      GL11.glBindTexture(3553, glId);
                   }
@@ -701,8 +702,8 @@ public class AmbientsModule extends Module {
          this.initSkyboxGeometry();
          this.initBlackShader();
          if (this.blackProgram != -1) {
-            class_310 mc = class_310.method_1551();
-            if (mc.field_1724 != null) {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
                int prevProgram = GL11.glGetInteger(35725);
                int prevVao = GL11.glGetInteger(34229);
                int prevVbo = GL11.glGetInteger(34964);
@@ -717,7 +718,7 @@ public class AmbientsModule extends Module {
                RenderSystem.enableDepthTest();
                RenderSystem.depthFunc(516);
                GL20.glUseProgram(this.blackProgram);
-               Matrix4f modelViewMat = new Matrix4f().rotation(new Quaternionf(context.camera().method_23767()).conjugate());
+               Matrix4f modelViewMat = new Matrix4f().rotation(new Quaternionf(context.camera().rotation()).conjugate());
                Matrix4f projMat = context.projectionMatrix();
                float[] modelViewArr = new float[16];
                modelViewMat.get(modelViewArr);
@@ -810,8 +811,8 @@ public class AmbientsModule extends Module {
 
    private void renderShaderFog(WorldRenderContext context) {
       if (context.matrixStack() != null) {
-         class_310 mc = class_310.method_1551();
-         if (mc.field_1724 != null) {
+         Minecraft mc = Minecraft.getInstance();
+         if (mc.player != null) {
             int program = -1;
             String mode = this.fogShaderMode.get();
             if (mode.equals("Mist")) {
@@ -847,7 +848,7 @@ public class AmbientsModule extends Module {
                RenderSystem.depthMask(false);
                RenderSystem.enableDepthTest();
                GL20.glUseProgram(program);
-               Matrix4f modelViewMat = new Matrix4f().rotation(new Quaternionf(context.camera().method_23767()).conjugate());
+               Matrix4f modelViewMat = new Matrix4f().rotation(new Quaternionf(context.camera().rotation()).conjugate());
                Matrix4f projMat = context.projectionMatrix();
                float[] modelViewArr = new float[16];
                modelViewMat.get(modelViewArr);
@@ -981,14 +982,14 @@ public class AmbientsModule extends Module {
    }
 
    private void ensureSphereBlurFbo(int width, int height) {
-      if (this.sphereBlurFbo == null || this.sphereBlurFbo.field_1482 != width || this.sphereBlurFbo.field_1481 != height) {
+      if (this.sphereBlurFbo == null || this.sphereBlurFbo.width != width || this.sphereBlurFbo.height != height) {
          if (this.sphereBlurFbo != null) {
-            this.sphereBlurFbo.method_1238();
+            this.sphereBlurFbo.destroyBuffers();
          }
 
-         this.sphereBlurFbo = new class_6367(width, height, false);
-         this.sphereBlurFbo.method_1236(0.0F, 0.0F, 0.0F, 0.0F);
-         GL11.glBindTexture(3553, this.sphereBlurFbo.method_30277());
+         this.sphereBlurFbo = GlCompat.newTarget(width, height, false);
+         GlCompat.setClearColor(this.sphereBlurFbo, 0.0F, 0.0F, 0.0F, 0.0F);
+         GL11.glBindTexture(3553, GlCompat.colorId(this.sphereBlurFbo));
          GL11.glTexParameteri(3553, 10241, 9729);
          GL11.glTexParameteri(3553, 10240, 9729);
          GL11.glTexParameteri(3553, 10242, 33071);
@@ -997,31 +998,31 @@ public class AmbientsModule extends Module {
       }
    }
 
-   private class_243 getSmoothSphereCenter(float tickDelta) {
-      class_310 mc = class_310.method_1551();
-      if (mc.field_1724 == null) {
-         return class_243.field_1353;
+   private Vec3 getSmoothSphereCenter(float tickDelta) {
+      Minecraft mc = Minecraft.getInstance();
+      if (mc.player == null) {
+         return Vec3.ZERO;
       }
 
-      double targetX = class_3532.method_16436(tickDelta, mc.field_1724.field_6038, mc.field_1724.method_23317());
-      double targetY = class_3532.method_16436(tickDelta, mc.field_1724.field_5971, mc.field_1724.method_23318()) + mc.field_1724.method_17682() * 0.5;
-      double targetZ = class_3532.method_16436(tickDelta, mc.field_1724.field_5989, mc.field_1724.method_23321());
-      class_243 targetPos = new class_243(targetX, targetY, targetZ);
+      double targetX = Mth.lerp(tickDelta, mc.player.xOld, mc.player.getX());
+      double targetY = Mth.lerp(tickDelta, mc.player.yOld, mc.player.getY()) + mc.player.getBbHeight() * 0.5;
+      double targetZ = Mth.lerp(tickDelta, mc.player.zOld, mc.player.getZ());
+      Vec3 targetPos = new Vec3(targetX, targetY, targetZ);
       if (this.smoothSphereCenter != null && this.smoothFollow.get()) {
-         if (this.smoothSphereCenter.method_1025(targetPos) > 40000.0) {
+         if (this.smoothSphereCenter.distanceToSqr(targetPos) > 40000.0) {
             this.smoothSphereCenter = targetPos;
             return targetPos;
          } else {
             long now = System.currentTimeMillis();
             float dt = this.lastSphereUpdateTime == 0L ? 0.016F : (float)(now - this.lastSphereUpdateTime) / 1000.0F;
-            dt = class_3532.method_15363(dt, 0.001F, 0.1F);
+            dt = Mth.clamp(dt, 0.001F, 0.1F);
             this.lastSphereUpdateTime = now;
             float speed = (float)this.blurFollowSpeed.get();
             float t = 1.0F - (float)Math.exp(-speed * dt);
-            this.smoothSphereCenter = new class_243(
-               class_3532.method_16436(t, this.smoothSphereCenter.field_1352, targetPos.field_1352),
-               class_3532.method_16436(t, this.smoothSphereCenter.field_1351, targetPos.field_1351),
-               class_3532.method_16436(t, this.smoothSphereCenter.field_1350, targetPos.field_1350)
+            this.smoothSphereCenter = new Vec3(
+               Mth.lerp(t, this.smoothSphereCenter.x, targetPos.x),
+               Mth.lerp(t, this.smoothSphereCenter.y, targetPos.y),
+               Mth.lerp(t, this.smoothSphereCenter.z, targetPos.z)
             );
             return this.smoothSphereCenter;
          }
@@ -1032,12 +1033,12 @@ public class AmbientsModule extends Module {
    }
 
    private void renderSphereBlur(WorldRenderContext context) {
-      class_310 mc = class_310.method_1551();
-      if (mc.field_1724 != null && context.camera() != null) {
-         class_276 mainFbo = mc.method_1522();
+      Minecraft mc = Minecraft.getInstance();
+      if (mc.player != null && context.camera() != null) {
+         RenderTarget mainFbo = mc.gameRenderer.mainRenderTarget();
          if (mainFbo != null) {
-            int width = mainFbo.field_1482;
-            int height = mainFbo.field_1481;
+            int width = mainFbo.width;
+            int height = mainFbo.height;
             if (width > 0 && height > 0) {
                this.initSphereBlurShader();
                if (this.sphereBlurProgram != -1) {
@@ -1046,12 +1047,12 @@ public class AmbientsModule extends Module {
                      this.ensureSphereBlurFbo(width, height);
                      int prevReadFbo = GL11.glGetInteger(36010);
                      int prevDrawFbo = GL11.glGetInteger(36006);
-                     GL30.glBindFramebuffer(36008, mainFbo.field_1476);
-                     GL30.glBindFramebuffer(36009, this.sphereBlurFbo.field_1476);
+                     GL30.glBindFramebuffer(36008, GlCompat.fbo(mainFbo));
+                     GL30.glBindFramebuffer(36009, GlCompat.fbo(this.sphereBlurFbo));
                      GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, 16384, 9728);
                      GL30.glBindFramebuffer(36008, prevReadFbo);
                      GL30.glBindFramebuffer(36009, prevDrawFbo);
-                     GL30.glBindFramebuffer(36160, mainFbo.field_1476);
+                     GL30.glBindFramebuffer(36160, GlCompat.fbo(mainFbo));
                      int prevProgram = GL11.glGetInteger(35725);
                      int prevVao = GL11.glGetInteger(34229);
                      int prevVbo = GL11.glGetInteger(34964);
@@ -1069,15 +1070,15 @@ public class AmbientsModule extends Module {
                      RenderSystem.disableCull();
                      RenderSystem.disableBlend();
                      GL20.glUseProgram(this.sphereBlurProgram);
-                     Matrix4f viewRotMat = new Matrix4f().rotation(new Quaternionf(context.camera().method_23767()).conjugate());
+                     Matrix4f viewRotMat = new Matrix4f().rotation(new Quaternionf(context.camera().rotation()).conjugate());
                      Matrix4f projMat = new Matrix4f(context.projectionMatrix());
                      Matrix4f invViewProjMat = new Matrix4f(projMat).mul(viewRotMat).invert();
                      float[] invViewProjArr = new float[16];
                      invViewProjMat.get(invViewProjArr);
-                     float tickDelta = context.tickCounter() != null ? context.tickCounter().method_60637(true) : 1.0F;
-                     class_243 sphereCenter = this.getSmoothSphereCenter(tickDelta);
-                     class_243 camPos = context.camera().method_19326();
-                     class_243 sphereCenterRelCam = sphereCenter.method_1020(camPos);
+                     float tickDelta = context.tickCounter() != null ? context.tickCounter().getGameTimeDeltaPartialTick(true) : 1.0F;
+                     Vec3 sphereCenter = this.getSmoothSphereCenter(tickDelta);
+                     Vec3 camPos = context.camera().position();
+                     Vec3 sphereCenterRelCam = sphereCenter.subtract(camPos);
                      int sampleCount = 32;
                      String quality = this.blurQuality.get();
                      if (quality.equals("Low")) {
@@ -1096,9 +1097,9 @@ public class AmbientsModule extends Module {
                      float b = themeColor.getBlue() / 255.0F;
                      float tintStrength = this.blurThemeTint.get() ? (float)this.blurThemeStrength.get() : 0.0F;
                      GL13.glActiveTexture(33984);
-                     GL11.glBindTexture(3553, this.sphereBlurFbo.method_30277());
+                     GL11.glBindTexture(3553, GlCompat.colorId(this.sphereBlurFbo));
                      GL13.glActiveTexture(33985);
-                     GL11.glBindTexture(3553, mainFbo.method_30278());
+                     GL11.glBindTexture(3553, GlCompat.depthId(mainFbo));
                      GL11.glTexParameteri(3553, 34892, 0);
                      GL11.glTexParameteri(3553, 10241, 9728);
                      GL11.glTexParameteri(3553, 10240, 9728);
@@ -1130,7 +1131,7 @@ public class AmbientsModule extends Module {
 
                      if (locSphereCenter != -1) {
                         GL20.glUniform3f(
-                           locSphereCenter, (float)sphereCenterRelCam.field_1352, (float)sphereCenterRelCam.field_1351, (float)sphereCenterRelCam.field_1350
+                           locSphereCenter, (float)sphereCenterRelCam.x, (float)sphereCenterRelCam.y, (float)sphereCenterRelCam.z
                         );
                      }
 
@@ -1206,14 +1207,14 @@ public class AmbientsModule extends Module {
    }
 
    private void ensureSaturationFbo(int width, int height) {
-      if (this.saturationFbo == null || this.saturationFbo.field_1482 != width || this.saturationFbo.field_1481 != height) {
+      if (this.saturationFbo == null || this.saturationFbo.width != width || this.saturationFbo.height != height) {
          if (this.saturationFbo != null) {
-            this.saturationFbo.method_1238();
+            this.saturationFbo.destroyBuffers();
          }
 
-         this.saturationFbo = new class_6367(width, height, false);
-         this.saturationFbo.method_1236(0.0F, 0.0F, 0.0F, 0.0F);
-         GL11.glBindTexture(3553, this.saturationFbo.method_30277());
+         this.saturationFbo = GlCompat.newTarget(width, height, false);
+         GlCompat.setClearColor(this.saturationFbo, 0.0F, 0.0F, 0.0F, 0.0F);
+         GL11.glBindTexture(3553, GlCompat.colorId(this.saturationFbo));
          GL11.glTexParameteri(3553, 10241, 9729);
          GL11.glTexParameteri(3553, 10240, 9729);
          GL11.glTexParameteri(3553, 10242, 33071);
@@ -1269,14 +1270,14 @@ public class AmbientsModule extends Module {
    }
 
    private void renderSaturation(WorldRenderContext context) {
-      class_310 mc = class_310.method_1551();
-      if (mc.field_1724 != null) {
+      Minecraft mc = Minecraft.getInstance();
+      if (mc.player != null) {
          float satVal = (float)this.saturation.get();
          if (!(Math.abs(satVal - 1.0F) < 0.001F)) {
-            class_276 mainFbo = mc.method_1522();
+            RenderTarget mainFbo = mc.gameRenderer.mainRenderTarget();
             if (mainFbo != null) {
-               int width = mainFbo.field_1482;
-               int height = mainFbo.field_1481;
+               int width = mainFbo.width;
+               int height = mainFbo.height;
                if (width > 0 && height > 0) {
                   this.initSaturationShader();
                   if (this.saturationProgram != -1) {
@@ -1285,12 +1286,12 @@ public class AmbientsModule extends Module {
                         this.ensureSaturationFbo(width, height);
                         int prevReadFbo = GL11.glGetInteger(36010);
                         int prevDrawFbo = GL11.glGetInteger(36006);
-                        GL30.glBindFramebuffer(36008, mainFbo.field_1476);
-                        GL30.glBindFramebuffer(36009, this.saturationFbo.field_1476);
+                        GL30.glBindFramebuffer(36008, GlCompat.fbo(mainFbo));
+                        GL30.glBindFramebuffer(36009, GlCompat.fbo(this.saturationFbo));
                         GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, 16384, 9728);
                         GL30.glBindFramebuffer(36008, prevReadFbo);
                         GL30.glBindFramebuffer(36009, prevDrawFbo);
-                        GL30.glBindFramebuffer(36160, mainFbo.field_1476);
+                        GL30.glBindFramebuffer(36160, GlCompat.fbo(mainFbo));
                         int prevProgram = GL11.glGetInteger(35725);
                         int prevVao = GL11.glGetInteger(34229);
                         int prevVbo = GL11.glGetInteger(34964);
@@ -1307,7 +1308,7 @@ public class AmbientsModule extends Module {
                         RenderSystem.disableBlend();
                         GL20.glUseProgram(this.saturationProgram);
                         GL13.glActiveTexture(33984);
-                        GL11.glBindTexture(3553, this.saturationFbo.method_30277());
+                        GL11.glBindTexture(3553, GlCompat.colorId(this.saturationFbo));
                         int locTex = GL20.glGetUniformLocation(this.saturationProgram, "uColorTexture");
                         int locSat = GL20.glGetUniformLocation(this.saturationProgram, "uSaturation");
                         if (locTex != -1) {
@@ -1355,12 +1356,12 @@ public class AmbientsModule extends Module {
    @Override
    public void onDisable() {
       if (this.sphereBlurFbo != null) {
-         this.sphereBlurFbo.method_1238();
+         this.sphereBlurFbo.destroyBuffers();
          this.sphereBlurFbo = null;
       }
 
       if (this.saturationFbo != null) {
-         this.saturationFbo.method_1238();
+         this.saturationFbo.destroyBuffers();
          this.saturationFbo = null;
       }
 

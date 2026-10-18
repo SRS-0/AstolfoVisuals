@@ -7,13 +7,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_2588;
-import net.minecraft.class_332;
-import net.minecraft.class_342;
-import net.minecraft.class_5250;
-import net.minecraft.class_7417;
-import net.minecraft.class_8828.class_2585;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.contents.PlainTextContents.LiteralContents;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
@@ -89,18 +89,18 @@ public class PasswordHiderModule extends Module {
       return sb.toString();
    }
 
-   public static void setupChatField(class_342 chatField) {
+   public static void setupChatField(EditBox chatField) {
       if (chatField != null) {
-         chatField.method_1854((originalStr, firstCharacterIndex) -> {
+         chatField.addFormatter((originalStr, firstCharacterIndex) -> {
             if (AstolfoclientClient.moduleManager == null) {
-               return class_2561.method_43470(originalStr).method_30937();
+               return Component.literal(originalStr).getVisualOrderText();
             }
 
             Module mod = AstolfoclientClient.moduleManager.getModuleByName("PasswordHider");
             if (mod != null && mod.isEnabled()) {
-               String fullText = chatField.method_1882();
+               String fullText = chatField.getValue();
                if (!isPasswordCommand(fullText)) {
-                  return class_2561.method_43470(originalStr).method_30937();
+                  return Component.literal(originalStr).getVisualOrderText();
                }
 
                int firstSpace = fullText.indexOf(32);
@@ -117,18 +117,18 @@ public class PasswordHiderModule extends Module {
                   }
                }
 
-               return class_2561.method_43470(sb.toString()).method_30937();
+               return Component.literal(sb.toString()).getVisualOrderText();
             } else {
-               return class_2561.method_43470(originalStr).method_30937();
+               return Component.literal(originalStr).getVisualOrderText();
             }
          });
       }
    }
 
-   public static void renderChatFieldOverlay(class_332 context, class_342 chatField) {
+   public static void renderChatFieldOverlay(GuiGraphicsExtractor context, EditBox chatField) {
    }
 
-   public static class_2561 getProtectedChat(class_2561 message) {
+   public static Component getProtectedChat(Component message) {
       if (message == null) {
          return null;
       }
@@ -154,30 +154,30 @@ public class PasswordHiderModule extends Module {
       }
    }
 
-   private static class_2561 protectChatTree(class_2561 text) {
+   private static Component protectChatTree(Component text) {
       if (text == null) {
          return null;
       }
 
-      class_7417 content = text.method_10851();
-      class_7417 newContent = content;
+      ComponentContents content = text.getContents();
+      ComponentContents newContent = content;
       boolean contentChanged = false;
-      if (content instanceof class_2585 literal) {
-         String str = literal.comp_737();
+      if (content instanceof LiteralContents literal) {
+         String str = literal.text();
          String masked = maskChatString(str);
          if (!masked.equals(str)) {
-            newContent = class_2561.method_43470(masked).method_10851();
+            newContent = Component.literal(masked).getContents();
             contentChanged = true;
          }
-      } else if (content instanceof class_2588 trans) {
-         Object[] args = trans.method_11023();
+      } else if (content instanceof TranslatableContents trans) {
+         Object[] args = trans.getArgs();
          Object[] newArgs = new Object[args.length];
          boolean argsChanged = false;
 
          for (int i = 0; i < args.length; i++) {
             Object arg = args[i];
-            if (arg instanceof class_2561 argText) {
-               class_2561 protectedArg = protectChatTree(argText);
+            if (arg instanceof Component argText) {
+               Component protectedArg = protectChatTree(argText);
                newArgs[i] = protectedArg;
                if (protectedArg != argText) {
                   argsChanged = true;
@@ -194,17 +194,17 @@ public class PasswordHiderModule extends Module {
          }
 
          if (argsChanged) {
-            newContent = new class_2588(trans.method_11022(), trans.method_48323(), newArgs);
+            newContent = new TranslatableContents(trans.getKey(), trans.getFallback(), newArgs);
             contentChanged = true;
          }
       }
 
-      List<class_2561> siblings = text.method_10855();
-      List<class_2561> newSiblings = new ArrayList<>(siblings.size());
+      List<Component> siblings = text.getSiblings();
+      List<Component> newSiblings = new ArrayList<>(siblings.size());
       boolean siblingsChanged = false;
 
-      for (class_2561 sibling : siblings) {
-         class_2561 protectedSibling = protectChatTree(sibling);
+      for (Component sibling : siblings) {
+         Component protectedSibling = protectChatTree(sibling);
          newSiblings.add(protectedSibling);
          if (protectedSibling != sibling) {
             siblingsChanged = true;
@@ -215,10 +215,10 @@ public class PasswordHiderModule extends Module {
          return text;
       }
 
-      class_5250 result = class_5250.method_43477(newContent).method_10862(text.method_10866());
+      MutableComponent result = MutableComponent.create(newContent).setStyle(text.getStyle());
 
-      for (class_2561 sibling : newSiblings) {
-         result.method_10852(sibling);
+      for (Component sibling : newSiblings) {
+         result.append(sibling);
       }
 
       return result;

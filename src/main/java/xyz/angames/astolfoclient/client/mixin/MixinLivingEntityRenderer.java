@@ -2,16 +2,17 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_10042;
-import net.minecraft.class_10055;
-import net.minecraft.class_1007;
-import net.minecraft.class_310;
-import net.minecraft.class_4587;
-import net.minecraft.class_4597;
-import net.minecraft.class_583;
-import net.minecraft.class_591;
-import net.minecraft.class_7833;
-import net.minecraft.class_922;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.PoseStack;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.player.PlayerModel;
+import com.mojang.math.Axis;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -25,13 +26,13 @@ import xyz.angames.astolfoclient.client.render.CustomModelRenderer;
 import xyz.angames.astolfoclient.client.util.FriendManager;
 
 @Environment(EnvType.CLIENT)
-@Mixin(class_922.class)
+@Mixin(LivingEntityRenderer.class)
 public abstract class MixinLivingEntityRenderer {
    @Unique
    private CustomModelRenderer customModelRenderer;
 
    @Shadow
-   public abstract class_583<?> method_4038();
+   public abstract EntityModel<?> getModel();
 
    @Unique
    private CustomModelRenderer getCustomModelRenderer() {
@@ -42,23 +43,20 @@ public abstract class MixinLivingEntityRenderer {
       return this.customModelRenderer;
    }
 
-   @Inject(
-      method = "render(Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;I)V",
-      at = @At("HEAD"),
-      cancellable = true
-   )
-   private void renderCustomModel(class_10042 state, class_4587 matrices, class_4597 vertexConsumers, int light, CallbackInfo ci) {
-      if (state instanceof class_10055 playerState) {
-         if (this instanceof class_1007) {
+   @Inject(method = "submit", at = @At("HEAD"), cancellable = true)
+   private void renderCustomModel(LivingEntityRenderState state, PoseStack matrices, SubmitNodeCollector vertexConsumers, CameraRenderState camera, CallbackInfo ci) {
+      int light = state.lightCoords;
+      if (state instanceof AvatarRenderState playerState) {
+         if ((Object)this instanceof AvatarRenderer) {
             ModelsModule modelsModule = (ModelsModule)AstolfoclientClient.moduleManager.getModuleByName("Models");
             if (modelsModule != null && modelsModule.isEnabled()) {
-               class_310 mc = class_310.method_1551();
-               String renderedName = playerState.field_53529 != null ? playerState.field_53529 : "";
+               Minecraft mc = Minecraft.getInstance();
+               String renderedName = playerState.nameTag != null ? playerState.nameTag.getString() : "";
                boolean isSelf = false;
                boolean isFriend = false;
-               if (mc.field_1724 != null) {
-                  String myUsername = mc.method_1548().method_1676();
-                  if (renderedName.toLowerCase().contains(myUsername.toLowerCase())) {
+               if (mc.player != null) {
+                  String myUsername = mc.getUser().getName();
+                  if (playerState.id == mc.player.getId() || renderedName.toLowerCase().contains(myUsername.toLowerCase())) {
                      isSelf = true;
                   }
                }
@@ -78,29 +76,29 @@ public abstract class MixinLivingEntityRenderer {
                }
 
                if (shouldRenderCustom) {
-                  class_583<?> model = this.method_4038();
-                  if (model instanceof class_591 playerModel) {
-                     playerModel.method_62110(playerState);
+                  EntityModel<?> model = this.getModel();
+                  if (model instanceof PlayerModel playerModel) {
+                     playerModel.setupAnim(playerState);
                   }
 
-                  matrices.method_22903();
-                  matrices.method_22904(0.0, playerState.field_53330 / 2.0, 0.0);
-                  matrices.method_22907(class_7833.field_40716.rotationDegrees(180.0F - playerState.field_53446));
+                  matrices.pushPose();
+                  matrices.translate(0.0, playerState.boundingBoxHeight / 2.0, 0.0);
+                  matrices.rotate(Axis.YP.rotationDegrees(180.0F - playerState.bodyRot));
                   String mode = modelsModule.mode.get();
                   if (mode.equals("Amogus") || mode.equals("Rabbit") || mode.equals("Cow")) {
-                     matrices.method_22907(new Quaternionf().rotationX((float) Math.PI));
+                     matrices.rotate(new Quaternionf().rotationX((float) Math.PI));
                      if (modelsModule.changeZ.get()) {
-                        matrices.method_22907(new Quaternionf().rotationY((float) Math.PI));
+                        matrices.rotate(new Quaternionf().rotationY((float) Math.PI));
                      }
                   }
 
-                  matrices.method_22904(0.0, -playerState.field_53330 / 2.0, 0.0);
+                  matrices.translate(0.0, -playerState.boundingBoxHeight / 2.0, 0.0);
                   if (mode.equals("Rabbit")) {
-                     matrices.method_22904(0.0, -0.05, 0.0);
+                     matrices.translate(0.0, -0.05, 0.0);
                   } else if (mode.equals("Amogus")) {
-                     matrices.method_22904(0.0, -0.5, 0.0);
+                     matrices.translate(0.0, -0.5, 0.0);
                   } else if (mode.equals("Cow")) {
-                     matrices.method_22904(0.0, -0.2, 0.0);
+                     matrices.translate(0.0, -0.2, 0.0);
                   }
 
                   float scale = 1.0F;
@@ -112,12 +110,12 @@ public abstract class MixinLivingEntityRenderer {
                      scale = 1.0F;
                   }
 
-                  matrices.method_22905(scale, scale, scale);
-                  if (model instanceof class_591 playerModel) {
+                  matrices.scale(scale, scale, scale);
+                  if (model instanceof PlayerModel playerModel) {
                      this.getCustomModelRenderer().render(playerState, matrices, vertexConsumers, light, mode, playerModel);
                   }
 
-                  matrices.method_22909();
+                  matrices.popPose();
                   ci.cancel();
                }
             }

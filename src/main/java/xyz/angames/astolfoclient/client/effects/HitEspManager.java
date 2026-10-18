@@ -4,9 +4,9 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2338;
-import net.minecraft.class_243;
-import net.minecraft.class_310;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.Minecraft;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -15,9 +15,9 @@ import xyz.angames.astolfoclient.client.module.modules.HitEspModule;
 @Environment(EnvType.CLIENT)
 public class HitEspManager {
    private final List<HitEspEffect> effects = new CopyOnWriteArrayList<>();
-   private final class_310 mc = class_310.method_1551();
+   private final Minecraft mc = Minecraft.getInstance();
 
-   public void addEffect(class_243 position, float rotationDirection, Quaternionf orientation) {
+   public void addEffect(Vec3 position, float rotationDirection, Quaternionf orientation) {
       this.effects.add(new HitEspEffect(position, rotationDirection, orientation));
    }
 
@@ -61,25 +61,25 @@ public class HitEspManager {
                         shard.vy -= gravityVal;
                         shard.vx *= frictionVal;
                         shard.vz *= frictionVal;
-                        if (this.mc.field_1687 != null) {
-                           double nextX = shard.pos.field_1352 + shard.vx;
-                           double nextY = shard.pos.field_1351 + shard.vy;
-                           double nextZ = shard.pos.field_1350 + shard.vz;
+                        if (this.mc.level != null) {
+                           double nextX = shard.pos.x + shard.vx;
+                           double nextY = shard.pos.y + shard.vy;
+                           double nextZ = shard.pos.z + shard.vz;
                            boolean collideX = !this.mc
-                              .field_1687
-                              .method_8320(class_2338.method_49638(new class_243(nextX, shard.pos.field_1351, shard.pos.field_1350)))
-                              .method_26220(this.mc.field_1687, class_2338.method_49638(new class_243(nextX, shard.pos.field_1351, shard.pos.field_1350)))
-                              .method_1110();
+                              .level
+                              .getBlockState(BlockPos.containing(new Vec3(nextX, shard.pos.y, shard.pos.z)))
+                              .getCollisionShape(this.mc.level, BlockPos.containing(new Vec3(nextX, shard.pos.y, shard.pos.z)))
+                              .isEmpty();
                            boolean collideY = !this.mc
-                              .field_1687
-                              .method_8320(class_2338.method_49638(new class_243(shard.pos.field_1352, nextY, shard.pos.field_1350)))
-                              .method_26220(this.mc.field_1687, class_2338.method_49638(new class_243(shard.pos.field_1352, nextY, shard.pos.field_1350)))
-                              .method_1110();
+                              .level
+                              .getBlockState(BlockPos.containing(new Vec3(shard.pos.x, nextY, shard.pos.z)))
+                              .getCollisionShape(this.mc.level, BlockPos.containing(new Vec3(shard.pos.x, nextY, shard.pos.z)))
+                              .isEmpty();
                            boolean collideZ = !this.mc
-                              .field_1687
-                              .method_8320(class_2338.method_49638(new class_243(shard.pos.field_1352, shard.pos.field_1351, nextZ)))
-                              .method_26220(this.mc.field_1687, class_2338.method_49638(new class_243(shard.pos.field_1352, shard.pos.field_1351, nextZ)))
-                              .method_1110();
+                              .level
+                              .getBlockState(BlockPos.containing(new Vec3(shard.pos.x, shard.pos.y, nextZ)))
+                              .getCollisionShape(this.mc.level, BlockPos.containing(new Vec3(shard.pos.x, shard.pos.y, nextZ)))
+                              .isEmpty();
                            if (bounceVal) {
                               if (collideX) {
                                  shard.vx = -shard.vx * bounceFactorVal;
@@ -99,13 +99,13 @@ public class HitEspManager {
                               }
 
                               if (!shard.onGround) {
-                                 shard.pos = shard.pos.method_1031(shard.vx, shard.vy, shard.vz);
+                                 shard.pos = shard.pos.add(shard.vx, shard.vy, shard.vz);
                                  shard.rotX = (float)(shard.rotX + shard.rotSpeedX * spinSpeedVal);
                                  shard.rotY = (float)(shard.rotY + shard.rotSpeedY * spinSpeedVal);
                                  shard.rotZ = (float)(shard.rotZ + shard.rotSpeedZ * spinSpeedVal);
                               }
                            } else if (!collideX && !collideY && !collideZ) {
-                              shard.pos = shard.pos.method_1031(shard.vx, shard.vy, shard.vz);
+                              shard.pos = shard.pos.add(shard.vx, shard.vy, shard.vz);
                               shard.rotX = (float)(shard.rotX + shard.rotSpeedX * spinSpeedVal);
                               shard.rotY = (float)(shard.rotY + shard.rotSpeedY * spinSpeedVal);
                               shard.rotZ = (float)(shard.rotZ + shard.rotSpeedZ * spinSpeedVal);
@@ -114,7 +114,7 @@ public class HitEspManager {
                               shard.groundHitTime = currentTime;
                            }
                         } else {
-                           shard.pos = shard.pos.method_1031(shard.vx, shard.vy, shard.vz);
+                           shard.pos = shard.pos.add(shard.vx, shard.vy, shard.vz);
                            shard.rotX = (float)(shard.rotX + shard.rotSpeedX * spinSpeedVal);
                            shard.rotY = (float)(shard.rotY + shard.rotSpeedY * spinSpeedVal);
                            shard.rotZ = (float)(shard.rotZ + shard.rotSpeedZ * spinSpeedVal);
@@ -153,7 +153,7 @@ public class HitEspManager {
             float localY = (y + 0.5F) * step - 0.5F;
             Vector3f localOffset = new Vector3f(localX, localY, 0.0F);
             effect.orientation.transform(localOffset);
-            class_243 startPos = effect.position.method_1031(localOffset.x * explosionRadius, localOffset.y * explosionRadius, localOffset.z * explosionRadius);
+            Vec3 startPos = effect.position.add(localOffset.x * explosionRadius, localOffset.y * explosionRadius, localOffset.z * explosionRadius);
             double vx = (localOffset.x * 0.5 + (Math.random() - 0.5) * 0.3) * explosionStrength;
             double vy = (localOffset.y * 0.5 + Math.random() * 0.4 + 0.2) * explosionStrength;
             double vz = (localOffset.z * 0.5 + (Math.random() - 0.5) * 0.3) * explosionStrength;

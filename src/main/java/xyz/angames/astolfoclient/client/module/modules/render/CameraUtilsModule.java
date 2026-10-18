@@ -2,9 +2,9 @@ package xyz.angames.astolfoclient.client.module.modules.render;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
-import net.minecraft.class_3532;
-import net.minecraft.class_3675;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import com.mojang.blaze3d.platform.InputConstants;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
@@ -58,9 +58,9 @@ public class CameraUtilsModule extends Module {
    private void resetSmoothCamera() {
       if (this.zoomActive) {
          this.zoomActive = false;
-         class_310 mc = class_310.method_1551();
-         if (mc != null && mc.field_1690 != null) {
-            mc.field_1690.field_1914 = this.originalSmoothCamera;
+         Minecraft mc = Minecraft.getInstance();
+         if (mc != null && mc.options != null) {
+            mc.options.smoothCamera = this.originalSmoothCamera;
          }
       }
    }
@@ -74,19 +74,19 @@ public class CameraUtilsModule extends Module {
          this.zoomProgress = 0.0F;
          return baseFov;
       } else {
-         class_310 mc = class_310.method_1551();
+         Minecraft mc = Minecraft.getInstance();
          boolean isKeyDown = false;
-         if (mc != null && mc.field_1755 == null && this.zoomKey.getKey() != -1 && this.zoomKey.getKey() != 0) {
-            isKeyDown = class_3675.method_15987(mc.method_22683().method_4490(), this.zoomKey.getKey());
+         if (mc != null && mc.gui.screen() == null && this.zoomKey.getKey() != -1 && this.zoomKey.getKey() != 0) {
+            isKeyDown = InputConstants.isKeyDown(xyz.angames.astolfoclient.client.compat.KeyMap.glfwToSdl(this.zoomKey.getKey()));
          }
 
-         if (this.smoothMouse.get() && mc != null && mc.field_1690 != null) {
+         if (this.smoothMouse.get() && mc != null && mc.options != null) {
             if (isKeyDown && !this.zoomActive) {
-               this.originalSmoothCamera = mc.field_1690.field_1914;
-               mc.field_1690.field_1914 = true;
+               this.originalSmoothCamera = mc.options.smoothCamera;
+               mc.options.smoothCamera = true;
                this.zoomActive = true;
             } else if (!isKeyDown && this.zoomActive) {
-               mc.field_1690.field_1914 = this.originalSmoothCamera;
+               mc.options.smoothCamera = this.originalSmoothCamera;
                this.zoomActive = false;
             }
          } else if (this.zoomActive) {
@@ -117,7 +117,7 @@ public class CameraUtilsModule extends Module {
          }
 
          double targetFov = this.zoomFov.get();
-         return class_3532.method_16436(this.zoomProgress, baseFov, targetFov);
+         return Mth.lerp(this.zoomProgress, baseFov, targetFov);
       }
    }
 

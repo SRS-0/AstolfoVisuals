@@ -4,7 +4,8 @@
     },
     "passes": [
         {
-            "program": "astolfoclient:post/depth_blur",
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "astolfoclient:post/depth_blur",
             "inputs": [
                 {
                     "sampler_name": "In",
@@ -18,15 +19,47 @@
                 }
             ],
             "output": "swap",
-            "uniforms": [
-                {
-                    "name": "BlurDir",
-                    "values": [ 1.0, 0.0 ]
-                }
-            ]
+            "uniforms": {
+                "DepthBlurConfig": [
+                    {
+                        "name": "BlurDir",
+                        "type": "vec2",
+                        "value": [
+                            1.0,
+                            0.0
+                        ]
+                    },
+                    {
+                        "name": "Radius",
+                        "type": "float",
+                        "value": 5.0
+                    },
+                    {
+                        "name": "Near",
+                        "type": "float",
+                        "value": 0.05
+                    },
+                    {
+                        "name": "Far",
+                        "type": "float",
+                        "value": 256.0
+                    },
+                    {
+                        "name": "FogStart",
+                        "type": "float",
+                        "value": 5.0
+                    },
+                    {
+                        "name": "FogEnd",
+                        "type": "float",
+                        "value": 50.0
+                    }
+                ]
+            }
         },
         {
-            "program": "astolfoclient:post/depth_blur",
+            "vertex_shader": "minecraft:core/screenquad",
+            "fragment_shader": "astolfoclient:post/depth_blur",
             "inputs": [
                 {
                     "sampler_name": "In",
@@ -40,12 +73,43 @@
                 }
             ],
             "output": "minecraft:main",
-            "uniforms": [
-                {
-                    "name": "BlurDir",
-                    "values": [ 0.0, 1.0 ]
-                }
-            ]
+            "uniforms": {
+                "DepthBlurConfig": [
+                    {
+                        "name": "BlurDir",
+                        "type": "vec2",
+                        "value": [
+                            0.0,
+                            1.0
+                        ]
+                    },
+                    {
+                        "name": "Radius",
+                        "type": "float",
+                        "value": 5.0
+                    },
+                    {
+                        "name": "Near",
+                        "type": "float",
+                        "value": 0.05
+                    },
+                    {
+                        "name": "Far",
+                        "type": "float",
+                        "value": 256.0
+                    },
+                    {
+                        "name": "FogStart",
+                        "type": "float",
+                        "value": 5.0
+                    },
+                    {
+                        "name": "FogEnd",
+                        "type": "float",
+                        "value": 50.0
+                    }
+                ]
+            }
         }
     ]
 }

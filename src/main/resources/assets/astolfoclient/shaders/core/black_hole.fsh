@@ -1,16 +1,20 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
+
+layout(std140) uniform CustomUniforms {
+    vec2 uResolution;
+    float uDistortion;
+    float uProgress;
+    float uAlpha;
+    vec3 uThemeColor;
+};
 
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
-uniform vec2 uResolution;
-uniform float uDistortion;
-uniform float uProgress;
-uniform float uAlpha;
-uniform vec3 uThemeColor;
 
-in vec2 texCoord;
-in vec2 vCenterScreen;
-out vec4 fragColor;
+layout(location = 103) in vec2 texCoord;
+layout(location = 103) in vec2 vCenterScreen;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     vec4 circleTex = texture(Sampler1, texCoord);

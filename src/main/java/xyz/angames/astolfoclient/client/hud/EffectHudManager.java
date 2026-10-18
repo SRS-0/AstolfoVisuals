@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -19,16 +20,16 @@ import java.util.Set;
 import java.util.Map.Entry;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1291;
-import net.minecraft.class_1293;
-import net.minecraft.class_1294;
-import net.minecraft.class_2561;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_6880;
+import net.minecraft.world.effect.MobEffect;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.core.Holder;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFW;
+import xyz.angames.astolfoclient.client.compat.GLFW;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
@@ -45,7 +46,7 @@ public class EffectHudManager {
    private float mainPanelAnim = 0.0F;
    private float subPanelAnim = 0.0F;
    private boolean wasMouseDown = false;
-   private final Map<class_1291, EffectHudManager.PotionCardState> cardStateMap = new LinkedHashMap<>();
+   private final Map<MobEffect, EffectHudManager.PotionCardState> cardStateMap = new LinkedHashMap<>();
    private float totalHeight = 0.0F;
    private float lastFrameTotalMaxWidth = 90.0F;
    private float animatedX = 10.0F;
@@ -56,15 +57,15 @@ public class EffectHudManager {
    private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("icon").data("icon").build());
 
-   public void render(class_332 context) {
-      this.render(context, class_310.method_1551().method_61966().method_60637(false));
+   public void render(GuiGraphicsExtractor context) {
+      this.render(context, Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));
    }
 
-   public void render(class_332 context, float tickDelta) {
-      class_310 client = class_310.method_1551();
-      if (client.field_1724 != null) {
-         Collection<class_1293> effects = client.field_1724.method_6026();
-         boolean isEditing = client.field_1755 instanceof HudEditorScreen;
+   public void render(GuiGraphicsExtractor context, float tickDelta) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.player != null) {
+         Collection<MobEffectInstance> effects = client.player.getActiveEffects();
+         boolean isEditing = client.gui.screen() instanceof HudEditorScreen;
          InterfaceModule interfaceMod = (InterfaceModule)(
             AstolfoclientClient.moduleManager != null ? AstolfoclientClient.moduleManager.getModuleByName("Interface") : null
          );
@@ -83,22 +84,22 @@ public class EffectHudManager {
 
          long themeTime = (long)(nowNs / 1000000.0);
          Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
-         List<class_1293> list = isEditing ? this.getPlaceholders() : new ArrayList<>(effects);
-         Set<class_1291> currentActiveEffects = new HashSet<>();
+         List<MobEffectInstance> list = isEditing ? this.getPlaceholders() : new ArrayList<>(effects);
+         Set<MobEffect> currentActiveEffects = new HashSet<>();
          if (isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing)) {
-            for (class_1293 inst : list) {
-               class_1291 effect = (class_1291)inst.method_5579().comp_349();
+            for (MobEffectInstance inst : list) {
+               MobEffect effect = (MobEffect)inst.getEffect().value();
                currentActiveEffects.add(effect);
                EffectHudManager.PotionCardState state = this.cardStateMap.computeIfAbsent(effect, k -> new EffectHudManager.PotionCardState());
                state.cachedInstance = inst;
             }
          }
 
-         Iterator<Entry<class_1291, EffectHudManager.PotionCardState>> iterator = this.cardStateMap.entrySet().iterator();
+         Iterator<Entry<MobEffect, EffectHudManager.PotionCardState>> iterator = this.cardStateMap.entrySet().iterator();
 
          while (iterator.hasNext()) {
-            Entry<class_1291, EffectHudManager.PotionCardState> entry = iterator.next();
-            class_1291 effect = entry.getKey();
+            Entry<MobEffect, EffectHudManager.PotionCardState> entry = iterator.next();
+            MobEffect effect = entry.getKey();
             EffectHudManager.PotionCardState state = entry.getValue();
             boolean isActive = currentActiveEffects.contains(effect);
             float targetAnim = isActive ? 1.0F : 0.0F;
@@ -133,8 +134,8 @@ public class EffectHudManager {
             MsdfFont medium = (MsdfFont)MEDIUM_FONT.get();
             MsdfFont iconFont = (MsdfFont)ICON_FONT.get();
             float scaleModifier = this.getScaleModifier();
-            float scaledWidth = client.method_22683().method_4486() / scaleModifier;
-            float scaledHeight = client.method_22683().method_4502() / scaleModifier;
+            float scaledWidth = client.getWindow().getGuiScaledWidth() / scaleModifier;
+            float scaledHeight = client.getWindow().getGuiScaledHeight() / scaleModifier;
             float computedTotalHeight = 0.0F;
 
             for (EffectHudManager.PotionCardState state : this.cardStateMap.values()) {
@@ -149,22 +150,22 @@ public class EffectHudManager {
             float targetBaseX = this.position == EffectHudManager.Position.RIGHT ? scaledWidth - this.lastFrameTotalMaxWidth - 10.0F : 10.0F;
             this.animatedX = this.animatedX + (targetBaseX - this.animatedX) * (float)(1.0 - Math.exp(-14.0 * deltaSeconds));
             this.x = this.animatedX;
-            context.method_51448().method_22903();
-            context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-            Matrix4f matrix = context.method_51448().method_23760().method_23761();
+            context.pose().pushMatrix();
+            context.pose().scale(scaleModifier, scaleModifier);
+            Matrix4f matrix = GuiCompat.matrix4f(context);
             float currentY = this.y;
             float currentFrameMaxWidth = 0.0F;
 
-            for (Entry<class_1291, EffectHudManager.PotionCardState> entry : this.cardStateMap.entrySet()) {
-               class_1291 effect = entry.getKey();
+            for (Entry<MobEffect, EffectHudManager.PotionCardState> entry : this.cardStateMap.entrySet()) {
+               MobEffect effect = entry.getKey();
                EffectHudManager.PotionCardState state = entry.getValue();
-               class_1293 instance = state.cachedInstance;
+               MobEffectInstance instance = state.cachedInstance;
                if (instance != null) {
                   float cardProgress = state.animProgress;
                   float effectiveAlpha = cardProgress * this.masterAlpha;
                   if (!(effectiveAlpha <= 0.002F)) {
-                     String name = class_2561.method_43471(effect.method_5567()).getString();
-                     int level = instance.method_5578() + 1;
+                     String name = Component.translatable(effect.getDescriptionId()).getString();
+                     int level = instance.getAmplifier() + 1;
                      boolean showLevel = level > 1;
                      String levelNum = String.valueOf(level);
                      String duration = this.formatDuration(instance);
@@ -188,16 +189,16 @@ public class EffectHudManager {
                         : this.animatedX;
                      float cardEase = 1.0F - (float)Math.pow(1.0F - cardProgress, 3.0);
                      float cardScale = 0.88F + 0.12F * cardEase;
-                     context.method_51448().method_22903();
+                     context.pose().pushMatrix();
                      if (cardScale < 0.999F) {
                         float cx = cardX + (this.position == EffectHudManager.Position.RIGHT ? currentAnimatedWidth : 0.0F);
                         float cy = currentY + cardHeight / 2.0F;
-                        context.method_51448().method_46416(cx, cy, 0.0F);
-                        context.method_51448().method_22905(cardScale, cardScale, 1.0F);
-                        context.method_51448().method_46416(-cx, -cy, 0.0F);
+                        context.pose().translate(cx, cy);
+                        context.pose().scale(cardScale, cardScale);
+                        context.pose().translate(-cx, -cy);
                      }
 
-                     Matrix4f cardMat = context.method_51448().method_23760().method_23761();
+                     Matrix4f cardMat = GuiCompat.matrix4f(context);
                      this.renderShadow(cardMat, cardX, currentY, currentAnimatedWidth, cardHeight, radius, effectiveAlpha);
                      Builder.rectangle()
                         .size(new SizeState(currentAnimatedWidth, cardHeight))
@@ -209,11 +210,11 @@ public class EffectHudManager {
                      float currentX = cardX + paddingX;
                      float iconCX = currentX + iconSize / 2.0F;
                      this.drawIconGlowShadow(cardMat, iconCX, centerY, iconSize / 2.0F, themeColor, 0.12F * effectiveAlpha);
-                     class_2960 icon = this.getEffectIconIdentifier(instance.method_5579());
+                     Identifier icon = this.getEffectIconIdentifier(instance.getEffect());
                      Builder.texture()
                         .size(new SizeState(iconSize, iconSize))
                         .radius(new QuadRadiusState(3.0F))
-                        .texture(0.0F, 0.0F, 1.0F, 1.0F, client.method_1531().method_4619(icon))
+                        .texture(0.0F, 0.0F, 1.0F, 1.0F, client.getTextureManager().getTexture(icon))
                         .color(new QuadColorState(new Color(255, 255, 255, (int)(255.0F * effectiveAlpha))))
                         .build()
                         .render(cardMat, currentX, centerY - iconSize / 2.0F);
@@ -237,7 +238,7 @@ public class EffectHudManager {
                         state.durationAnimator.render(cardMat, currentX, currentY + 14.5F, grayText, medium, infoSize, effectiveAlpha);
                      }
 
-                     context.method_51448().method_22909();
+                     context.pose().popMatrix();
                      currentY += (cardHeight + gap) * state.heightScale;
                   }
                }
@@ -248,7 +249,7 @@ public class EffectHudManager {
             if (isEditing) {
                double mx = this.getScaledMouseX();
                double my = this.getScaledMouseY();
-               boolean isMouseDown = GLFW.glfwGetMouseButton(client.method_22683().method_4490(), 0) == 1;
+               boolean isMouseDown = GLFW.glfwGetMouseButton(client.getWindow().handle(), 0) == 1;
                this.drawConnectedContextPanel(context, scaledWidth, scaledHeight, themeColor, mx, my, isMouseDown, this.wasMouseDown, (float)deltaSeconds);
                this.wasMouseDown = isMouseDown;
             } else {
@@ -259,13 +260,13 @@ public class EffectHudManager {
                this.wasMouseDown = false;
             }
 
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
          }
       }
    }
 
    private void drawConnectedContextPanel(
-      class_332 context,
+      GuiGraphicsExtractor context,
       float screenW,
       float screenH,
       Color themeColor,
@@ -318,16 +319,16 @@ public class EffectHudManager {
          MsdfFont spFont = (MsdfFont)LogoRenderer.SP_FONT.get();
          float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
          float mainScale = 0.88F + 0.12F * mainEase;
-         context.method_51448().method_22903();
+         context.pose().pushMatrix();
          if (mainScale < 0.999F) {
             float cx = mX + mainW / 2.0F;
             float cy = mY + mainH / 2.0F;
-            context.method_51448().method_46416(cx, cy, 0.0F);
-            context.method_51448().method_22905(mainScale, mainScale, 1.0F);
-            context.method_51448().method_46416(-cx, -cy, 0.0F);
+            context.pose().translate(cx, cy);
+            context.pose().scale(mainScale, mainScale);
+            context.pose().translate(-cx, -cy);
          }
 
-         Matrix4f matrix = context.method_51448().method_23760().method_23761();
+         Matrix4f matrix = GuiCompat.matrix4f(context);
 
          for (int i = 6; i >= 0; i--) {
             float progress = i / 6.0F;
@@ -371,7 +372,7 @@ public class EffectHudManager {
          if (closeHover && isMouseDown && !wasMouseDown) {
             this.panelOpen = false;
             this.submenuOpen = false;
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
          } else {
             float c1X = mX + 4.0F;
             float c1Y = mY + 20.0F;
@@ -424,7 +425,7 @@ public class EffectHudManager {
                this.submenuOpen = !this.submenuOpen;
             }
 
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
             if (this.subPanelAnim > 0.005F) {
                float subEase = 1.0F - (float)Math.pow(1.0F - this.subPanelAnim, 3.0);
                float subScale = 0.88F + 0.12F * subEase;
@@ -434,16 +435,16 @@ public class EffectHudManager {
                }
 
                float sY = mY;
-               context.method_51448().method_22903();
+               context.pose().pushMatrix();
                if (subScale < 0.999F) {
                   float scx = sX + subW / 2.0F;
                   float scy = sY + subH / 2.0F;
-                  context.method_51448().method_46416(scx, scy, 0.0F);
-                  context.method_51448().method_22905(subScale, subScale, 1.0F);
-                  context.method_51448().method_46416(-scx, -scy, 0.0F);
+                  context.pose().translate(scx, scy);
+                  context.pose().scale(subScale, subScale);
+                  context.pose().translate(-scx, -scy);
                }
 
-               matrix = context.method_51448().method_23760().method_23761();
+               matrix = GuiCompat.matrix4f(context);
 
                for (int i = 6; i >= 0; i--) {
                   float progress = i / 6.0F;
@@ -512,33 +513,33 @@ public class EffectHudManager {
                   }
                }
 
-               context.method_51448().method_22909();
+               context.pose().popMatrix();
             }
          }
       }
    }
 
-   private class_2960 getEffectIconIdentifier(class_6880<class_1291> effect) {
-      return effect.method_40230()
-         .map(key -> class_2960.method_60655("minecraft", "textures/mob_effect/" + key.method_29177().method_12832() + ".png"))
-         .orElse(class_2960.method_60655("minecraft", "textures/missing.png"));
+   private Identifier getEffectIconIdentifier(Holder<MobEffect> effect) {
+      return effect.unwrapKey()
+         .map(key -> Identifier.fromNamespaceAndPath("minecraft", "textures/mob_effect/" + key.identifier().getPath() + ".png"))
+         .orElse(Identifier.fromNamespaceAndPath("minecraft", "textures/missing.png"));
    }
 
-   private String formatDuration(class_1293 effect) {
-      if (effect.method_48559()) {
+   private String formatDuration(MobEffectInstance effect) {
+      if (effect.isInfiniteDuration()) {
          return "Infinite";
       }
 
-      int totalSeconds = effect.method_5584() / 20;
+      int totalSeconds = effect.getDuration() / 20;
       return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
    }
 
-   private List<class_1293> getPlaceholders() {
+   private List<MobEffectInstance> getPlaceholders() {
       return List.of(
-         new class_1293(class_1294.field_5918, 16500, 0),
-         new class_1293(class_1294.field_5910, 740, 1),
-         new class_1293(class_1294.field_5904, 1640, 1),
-         new class_1293(class_1294.field_5898, 2260, 3)
+         new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 16500, 0),
+         new MobEffectInstance(MobEffects.STRENGTH, 740, 1),
+         new MobEffectInstance(MobEffects.SPEED, 1640, 1),
+         new MobEffectInstance(MobEffects.ABSORPTION, 2260, 3)
       );
    }
 
@@ -589,8 +590,8 @@ public class EffectHudManager {
    }
 
    private float getScaleModifier() {
-      class_310 mc = class_310.method_1551();
-      double currentGuiScale = mc.method_22683().method_4495();
+      Minecraft mc = Minecraft.getInstance();
+      double currentGuiScale = mc.getWindow().getGuiScale();
       if (currentGuiScale <= 0.0) {
          currentGuiScale = 2.0;
       }
@@ -599,20 +600,20 @@ public class EffectHudManager {
    }
 
    private double getScaledMouseX() {
-      class_310 mc = class_310.method_1551();
+      Minecraft mc = Minecraft.getInstance();
       double scaleModifier = this.getScaleModifier();
-      return mc.field_1729.method_1603() * mc.method_22683().method_4486() / mc.method_22683().method_4480() / scaleModifier;
+      return mc.mouseHandler.xpos() * mc.getWindow().getGuiScaledWidth() / mc.getWindow().getScreenWidth() / scaleModifier;
    }
 
    private double getScaledMouseY() {
-      class_310 mc = class_310.method_1551();
+      Minecraft mc = Minecraft.getInstance();
       double scaleModifier = this.getScaleModifier();
-      return mc.field_1729.method_1604() * mc.method_22683().method_4502() / mc.method_22683().method_4507() / scaleModifier;
+      return mc.mouseHandler.ypos() * mc.getWindow().getGuiScaledHeight() / mc.getWindow().getScreenHeight() / scaleModifier;
    }
 
    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-      class_310 mc = class_310.method_1551();
-      boolean isEditing = mc.field_1755 instanceof HudEditorScreen;
+      Minecraft mc = Minecraft.getInstance();
+      boolean isEditing = mc.gui.screen() instanceof HudEditorScreen;
       if (!isEditing) {
          return false;
       }
@@ -620,7 +621,7 @@ public class EffectHudManager {
       float scaleModifier = this.getScaleModifier();
       double mx = mouseX / scaleModifier;
       double my = mouseY / scaleModifier;
-      float screenW = mc.method_22683().method_4486() / scaleModifier;
+      float screenW = mc.getWindow().getGuiScaledWidth() / scaleModifier;
       float currentCardX = this.position == EffectHudManager.Position.RIGHT ? screenW - this.lastFrameTotalMaxWidth - 10.0F : 10.0F;
       if (this.panelOpen) {
          float mainW = 110.0F;
@@ -704,7 +705,7 @@ public class EffectHudManager {
       float animProgress = 0.0F;
       float heightScale = 0.0F;
       float width = 80.0F;
-      class_1293 cachedInstance;
+      MobEffectInstance cachedInstance;
       EffectHudManager.TextAnimator durationAnimator = new EffectHudManager.TextAnimator();
    }
 

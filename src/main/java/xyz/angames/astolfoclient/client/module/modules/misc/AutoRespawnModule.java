@@ -4,8 +4,8 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents.EndTick;
-import net.minecraft.class_310;
-import net.minecraft.class_418;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DeathScreen;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.NumberSetting;
 
@@ -24,11 +24,11 @@ public class AutoRespawnModule extends Module {
       });
    }
 
-   private void onTick(class_310 mc) {
-      if (mc.field_1724 == null) {
+   private void onTick(Minecraft mc) {
+      if (mc.player == null) {
          this.deathTime = 0L;
       } else {
-         boolean isDead = mc.field_1755 instanceof class_418 || mc.field_1724.method_29504() || mc.field_1724.method_6032() <= 0.0F;
+         boolean isDead = mc.gui.screen() instanceof DeathScreen || mc.player.isDeadOrDying() || mc.player.getHealth() <= 0.0F;
          if (isDead) {
             long now = System.currentTimeMillis();
             if (this.deathTime == 0L) {
@@ -36,9 +36,9 @@ public class AutoRespawnModule extends Module {
             }
 
             if (now - this.deathTime >= (long)this.delay.get()) {
-               mc.field_1724.method_7331();
-               if (mc.field_1755 instanceof class_418) {
-                  mc.method_1507(null);
+               mc.player.respawn();
+               if (mc.gui.screen() instanceof DeathScreen) {
+                  mc.gui.setScreen(null);
                }
 
                this.deathTime = 0L;

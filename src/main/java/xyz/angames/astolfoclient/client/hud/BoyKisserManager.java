@@ -1,21 +1,26 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.Vtx;
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1921;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_4588;
-import net.minecraft.class_4597.class_4598;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import dev.sxmurxy.mre.builders.Builder;
+import dev.sxmurxy.mre.builders.states.QuadColorState;
+import dev.sxmurxy.mre.builders.states.QuadRadiusState;
+import dev.sxmurxy.mre.builders.states.SizeState;
 import org.joml.Matrix4f;
 
 @Environment(EnvType.CLIENT)
 public class BoyKisserManager {
-   private final class_310 client = class_310.method_1551();
-   private final List<class_2960> frames = new ArrayList<>();
+   private final Minecraft client = Minecraft.getInstance();
+   private final List<Identifier> frames = new ArrayList<>();
    private int currentFrame = 0;
    private long lastFrameTime = 0L;
    private final int frameDelay = 100;
@@ -31,43 +36,37 @@ public class BoyKisserManager {
       int frameCount = 52;
 
       for (int i = 0; i < frameCount; i++) {
-         this.frames.add(class_2960.method_60655("astolfoclient", "textures/gui/boikiser/boykisser_" + i + ".png"));
+         this.frames.add(Identifier.fromNamespaceAndPath("astolfoclient", "textures/gui/boikiser/boykisser_" + i + ".png"));
       }
    }
 
-   public void render(class_332 context, float delta) {
+   public void render(GuiGraphicsExtractor context, float delta) {
       long now = (long)(System.nanoTime() / 1000000.0);
       if (now - this.lastFrameTime > 100L) {
          this.currentFrame = (this.currentFrame + 1) % this.frames.size();
          this.lastFrameTime = now;
       }
 
-      class_2960 currentTexture = this.frames.get(this.currentFrame);
-      context.method_51448().method_22903();
+      Identifier currentTexture = this.frames.get(this.currentFrame);
+      context.pose().pushMatrix();
       float scaleModifier = this.getScaleModifier();
-      context.method_51448().method_46416((float)this.x, (float)this.y, 0.0F);
-      context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-      context.method_51448().method_46416((float)(-this.x), (float)(-this.y), 0.0F);
-      class_4598 provider = this.client.method_22940().method_23000();
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
-      class_4588 vertexConsumer = provider.getBuffer(class_1921.method_23028(currentTexture));
-      int light = 15728880;
-      float x1 = (float)this.x;
-      float y1 = (float)this.y;
-      float x2 = (float)(this.x + 64.0);
-      float y2 = (float)(this.y + 64.0);
-      float z = 0.0F;
-      vertexConsumer.method_22918(matrix, x1, y2, z).method_1336(255, 255, 255, 255).method_22913(0.0F, 1.0F).method_60803(light);
-      vertexConsumer.method_22918(matrix, x2, y2, z).method_1336(255, 255, 255, 255).method_22913(1.0F, 1.0F).method_60803(light);
-      vertexConsumer.method_22918(matrix, x2, y1, z).method_1336(255, 255, 255, 255).method_22913(1.0F, 0.0F).method_60803(light);
-      vertexConsumer.method_22918(matrix, x1, y1, z).method_1336(255, 255, 255, 255).method_22913(0.0F, 0.0F).method_60803(light);
-      provider.method_22993();
-      context.method_51448().method_22909();
+      context.pose().translate((float)this.x, (float)this.y);
+      context.pose().scale(scaleModifier, scaleModifier);
+      context.pose().translate((float)(-this.x), (float)(-this.y));
+      Matrix4f matrix = GuiCompat.matrix4f(context);
+      Builder.texture()
+         .size(new SizeState(64.0F, 64.0F))
+         .radius(new QuadRadiusState(0.0F))
+         .texture(0.0F, 0.0F, 1.0F, 1.0F, this.client.getTextureManager().getTexture(currentTexture))
+         .color(QuadColorState.WHITE)
+         .build()
+         .render(matrix, (float)this.x, (float)this.y);
+      context.pose().popMatrix();
    }
 
    public float getScaleModifier() {
-      class_310 mc = class_310.method_1551();
-      double currentGuiScale = mc.method_22683().method_4495();
+      Minecraft mc = Minecraft.getInstance();
+      double currentGuiScale = mc.getWindow().getGuiScale();
       if (currentGuiScale <= 0.0) {
          currentGuiScale = 2.0;
       }
@@ -92,8 +91,8 @@ public class BoyKisserManager {
    public void onMouseDragged(double mouseX, double mouseY, int button) {
       if (button == 0 && this.isDragging) {
          float scaleModifier = this.getScaleModifier();
-         float screenW = this.client.method_22683().method_4486();
-         float screenH = this.client.method_22683().method_4502();
+         float screenW = this.client.getWindow().getGuiScaledWidth();
+         float screenH = this.client.getWindow().getGuiScaledHeight();
          float effectiveW = (float)(64.0 * scaleModifier);
          float effectiveH = (float)(64.0 * scaleModifier);
          this.x = Math.max(0.0, Math.min(Math.max(0.0F, screenW - effectiveW), mouseX - this.dragX));

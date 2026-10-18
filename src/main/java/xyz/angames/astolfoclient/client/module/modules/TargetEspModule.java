@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.module.modules;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1297;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
@@ -48,7 +48,7 @@ public class TargetEspModule extends Module {
       this.addSetting(this.chromatic);
    }
 
-   public static void addTargetEffect(class_1297 target) {
+   public static void addTargetEffect(Entity target) {
       if (target != null) {
          if (AstolfoclientClient.moduleManager.getModuleByName("TargetESP") instanceof TargetEspModule tem && tem.isEnabled()) {
             String m = tem.mode.get();
@@ -65,7 +65,7 @@ public class TargetEspModule extends Module {
       }
    }
 
-   public static void addTargetAttack(class_1297 target) {
+   public static void addTargetAttack(Entity target) {
       if (target != null) {
          if (AstolfoclientClient.moduleManager.getModuleByName("TargetESP") instanceof TargetEspModule tem && tem.isEnabled()) {
             String m = tem.mode.get();

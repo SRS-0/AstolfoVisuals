@@ -3,26 +3,25 @@ package xyz.angames.astolfoclient.client.mixin;
 import it.unimi.dsi.fastutil.objects.Object2IntMap.Entry;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1268;
-import net.minecraft.class_1269;
-import net.minecraft.class_1294;
-import net.minecraft.class_1297;
-import net.minecraft.class_1309;
-import net.minecraft.class_1657;
-import net.minecraft.class_1799;
-import net.minecraft.class_1802;
-import net.minecraft.class_1829;
-import net.minecraft.class_1887;
-import net.minecraft.class_1890;
-import net.minecraft.class_2398;
-import net.minecraft.class_310;
-import net.minecraft.class_3417;
-import net.minecraft.class_3966;
-import net.minecraft.class_5134;
-import net.minecraft.class_636;
-import net.minecraft.class_638;
-import net.minecraft.class_6880;
-import net.minecraft.class_9304;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.Holder;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -34,10 +33,10 @@ import xyz.angames.astolfoclient.client.module.modules.render.RagdollModule;
 import xyz.angames.astolfoclient.client.util.FakePlayerEntity;
 
 @Environment(EnvType.CLIENT)
-@Mixin(class_636.class)
+@Mixin(MultiPlayerGameMode.class)
 public class ClientPlayerInteractionManagerMixin {
-   @Inject(method = "attackEntity", at = @At("HEAD"), cancellable = true)
-   public void onAttackEntity(class_1657 player, class_1297 target, CallbackInfo ci) {
+   @Inject(method = "attack", at = @At("HEAD"), cancellable = true)
+   public void onAttackEntity(Player player, Entity target, CallbackInfo ci) {
       if (AstolfoclientClient.killEffectManager != null && AstolfoclientClient.moduleManager != null) {
          Module mod = AstolfoclientClient.moduleManager.getModuleByName("KillEffect");
          if (mod != null && mod.isEnabled()) {
@@ -50,26 +49,26 @@ public class ClientPlayerInteractionManagerMixin {
          if (ragdollModule != null
             && ragdollModule.isEnabled()
             && ((RagdollModule)ragdollModule).hit.get()
-            && target instanceof class_1309 livingTarget
+            && target instanceof LivingEntity livingTarget
             && AstolfoclientClient.ragdollRenderer != null) {
             AstolfoclientClient.ragdollRenderer.addRagdoll(livingTarget);
          }
       }
 
       if (target instanceof FakePlayerEntity fake) {
-         fake.method_5711((byte)2);
-         player.method_7350();
-         float cooldownProgress = player.method_7261(0.5F);
+         fake.handleEntityEvent((byte)2);
+         player.resetAttackStrengthTicker();
+         float cooldownProgress = player.getAttackStrengthScale(0.5F);
          boolean fullyCharged = cooldownProgress > 0.9F;
          boolean isCrit = fullyCharged
-            && !player.method_24828()
-            && !player.method_6101()
-            && !player.method_5799()
-            && !player.method_6059(class_1294.field_5919)
-            && !player.method_5765();
-         double baseDamage = player.method_45325(class_5134.field_23721);
-         if (baseDamage <= 1.0 && player.method_6047() != null && !player.method_6047().method_7960()) {
-            String name = player.method_6047().method_7909().toString().toLowerCase();
+            && !player.onGround()
+            && !player.onClimbable()
+            && !player.isInWater()
+            && !player.hasEffect(MobEffects.BLINDNESS)
+            && !player.isPassenger();
+         double baseDamage = player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+         if (baseDamage <= 1.0 && player.getMainHandItem() != null && !player.getMainHandItem().isEmpty()) {
+            String name = player.getMainHandItem().getItem().toString().toLowerCase();
             if (name.contains("sword")) {
                if (name.contains("netherite")) {
                   baseDamage = 8.0;
@@ -101,11 +100,11 @@ public class ClientPlayerInteractionManagerMixin {
          }
 
          int fireAspectLevel = 0;
-         if (player.method_6047() != null && !player.method_6047().method_7960()) {
-            class_9304 enchants = class_1890.method_57532(player.method_6047());
+         if (player.getMainHandItem() != null && !player.getMainHandItem().isEmpty()) {
+            ItemEnchantments enchants = EnchantmentHelper.getEnchantmentsForCrafting(player.getMainHandItem());
 
-            for (Entry<class_6880<class_1887>> entry : enchants.method_57539()) {
-               String id = ((class_6880)entry.getKey()).method_40230().map(k -> k.method_29177().toString()).orElse("");
+            for (Entry<Holder<Enchantment>> entry : enchants.entrySet()) {
+               String id = ((Holder<Enchantment>)entry.getKey()).unwrapKey().map(k -> k.identifier().toString()).orElse("");
                if (id.contains("fire_aspect")) {
                   fireAspectLevel = entry.getIntValue();
                   break;
@@ -114,81 +113,74 @@ public class ClientPlayerInteractionManagerMixin {
          }
 
          if (fireAspectLevel > 0) {
-            fake.method_5639(fireAspectLevel * 4);
+            fake.igniteForSeconds(fireAspectLevel * 4);
          }
 
-         boolean isSword = player.method_6047() != null && player.method_6047().method_7909() instanceof class_1829;
-         boolean isSweep = fullyCharged && !isCrit && player.method_24828() && !player.method_5624() && isSword;
-         boolean isKnockback = fullyCharged && player.method_5624();
-         player.method_5783(class_3417.field_15115, 1.0F, 1.0F);
+         boolean isSword = player.getMainHandItem() != null && player.getMainHandItem().is(net.minecraft.tags.ItemTags.SWORDS);
+         boolean isSweep = fullyCharged && !isCrit && player.onGround() && !player.isSprinting() && isSword;
+         boolean isKnockback = fullyCharged && player.isSprinting();
+         player.playSound(SoundEvents.PLAYER_HURT, 1.0F, 1.0F);
          if (isCrit) {
-            class_310.method_1551().field_1713.method_3061(target, class_2398.field_11205);
-            player.method_5783(class_3417.field_15016, 1.0F, 1.0F);
+            Minecraft.getInstance().particleEngine.createTrackingEmitter(target, ParticleTypes.CRIT);
+            player.playSound(SoundEvents.PLAYER_ATTACK_CRIT, 1.0F, 1.0F);
          } else if (isSweep) {
-            double d = -Math.sin(player.method_36454() * (float) (Math.PI / 180.0));
-            double e = Math.cos(player.method_36454() * (float) (Math.PI / 180.0));
-            if (player.method_37908() instanceof class_638) {
-               player.method_37908()
-                  .method_8406(class_2398.field_11227, target.method_23317() + d, target.method_23323(0.5), target.method_23321() + e, d, 0.0, e);
+            double d = -Math.sin(player.getYRot() * (float) (Math.PI / 180.0));
+            double e = Math.cos(player.getYRot() * (float) (Math.PI / 180.0));
+            if (player.level() instanceof ClientLevel) {
+               player.level()
+                  .addParticle(ParticleTypes.SWEEP_ATTACK, target.getX() + d, target.getY(0.5), target.getZ() + e, d, 0.0, e);
             }
 
-            player.method_5783(class_3417.field_14706, 1.0F, 1.0F);
-            if (player.method_37908() != null) {
+            player.playSound(SoundEvents.PLAYER_ATTACK_SWEEP, 1.0F, 1.0F);
+            if (player.level() != null) {
                float sweepDamage = 1.0F + 0.5F * (float)baseDamage;
 
-               for (class_1297 entity : player.method_37908()
-                  .method_8390(FakePlayerEntity.class, target.method_5829().method_1009(1.0, 0.25, 1.0), ent -> ent != target && ent != player)) {
-                  entity.method_5711((byte)2);
-                  player.method_5783(class_3417.field_15115, 1.0F, 1.0F);
-                  float otherHealth = ((FakePlayerEntity)entity).method_6032() - sweepDamage;
+               for (Entity entity : player.level()
+                  .getEntitiesOfClass(FakePlayerEntity.class, target.getBoundingBox().inflate(1.0, 0.25, 1.0), ent -> ent != target && ent != player)) {
+                  entity.handleEntityEvent((byte)2);
+                  player.playSound(SoundEvents.PLAYER_HURT, 1.0F, 1.0F);
+                  float otherHealth = ((FakePlayerEntity)entity).getHealth() - sweepDamage;
                   if (otherHealth <= 0.0F) {
-                     entity.method_5711((byte)35);
-                     class_310.method_1551().field_1713.method_3051(entity, class_2398.field_11220, 30);
-                     player.method_5783(class_3417.field_14931, 1.0F, 1.0F);
-                     ((FakePlayerEntity)entity).method_6033(20.0F);
+                     entity.handleEntityEvent((byte)35);
+                     Minecraft.getInstance().particleEngine.createTrackingEmitter(entity, ParticleTypes.TOTEM_OF_UNDYING, 30);
+                     player.playSound(SoundEvents.TOTEM_USE, 1.0F, 1.0F);
+                     ((FakePlayerEntity)entity).setHealth(20.0F);
                   } else {
-                     ((FakePlayerEntity)entity).method_6033(otherHealth);
+                     ((FakePlayerEntity)entity).setHealth(otherHealth);
                   }
                }
             }
          } else if (isKnockback) {
-            player.method_5783(class_3417.field_14999, 1.0F, 1.0F);
+            player.playSound(SoundEvents.PLAYER_ATTACK_KNOCKBACK, 1.0F, 1.0F);
          } else if (fullyCharged) {
-            player.method_5783(class_3417.field_14840, 1.0F, 1.0F);
+            player.playSound(SoundEvents.PLAYER_ATTACK_STRONG, 1.0F, 1.0F);
          } else {
-            player.method_5783(class_3417.field_14625, 1.0F, 1.0F);
+            player.playSound(SoundEvents.PLAYER_ATTACK_WEAK, 1.0F, 1.0F);
          }
 
-         if (player.method_6047() != null && !player.method_6047().method_7960() && player.method_6047().method_7942()) {
-            class_310.method_1551().field_1713.method_3061(target, class_2398.field_11208);
+         if (player.getMainHandItem() != null && !player.getMainHandItem().isEmpty() && player.getMainHandItem().isEnchanted()) {
+            Minecraft.getInstance().particleEngine.createTrackingEmitter(target, ParticleTypes.ENCHANTED_HIT);
          }
 
-         float newHealth = fake.method_6032() - damage;
+         float newHealth = fake.getHealth() - damage;
          if (newHealth <= 0.0F) {
-            fake.method_5711((byte)35);
-            class_310.method_1551().field_1713.method_3051(fake, class_2398.field_11220, 30);
-            class_310.method_1551().field_1773.method_3189(new class_1799(class_1802.field_8288));
-            player.method_5783(class_3417.field_14931, 1.0F, 1.0F);
-            fake.method_6033(20.0F);
+            fake.handleEntityEvent((byte)35);
+            Minecraft.getInstance().particleEngine.createTrackingEmitter(fake, ParticleTypes.TOTEM_OF_UNDYING, 30);
+            Minecraft.getInstance().player.displayItemActivation(new ItemStack(Items.TOTEM_OF_UNDYING));
+            player.playSound(SoundEvents.TOTEM_USE, 1.0F, 1.0F);
+            fake.setHealth(20.0F);
          } else {
-            fake.method_6033(newHealth);
+            fake.setHealth(newHealth);
          }
 
          ci.cancel();
       }
    }
 
-   @Inject(method = "interactEntity", at = @At("HEAD"), cancellable = true)
-   public void onInteractEntity(class_1657 player, class_1297 entity, class_1268 hand, CallbackInfoReturnable<class_1269> cir) {
+   @Inject(method = "interact", at = @At("HEAD"), cancellable = true)
+   public void onInteractEntityAtLocation(Player player, Entity entity, EntityHitResult hitResult, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
       if (entity instanceof FakePlayerEntity) {
-         cir.setReturnValue(class_1269.field_5811);
-      }
-   }
-
-   @Inject(method = "interactEntityAtLocation", at = @At("HEAD"), cancellable = true)
-   public void onInteractEntityAtLocation(class_1657 player, class_1297 entity, class_3966 hitResult, class_1268 hand, CallbackInfoReturnable<class_1269> cir) {
-      if (entity instanceof FakePlayerEntity) {
-         cir.setReturnValue(class_1269.field_5811);
+         cir.setReturnValue(InteractionResult.PASS);
       }
    }
 }

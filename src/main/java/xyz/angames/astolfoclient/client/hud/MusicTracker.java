@@ -15,10 +15,10 @@ import java.util.Arrays;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1011;
-import net.minecraft.class_1043;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
 
 @Environment(EnvType.CLIENT)
 public class MusicTracker {
@@ -33,8 +33,8 @@ public class MusicTracker {
    private static volatile String owner = "system";
    private static volatile long lastPollSystemTime = 0L;
    private static volatile long lastPolledPosition = 0L;
-   private static class_2960 artworkIdentifier = null;
-   private static class_1043 artworkTexture = null;
+   private static Identifier artworkIdentifier = null;
+   private static DynamicTexture artworkTexture = null;
    private static byte[] lastArtworkBytes = null;
    private static MusicTracker.User32 user32Instance = null;
 
@@ -181,10 +181,10 @@ public class MusicTracker {
    public static String getLyrics(String artist, String title) {
       if (artist != null && title != null) {
          String fileName = (artist + " - " + title).replaceAll("[\\\\/:*?\"<>|]", "_") + ".txt";
-         File file = new File(class_310.method_1551().field_1697, "astolfoclient/lyrics/" + fileName);
+         File file = new File(Minecraft.getInstance().gameDirectory, "astolfoclient/lyrics/" + fileName);
          if (!file.exists()) {
             fileName = (artist + " - " + title).replaceAll("[\\\\/:*?\"<>|]", "_") + ".lrc";
-            file = new File(class_310.method_1551().field_1697, "astolfoclient/lyrics/" + fileName);
+            file = new File(Minecraft.getInstance().gameDirectory, "astolfoclient/lyrics/" + fileName);
          }
 
          if (file.exists()) {
@@ -201,7 +201,7 @@ public class MusicTracker {
       }
    }
 
-   public static class_2960 getArtworkTexture(byte[] artworkPng) {
+   public static Identifier getArtworkTexture(byte[] artworkPng) {
       if (artworkPng == null || artworkPng.length == 0) {
          return null;
       }
@@ -213,14 +213,14 @@ public class MusicTracker {
       cleanupArtwork();
 
       try {
-         class_1011 nativeImage = class_1011.method_4309(new ByteArrayInputStream(artworkPng));
+         NativeImage nativeImage = NativeImage.read(new ByteArrayInputStream(artworkPng));
          if (nativeImage == null) {
             return null;
          }
 
-         artworkTexture = new class_1043(nativeImage);
-         artworkIdentifier = class_2960.method_60655("astolfoclient", "music_artwork_" + System.currentTimeMillis());
-         class_310.method_1551().method_1531().method_4616(artworkIdentifier, artworkTexture);
+         artworkTexture = new DynamicTexture(() -> "astolfo artwork", nativeImage);
+         artworkIdentifier = Identifier.fromNamespaceAndPath("astolfoclient", "music_artwork_" + System.currentTimeMillis());
+         Minecraft.getInstance().getTextureManager().register(artworkIdentifier, artworkTexture);
          lastArtworkBytes = artworkPng;
          return artworkIdentifier;
       } catch (Exception e) {
@@ -232,7 +232,7 @@ public class MusicTracker {
    public static void cleanupArtwork() {
       if (artworkTexture != null) {
          try {
-            class_310.method_1551().method_1531().method_4615(artworkIdentifier);
+            Minecraft.getInstance().getTextureManager().release(artworkIdentifier);
             artworkTexture.close();
          } catch (Throwable var1) {
          }

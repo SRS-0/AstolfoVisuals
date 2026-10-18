@@ -7,7 +7,7 @@ import dev.sxmurxy.mre.builders.states.SizeState;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_3532;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.util.ModSounds;
@@ -79,8 +79,8 @@ public class ColorPickerComponent {
          .color(new QuadColorState(cBlackTrans, cBlack, cBlack, cBlackTrans))
          .build()
          .render(matrix, padX, padY);
-      float curX = padX + class_3532.method_15363(this.animSat, 0.0F, 1.0F) * padW;
-      float curY = padY + (1.0F - class_3532.method_15363(this.animBri, 0.0F, 1.0F)) * padH;
+      float curX = padX + Mth.clamp(this.animSat, 0.0F, 1.0F) * padW;
+      float curY = padY + (1.0F - Mth.clamp(this.animBri, 0.0F, 1.0F)) * padH;
       Builder.border()
          .size(new SizeState(8.5F, 8.5F))
          .radius(new QuadRadiusState(4.25F))
@@ -119,7 +119,7 @@ public class ColorPickerComponent {
             .render(matrix, hueBarX + i * sliceW, hueBarY);
       }
 
-      float hueHandleX = hueBarX + class_3532.method_15363(this.animHue, 0.0F, 1.0F) * hueBarW;
+      float hueHandleX = hueBarX + Mth.clamp(this.animHue, 0.0F, 1.0F) * hueBarW;
       float hueHandleY = hueBarY + hueBarH / 2.0F;
       Builder.border()
          .size(new SizeState(8.5F, 8.5F))
@@ -171,13 +171,13 @@ public class ColorPickerComponent {
       float hueBarX = padX;
       float hueBarW = padW;
       if (this.draggingPad) {
-         this.sat = class_3532.method_15363((float)(mx - padX) / padW, 0.0F, 1.0F);
-         this.bri = 1.0F - class_3532.method_15363((float)(my - padY) / padH, 0.0F, 1.0F);
+         this.sat = Mth.clamp((float)(mx - padX) / padW, 0.0F, 1.0F);
+         this.bri = 1.0F - Mth.clamp((float)(my - padY) / padH, 0.0F, 1.0F);
          this.updateTheme();
       }
 
       if (this.draggingHue) {
-         this.hue = class_3532.method_15363((float)(mx - hueBarX) / hueBarW, 0.0F, 1.0F);
+         this.hue = Mth.clamp((float)(mx - hueBarX) / hueBarW, 0.0F, 1.0F);
          this.updateTheme();
       }
    }

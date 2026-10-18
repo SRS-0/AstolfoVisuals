@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.config;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_3532;
+import net.minecraft.util.Mth;
 
 @Environment(EnvType.CLIENT)
 public class SoundSettings {
@@ -29,7 +29,7 @@ public class SoundSettings {
    }
 
    public static void setMasterVolume(float volume) {
-      masterVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      masterVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getGuiOpenVolume() {
@@ -37,7 +37,7 @@ public class SoundSettings {
    }
 
    public static void setGuiOpenVolume(float volume) {
-      guiOpenVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      guiOpenVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getCategoryVolume() {
@@ -45,7 +45,7 @@ public class SoundSettings {
    }
 
    public static void setCategoryVolume(float volume) {
-      categoryVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      categoryVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getModuleSelectVolume() {
@@ -53,7 +53,7 @@ public class SoundSettings {
    }
 
    public static void setModuleSelectVolume(float volume) {
-      moduleSelectVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      moduleSelectVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getSliderVolume() {
@@ -61,7 +61,7 @@ public class SoundSettings {
    }
 
    public static void setSliderVolume(float volume) {
-      sliderVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      sliderVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getSearchVolume() {
@@ -69,7 +69,7 @@ public class SoundSettings {
    }
 
    public static void setSearchVolume(float volume) {
-      searchVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      searchVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getModeOpenVolume() {
@@ -77,7 +77,7 @@ public class SoundSettings {
    }
 
    public static void setModeOpenVolume(float volume) {
-      modeOpenVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      modeOpenVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 
    public static float getModuleToggleVolume() {
@@ -85,6 +85,6 @@ public class SoundSettings {
    }
 
    public static void setModuleToggleVolume(float volume) {
-      moduleToggleVolume = class_3532.method_15363(volume, 0.0F, 100.0F);
+      moduleToggleVolume = Mth.clamp(volume, 0.0F, 100.0F);
    }
 }

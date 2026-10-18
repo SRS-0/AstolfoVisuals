@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
-import net.minecraft.class_2561;
-import net.minecraft.class_310;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.client.Minecraft;
 import xyz.angames.astolfoclient.client.command.commands.BindCommand;
 import xyz.angames.astolfoclient.client.command.commands.ConfigCommand;
 import xyz.angames.astolfoclient.client.command.commands.FakePlayerCommand;
@@ -68,11 +68,11 @@ public class CommandManager {
          }
       }
 
-      if (class_310.method_1551().field_1705 != null) {
-         class_310.method_1551()
-            .field_1705
-            .method_1743()
-            .method_1812(class_2561.method_43470("§d[Astolfo] " + class_124.field_1061 + "Unknown command: " + commandName + ". Try $help."));
+      if (Minecraft.getInstance().gui != null) {
+         Minecraft.getInstance()
+            .gui
+            .hud.getChat()
+            .addClientSystemMessage(Component.literal("§d[Astolfo] " + ChatFormatting.RED + "Unknown command: " + commandName + ". Try $help."));
       }
 
       return true;

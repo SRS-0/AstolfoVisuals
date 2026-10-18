@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -14,14 +15,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_266;
-import net.minecraft.class_268;
-import net.minecraft.class_269;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_8646;
-import net.minecraft.class_9011;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.PlayerScoreEntry;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -31,30 +32,30 @@ import xyz.angames.astolfoclient.client.module.Module;
 public class ScoreboardManager {
    public float x = 0.0F;
    public float y = 0.0F;
-   private final class_310 client = class_310.method_1551();
+   private final Minecraft client = Minecraft.getInstance();
    private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
    private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
    private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
 
-   public void render(class_332 context) {
+   public void render(GuiGraphicsExtractor context) {
       Module module = AstolfoclientClient.moduleManager.getModuleByName("Scoreboard");
       if (module != null && module.isEnabled()) {
-         if (this.client.field_1687 != null && this.client.field_1724 != null) {
-            class_269 scoreboard = this.client.field_1687.method_8428();
-            class_266 objective = scoreboard.method_1189(class_8646.field_45157);
+         if (this.client.level != null && this.client.player != null) {
+            Scoreboard scoreboard = this.client.level.getScoreboard();
+            Objective objective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR);
             if (objective != null) {
                List<String> lines = new ArrayList<>();
-               Collection<class_9011> scores = scoreboard.method_1184(objective);
-               List<class_9011> list = scores.stream()
-                  .filter(score -> score.comp_2127() != null && !score.comp_2127().startsWith("#"))
-                  .sorted((s1, s2) -> Integer.compare(s2.comp_2128(), s1.comp_2128()))
+               Collection<PlayerScoreEntry> scores = scoreboard.listPlayerScores(objective);
+               List<PlayerScoreEntry> list = scores.stream()
+                  .filter(score -> score.owner() != null && !score.owner().startsWith("#"))
+                  .sorted((s1, s2) -> Integer.compare(s2.value(), s1.value()))
                   .limit(15L)
                   .collect(Collectors.toList());
-               String title = objective.method_1114().getString();
+               String title = objective.getDisplayName().getString();
 
-               for (class_9011 score : list) {
-                  class_268 team = scoreboard.method_1164(score.comp_2127());
-                  class_2561 text = class_268.method_1142(team, class_2561.method_43470(score.comp_2127()));
+               for (PlayerScoreEntry score : list) {
+                  PlayerTeam team = scoreboard.getPlayersTeam(score.owner());
+                  Component text = PlayerTeam.formatNameForTeam(team, Component.literal(score.owner()));
                   lines.add(text.getString());
                }
 
@@ -76,19 +77,19 @@ public class ScoreboardManager {
                float headerHeight = 18.0F;
                float lineHeight = 11.0F;
                float totalHeight = headerHeight + lines.size() * lineHeight + 6.0F;
-               double currentGuiScale = this.client.method_22683().method_4495();
+               double currentGuiScale = this.client.getWindow().getGuiScale();
                if (currentGuiScale <= 0.0) {
                   currentGuiScale = 2.0;
                }
 
                float scaleModifier = (float)(2.0 / currentGuiScale);
-               this.x = this.client.method_22683().method_4486() - width * scaleModifier - 6.0F;
-               this.y = (this.client.method_22683().method_4502() - totalHeight * scaleModifier) / 2.0F;
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(this.x, this.y, 0.0F);
-               context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-               context.method_51448().method_46416(-this.x, -this.y, 0.0F);
-               Matrix4f matrix = context.method_51448().method_23760().method_23761();
+               this.x = this.client.getWindow().getGuiScaledWidth() - width * scaleModifier - 6.0F;
+               this.y = (this.client.getWindow().getGuiScaledHeight() - totalHeight * scaleModifier) / 2.0F;
+               context.pose().pushMatrix();
+               context.pose().translate(this.x, this.y);
+               context.pose().scale(scaleModifier, scaleModifier);
+               context.pose().translate(-this.x, -this.y);
+               Matrix4f matrix = GuiCompat.matrix4f(context);
                long now = System.currentTimeMillis();
                new Color(ThemeManager.getThemedColor(now / 10L));
                this.renderShadow(matrix, this.x, this.y, width, totalHeight, 6.5F, 1.0F);
@@ -118,7 +119,7 @@ public class ScoreboardManager {
                   currentY += lineHeight;
                }
 
-               context.method_51448().method_22909();
+               context.pose().popMatrix();
             }
          }
       }

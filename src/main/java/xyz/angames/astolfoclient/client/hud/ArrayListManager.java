@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -13,8 +14,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -23,22 +24,22 @@ import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
 @Environment(EnvType.CLIENT)
 public class ArrayListManager {
-   private final class_310 client = class_310.method_1551();
+   private final Minecraft client = Minecraft.getInstance();
    private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
 
-   public void render(class_332 context) {
+   public void render(GuiGraphicsExtractor context) {
       MsdfFont semibold = (MsdfFont)SEMIBOLD_FONT.get();
       if (semibold != null) {
-         double currentGuiScale = this.client.method_22683().method_4495();
+         double currentGuiScale = this.client.getWindow().getGuiScale();
          if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
          }
 
          float scaleModifier = (float)(2.0 / currentGuiScale);
-         context.method_51448().method_22903();
-         context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-         Matrix4f matrix = context.method_51448().method_23760().method_23761();
-         float guiWidth = this.client.method_22683().method_4486() / scaleModifier;
+         context.pose().pushMatrix();
+         context.pose().scale(scaleModifier, scaleModifier);
+         Matrix4f matrix = GuiCompat.matrix4f(context);
+         float guiWidth = this.client.getWindow().getGuiScaledWidth() / scaleModifier;
          List<Module> enabledModules = AstolfoclientClient.moduleManager
             .getModules()
             .stream()
@@ -91,7 +92,7 @@ public class ArrayListManager {
             timeOffset += 180L;
          }
 
-         context.method_51448().method_22909();
+         context.pose().popMatrix();
       }
    }
 }

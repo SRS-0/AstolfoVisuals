@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.command.commands;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 
@@ -14,11 +14,11 @@ public class HelpCommand extends Command {
 
    @Override
    public void execute(String[] args) {
-      sendMessage(class_124.field_1067 + "--- Available Commands ---");
+      sendMessage(ChatFormatting.BOLD + "--- Available Commands ---");
 
       for (Command c : AstolfoclientClient.commandManager.getCommands()) {
-         sendMessage(class_124.field_1075 + c.getName() + class_124.field_1080 + ": " + c.getDescription());
-         sendMessage(class_124.field_1063 + "  " + c.getSyntax());
+         sendMessage(ChatFormatting.AQUA + c.getName() + ChatFormatting.GRAY + ": " + c.getDescription());
+         sendMessage(ChatFormatting.DARK_GRAY + "  " + c.getSyntax());
       }
    }
 }

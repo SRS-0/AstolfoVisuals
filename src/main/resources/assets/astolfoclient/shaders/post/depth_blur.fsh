@@ -1,18 +1,26 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
 uniform sampler2D InSampler;
 uniform sampler2D DepthSampler;
 
-in vec2 texCoord;
-in vec2 sampleStep;
+layout(std140) uniform SamplerInfo {
+    vec2 OutSize;
+    vec2 InSize;
+};
 
-uniform float Radius;
-uniform float Near;
-uniform float Far;
-uniform float FogStart;
-uniform float FogEnd;
+layout(std140) uniform DepthBlurConfig {
+    vec2 BlurDir;
+    float Radius;
+    float Near;
+    float Far;
+    float FogStart;
+    float FogEnd;
+};
 
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+
+layout(location = 0) out vec4 fragColor;
 
 float linearizeDepth(float depth, float near, float far) {
     float ndc = depth * 2.0 - 1.0;
@@ -20,6 +28,7 @@ float linearizeDepth(float depth, float near, float far) {
 }
 
 void main() {
+    vec2 sampleStep = (1.0 / InSize) * BlurDir;
     float rawDepth = texture(DepthSampler, texCoord).r;
     
     // Skip blurring for sky/background pixels to keep the skybox/stars sharp

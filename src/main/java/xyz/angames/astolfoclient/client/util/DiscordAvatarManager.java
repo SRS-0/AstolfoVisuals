@@ -5,14 +5,14 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1011;
-import net.minecraft.class_1043;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
+import com.mojang.blaze3d.platform.NativeImage;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
 
 @Environment(EnvType.CLIENT)
 public class DiscordAvatarManager {
-   private static class_2960 avatarTexture = null;
+   private static Identifier avatarTexture = null;
    private static volatile String lastAvatarUrl = "";
    private static volatile boolean isDownloading = false;
 
@@ -44,11 +44,11 @@ public class DiscordAvatarManager {
                conn.connect();
                if (conn.getResponseCode() == 200) {
                   try (InputStream in = conn.getInputStream()) {
-                     class_1011 img = class_1011.method_4309(in);
+                     NativeImage img = NativeImage.read(in);
                      if (img != null) {
-                        class_310.method_1551().execute(() -> {
-                           class_2960 id = class_2960.method_60655("astolfoclient", "discord_avatar_" + System.currentTimeMillis());
-                           class_310.method_1551().method_1531().method_4616(id, new class_1043(img));
+                        Minecraft.getInstance().execute(() -> {
+                           Identifier id = Identifier.fromNamespaceAndPath("astolfoclient", "discord_avatar_" + System.currentTimeMillis());
+                           Minecraft.getInstance().getTextureManager().register(id, new DynamicTexture(() -> "astolfo discord avatar", img));
                            avatarTexture = id;
                         });
                      }
@@ -64,7 +64,7 @@ public class DiscordAvatarManager {
       }
    }
 
-   public static class_2960 getAvatarTexture() {
+   public static Identifier getAvatarTexture() {
       return avatarTexture;
    }
 }

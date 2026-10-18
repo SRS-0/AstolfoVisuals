@@ -2,8 +2,8 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_266;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.scores.Objective;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -11,10 +11,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.angames.astolfoclient.client.module.modules.misc.NameProtectModule;
 
 @Environment(EnvType.CLIENT)
-@Mixin(class_266.class)
+@Mixin(Objective.class)
 public class ScoreboardObjectiveMixin {
    @Inject(method = "getDisplayName", at = @At("RETURN"), cancellable = true)
-   public void onGetDisplayName(CallbackInfoReturnable<class_2561> cir) {
-      cir.setReturnValue(NameProtectModule.getProtectedText((class_2561)cir.getReturnValue()));
+   public void onGetDisplayName(CallbackInfoReturnable<Component> cir) {
+      cir.setReturnValue(NameProtectModule.getProtectedText((Component)cir.getReturnValue()));
    }
 }

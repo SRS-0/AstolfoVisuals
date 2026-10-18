@@ -1,11 +1,11 @@
 package xyz.angames.astolfoclient.client.render.shader;
 
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import org.lwjgl.opengl.GL20;
+import xyz.angames.astolfoclient.client.compat.GL20;
 
 @Environment(EnvType.CLIENT)
 public class ShaderUtil {

@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.builders.Builder;
@@ -12,21 +13,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1044;
-import net.minecraft.class_1297;
-import net.minecraft.class_1309;
-import net.minecraft.class_1531;
-import net.minecraft.class_1657;
-import net.minecraft.class_266;
-import net.minecraft.class_269;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_3532;
-import net.minecraft.class_640;
-import net.minecraft.class_742;
-import net.minecraft.class_8646;
-import net.minecraft.class_9013;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
@@ -41,13 +42,13 @@ public class TargetHudManager {
    private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
    private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
    private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
-   private static final class_2960 DEFAULT_MOB_ICON = class_2960.method_60655("astolfoclient", "textures/gui/mob_icon.png");
+   private static final Identifier DEFAULT_MOB_ICON = Identifier.fromNamespaceAndPath("astolfoclient", "textures/gui/mob_icon.png");
    private static final Pattern HEALTH_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)");
    private final float baseWidth = 122.0F;
    private final float baseHeight = 33.0F;
    public float x = 100.0F;
    public float y = 100.0F;
-   private class_1309 currentTarget;
+   private LivingEntity currentTarget;
    private long lastHitTime;
    private long lastDamageTime;
    private float animationProgress = 0.0F;
@@ -60,7 +61,7 @@ public class TargetHudManager {
    private float dragOffsetY;
    private long lastUpdateTimeNs = -1L;
 
-   public void setTarget(class_1309 target) {
+   public void setTarget(LivingEntity target) {
       if (target == null || !TargetUtils.isInvisible(target)) {
          if (this.currentTarget != target) {
             this.currentTarget = target;
@@ -68,7 +69,7 @@ public class TargetHudManager {
                float h = this.getRealHealth(target);
                this.visualHealth = h;
                this.damageHealth = h;
-               this.visualAbsorption = target.method_6067();
+               this.visualAbsorption = target.getAbsorptionAmount();
             }
          }
 
@@ -81,10 +82,10 @@ public class TargetHudManager {
       this.lastDamageTime = (long)(System.nanoTime() / 1000000.0);
    }
 
-   public void render(class_332 context, float tickDelta) {
-      class_310 client = class_310.method_1551();
-      if (client.field_1687 != null) {
-         boolean isEditing = client.field_1755 instanceof HudEditorScreen;
+   public void render(GuiGraphicsExtractor context, float tickDelta) {
+      Minecraft client = Minecraft.getInstance();
+      if (client.level != null) {
+         boolean isEditing = client.gui.screen() instanceof HudEditorScreen;
          long nowNs = System.nanoTime();
          if (this.lastUpdateTimeNs == -1L) {
             this.lastUpdateTimeNs = nowNs;
@@ -98,40 +99,40 @@ public class TargetHudManager {
          }
 
          long now = (long)(nowNs / 1000000.0);
-         boolean isTargetValid = this.currentTarget != null && this.currentTarget.method_5805() && !TargetUtils.isInvisible(this.currentTarget);
+         boolean isTargetValid = this.currentTarget != null && this.currentTarget.isAlive() && !TargetUtils.isInvisible(this.currentTarget);
          boolean shouldShow = isTargetValid && now - this.lastHitTime <= 250L || isEditing;
          this.animationProgress = this.animationProgress
             + ((shouldShow ? 1.0F : 0.0F) - this.animationProgress) * (float)(1.0 - Math.exp(-14.0 * deltaSeconds));
          if (this.animationProgress < 0.005F && !shouldShow) {
             this.currentTarget = null;
          } else {
-            class_1309 entityToRender = (class_1309)(isEditing ? client.field_1724 : this.currentTarget);
+            LivingEntity entityToRender = (LivingEntity)(isEditing ? client.player : this.currentTarget);
             if (entityToRender != null) {
                float realHealth = this.getRealHealth(entityToRender);
-               float realAbsorption = entityToRender.method_6067();
+               float realAbsorption = entityToRender.getAbsorptionAmount();
                this.visualHealth = this.visualHealth + (realHealth - this.visualHealth) * (float)(1.0 - Math.exp(-12.0 * deltaSeconds));
                this.damageHealth = this.damageHealth + (realHealth - this.damageHealth) * (float)(1.0 - Math.exp(-6.0 * deltaSeconds));
                this.visualAbsorption = this.visualAbsorption + (realAbsorption - this.visualAbsorption) * (float)(1.0 - Math.exp(-12.0 * deltaSeconds));
-               String name = NameProtectModule.getProtectedName(entityToRender.method_5477().getString());
+               String name = NameProtectModule.getProtectedName(entityToRender.getName().getString());
                MsdfFont bold = (MsdfFont)BOLD_FONT.get();
                MsdfFont semibold = (MsdfFont)SEMIBOLD_FONT.get();
                MsdfFont medium = (MsdfFont)MEDIUM_FONT.get();
                float scaleModifier = this.getScaleModifier();
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(this.x, this.y, 0.0F);
-               context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-               context.method_51448().method_46416(-this.x, -this.y, 0.0F);
+               context.pose().pushMatrix();
+               context.pose().translate(this.x, this.y);
+               context.pose().scale(scaleModifier, scaleModifier);
+               context.pose().translate(-this.x, -this.y);
                float ease = 1.0F - (float)Math.pow(1.0F - this.animationProgress, 3.0);
                float popScale = 0.86F + 0.14F * ease;
                if (popScale < 0.999F) {
                   float cx = this.x + 61.0F;
                   float cy = this.y + 16.5F;
-                  context.method_51448().method_46416(cx, cy, 0.0F);
-                  context.method_51448().method_22905(popScale, popScale, 1.0F);
-                  context.method_51448().method_46416(-cx, -cy, 0.0F);
+                  context.pose().translate(cx, cy);
+                  context.pose().scale(popScale, popScale);
+                  context.pose().translate(-cx, -cy);
                }
 
-               Matrix4f matrix = context.method_51448().method_23760().method_23761();
+               Matrix4f matrix = GuiCompat.matrix4f(context);
                Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
                int shadowSteps = 12;
                float maxSpread = 7.5F;
@@ -214,28 +215,28 @@ public class TargetHudManager {
 
                float barWidth = 122.0F - (textStartX - this.x) - 6.0F;
                float barY = hpTopY + 9.0F;
-               this.renderHpBar(matrix, textStartX, barY, barWidth, 3.2F, themeColor, this.animationProgress, entityToRender.method_6063());
-               context.method_51448().method_22909();
+               this.renderHpBar(matrix, textStartX, barY, barWidth, 3.2F, themeColor, this.animationProgress, entityToRender.getMaxHealth());
+               context.pose().popMatrix();
             }
          }
       }
    }
 
-   public float getRealHealth(class_1309 entity) {
-      if (entity != null && class_310.method_1551().field_1687 != null) {
-         class_269 scoreboard = class_310.method_1551().field_1687.method_8428();
-         class_266 objective = scoreboard.method_1189(class_8646.field_45158);
+   public float getRealHealth(LivingEntity entity) {
+      if (entity != null && Minecraft.getInstance().level != null) {
+         Scoreboard scoreboard = Minecraft.getInstance().level.getScoreboard();
+         Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
          if (objective != null) {
-            class_9013 score = scoreboard.method_55430(entity, objective);
+            ReadOnlyScoreInfo score = scoreboard.getPlayerScoreInfo(entity, objective);
             if (score != null) {
-               return score.method_55397();
+               return score.value();
             }
          }
 
-         if (entity instanceof class_1657 player) {
-            class_640 entry = class_310.method_1551().method_1562().method_2871(player.method_5667());
-            if (entry != null && entry.method_2955() != null) {
-               String suffix = entry.method_2955().method_1136().getString();
+         if (entity instanceof Player player) {
+            PlayerInfo entry = Minecraft.getInstance().getConnection().getPlayerInfo(player.getUUID());
+            if (entry != null && entry.getTeam() != null) {
+               String suffix = entry.getTeam().getPlayerSuffix().getString();
                float extracted = this.extractHealthFromString(suffix);
                if (extracted != -1.0F) {
                   return extracted;
@@ -243,16 +244,16 @@ public class TargetHudManager {
             }
          }
 
-         for (class_1297 e : class_310.method_1551().field_1687.method_8335(entity, entity.method_5829().method_1009(4.0, 2.0, 4.0))) {
-            if (e.method_5807() || e instanceof class_1531) {
-               float extracted = this.extractHealthFromString(e.method_5476().getString());
+         for (Entity e : Minecraft.getInstance().level.getEntities(entity, entity.getBoundingBox().inflate(4.0, 2.0, 4.0))) {
+            if (e.isCustomNameVisible() || e instanceof ArmorStand) {
+               float extracted = this.extractHealthFromString(e.getDisplayName().getString());
                if (extracted != -1.0F) {
                   return extracted;
                }
             }
          }
 
-         return entity.method_6032();
+         return entity.getHealth();
       } else {
          return 0.0F;
       }
@@ -283,11 +284,11 @@ public class TargetHudManager {
          .build()
          .render(matrix, bx, by);
       float safeMax = Math.max(maxHp, 20.0F);
-      float hpPct = class_3532.method_15363(this.visualHealth / safeMax, 0.0F, 1.0F);
+      float hpPct = Mth.clamp(this.visualHealth / safeMax, 0.0F, 1.0F);
       float hpWidth = bw * hpPct;
-      float absPct = class_3532.method_15363(this.visualAbsorption / safeMax, 0.0F, 1.0F);
+      float absPct = Mth.clamp(this.visualAbsorption / safeMax, 0.0F, 1.0F);
       float absWidth = bw * absPct;
-      float dmgPct = class_3532.method_15363(this.damageHealth / safeMax, 0.0F, 1.0F);
+      float dmgPct = Mth.clamp(this.damageHealth / safeMax, 0.0F, 1.0F);
       float dmgWidth = bw * dmgPct;
       if (hpWidth > 2.0F) {
          this.drawBarGlowShadow(matrix, bx, by, hpWidth, bh, bh / 2.0F, theme, 0.2F * alpha);
@@ -345,9 +346,9 @@ public class TargetHudManager {
       }
    }
 
-   private void renderEntityHead(class_310 client, class_1309 entity, Matrix4f matrix, float hX, float hY, float size, Color tint, float alpha) {
-      if (entity instanceof class_742 player) {
-         class_1044 skin = client.method_1531().method_4619(player.method_52814().comp_1626());
+   private void renderEntityHead(Minecraft client, LivingEntity entity, Matrix4f matrix, float hX, float hY, float size, Color tint, float alpha) {
+      if (entity instanceof AbstractClientPlayer player) {
+         AbstractTexture skin = client.getTextureManager().getTexture(player.getSkin().body().texturePath());
          Builder.texture()
             .size(new SizeState(size, size))
             .radius(new QuadRadiusState(4.0F))
@@ -363,7 +364,7 @@ public class TargetHudManager {
             .build()
             .render(matrix, hX, hY);
       } else {
-         class_1044 mob = client.method_1531().method_4619(DEFAULT_MOB_ICON);
+         AbstractTexture mob = client.getTextureManager().getTexture(DEFAULT_MOB_ICON);
          Builder.texture()
             .size(new SizeState(size, size))
             .radius(new QuadRadiusState(4.0F))
@@ -426,8 +427,8 @@ public class TargetHudManager {
    }
 
    private float getScaleModifier() {
-      class_310 client = class_310.method_1551();
-      double currentGuiScale = client.method_22683().method_4495();
+      Minecraft client = Minecraft.getInstance();
+      double currentGuiScale = client.getWindow().getGuiScale();
       if (currentGuiScale <= 0.0) {
          currentGuiScale = 2.0;
       }
@@ -436,7 +437,7 @@ public class TargetHudManager {
    }
 
    private float lerp(float start, float end, float delta) {
-      return start + (end - start) * class_3532.method_15363(delta, 0.0F, 1.0F);
+      return start + (end - start) * Mth.clamp(delta, 0.0F, 1.0F);
    }
 
    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
@@ -455,10 +456,10 @@ public class TargetHudManager {
 
    public boolean onMouseDragged(double mouseX, double mouseY, int button) {
       if (this.dragging && button == 0) {
-         class_310 mc = class_310.method_1551();
+         Minecraft mc = Minecraft.getInstance();
          float scaleModifier = this.getScaleModifier();
-         float screenW = mc.method_22683().method_4486();
-         float screenH = mc.method_22683().method_4502();
+         float screenW = mc.getWindow().getGuiScaledWidth();
+         float screenH = mc.getWindow().getGuiScaledHeight();
          float effectiveW = 122.0F * scaleModifier;
          float effectiveH = 33.0F * scaleModifier;
          float targetX = (float)(mouseX - this.dragOffsetX);

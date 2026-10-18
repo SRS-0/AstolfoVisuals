@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.gui.clickgui;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import dev.sxmurxy.mre.builders.Builder;
 import dev.sxmurxy.mre.builders.states.QuadColorState;
 import dev.sxmurxy.mre.builders.states.QuadRadiusState;
@@ -12,8 +13,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_332;
-import net.minecraft.class_3532;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.SoundSettings;
 import xyz.angames.astolfoclient.client.util.ModSounds;
@@ -23,7 +24,7 @@ public class SoundSettingsPopup {
    private static final List<SoundSettingsPopup.SoundEntry> ENTRIES = new ArrayList<>();
    private static int draggingIndex = -1;
 
-   public static void render(class_332 context, float x, float y, float w, float h, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+   public static void render(GuiGraphicsExtractor context, float x, float y, float w, float h, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
       MsdfFont medFont = null;
 
       try {
@@ -31,7 +32,7 @@ public class SoundSettingsPopup {
       } catch (Exception var31) {
       }
 
-      Matrix4f matrix = context.method_51448().method_23760().method_23761();
+      Matrix4f matrix = GuiCompat.matrix4f(context);
       GuiUtils.renderTextSafely(matrix, "Client Sounds", x + 10.0F, y + 8.0F, GuiUtils.withAlpha(Color.WHITE, alpha), 8.5F);
       Builder.rectangle()
          .size(new SizeState(w - 20.0F, 1.0F))
@@ -127,7 +128,7 @@ public class SoundSettingsPopup {
    private static void updateDrag(float mx, float tX, float trackW) {
       if (draggingIndex >= 0 && draggingIndex < ENTRIES.size()) {
          SoundSettingsPopup.SoundEntry entry = ENTRIES.get(draggingIndex);
-         float progress = class_3532.method_15363((mx - tX) / trackW, 0.0F, 1.0F);
+         float progress = Mth.clamp((mx - tX) / trackW, 0.0F, 1.0F);
          float newVal = Math.round(progress * 100.0F);
          entry.setter.accept(newVal);
          if (draggingIndex == 4) {

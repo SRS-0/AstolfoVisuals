@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import xyz.angames.astolfoclient.client.compat.GuiCompat;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.sun.management.OperatingSystemMXBean;
@@ -21,13 +22,13 @@ import java.util.Map;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1044;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_640;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.multiplayer.PlayerInfo;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFW;
+import xyz.angames.astolfoclient.client.compat.GLFW;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.DiscordRpcManager;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -39,19 +40,19 @@ import xyz.angames.astolfoclient.client.util.DiscordAvatarManager;
 
 @Environment(EnvType.CLIENT)
 public class LogoRenderer {
-   private final class_310 client = class_310.method_1551();
+   private final Minecraft client = Minecraft.getInstance();
    public static final Supplier<MsdfFont> ASTOLFO_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("astolfo_logo")
-         .data(class_2960.method_60655("mre", "fonts/astolfo.json"))
-         .atlas(class_2960.method_60655("mre", "fonts/astolfo.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "fonts/astolfo.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "fonts/astolfo.png"))
          .build()
    );
    public static final Supplier<MsdfFont> WATERMARK_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("watermark_icons")
-         .data(class_2960.method_60655("mre", "icons/watermark/watermark.json"))
-         .atlas(class_2960.method_60655("mre", "icons/watermark/watermark.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/watermark/watermark.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/watermark/watermark.png"))
          .glyphMapper(g -> {
             int idx = g.index();
             if (idx == 4) {
@@ -83,8 +84,8 @@ public class LogoRenderer {
    public static final Supplier<MsdfFont> SP_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("watermark_sp_icons")
-         .data(class_2960.method_60655("mre", "icons/watermark/seting-panel/watermark-sp.json"))
-         .atlas(class_2960.method_60655("mre", "icons/watermark/seting-panel/watermark-sp.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/watermark/seting-panel/watermark-sp.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/watermark/seting-panel/watermark-sp.png"))
          .glyphMapper(g -> {
             int idx = g.index();
             if (idx == 4) {
@@ -233,10 +234,10 @@ public class LogoRenderer {
       return AstolfoclientClient.moduleManager == null ? null : (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
    }
 
-   public void render(class_332 context) {
-      if (this.client.field_1687 != null && this.client.field_1724 != null) {
+   public void render(GuiGraphicsExtractor context) {
+      if (this.client.level != null && this.client.player != null) {
          InterfaceModule interfaceMod = this.getInterfaceModule();
-         if (interfaceMod == null || interfaceMod.logo.get() || this.client.field_1755 instanceof HudEditorScreen) {
+         if (interfaceMod == null || interfaceMod.logo.get() || this.client.gui.screen() instanceof HudEditorScreen) {
             long now = System.currentTimeMillis();
             float deltaTime = (float)(now - this.lastFrameTime) / 1000.0F;
             this.lastFrameTime = now;
@@ -254,14 +255,14 @@ public class LogoRenderer {
             MsdfFont boldFont = (MsdfFont)BOLD_FONT.get();
             MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
             MsdfFont spFont = (MsdfFont)SP_FONT.get();
-            double currentGuiScale = this.client.method_22683().method_4495();
+            double currentGuiScale = this.client.getWindow().getGuiScale();
             if (currentGuiScale <= 0.0) {
                currentGuiScale = 2.0;
             }
 
             float scaleFactor = (float)(2.0 / currentGuiScale);
-            float guiWidth = this.client.method_22683().method_4486();
-            float guiHeight = this.client.method_22683().method_4502();
+            float guiWidth = this.client.getWindow().getGuiScaledWidth();
+            float guiHeight = this.client.getWindow().getGuiScaledHeight();
 
             try {
                float fontSize = 8.5F;
@@ -293,7 +294,7 @@ public class LogoRenderer {
                this.gpuAnim.update(gpuStr);
                this.ramAnim.update(ramStr);
                this.userAnim.update(userStr);
-               Object activeScreen = this.client.field_1755;
+               Object activeScreen = this.client.gui.screen();
                if (activeScreen != this.lastScreen) {
                   this.draggedSection = null;
                   this.wasMouseDown = false;
@@ -306,13 +307,13 @@ public class LogoRenderer {
                double mouseScaledY = -9999.0;
                boolean isMouseDown = false;
                boolean isRightMouseDown = false;
-               long win = this.client.method_22683().method_4490();
+               long win = this.client.getWindow().handle();
                if (win != 0L) {
                   double[] mx = new double[1];
                   double[] my = new double[1];
                   GLFW.glfwGetCursorPos(win, mx, my);
-                  double screenWidth = this.client.method_22683().method_4489();
-                  double screenHeight = this.client.method_22683().method_4506();
+                  double screenWidth = this.client.getWindow().getWidth();
+                  double screenHeight = this.client.getWindow().getHeight();
                   if (screenWidth > 0.0 && screenHeight > 0.0) {
                      mouseScaledX = mx[0] / screenWidth * guiWidth;
                      mouseScaledY = my[0] / screenHeight * guiHeight;
@@ -520,11 +521,11 @@ public class LogoRenderer {
                }
 
                Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(x, y, 0.0F);
-               context.method_51448().method_22905(scaleFactor, scaleFactor, 1.0F);
-               context.method_51448().method_46416(-x, -y, 0.0F);
-               Matrix4f matrix = context.method_51448().method_23760().method_23761();
+               context.pose().pushMatrix();
+               context.pose().translate(x, y);
+               context.pose().scale(scaleFactor, scaleFactor);
+               context.pose().translate(-x, -y);
+               Matrix4f matrix = GuiCompat.matrix4f(context);
                int shadowSteps = 12;
                float maxSpread = 8.0F;
 
@@ -609,10 +610,10 @@ public class LogoRenderer {
 
                if (hasAvatar) {
                   boolean drawnAvatar = false;
-                  class_2960 avatarTex = DiscordAvatarManager.getAvatarTexture();
+                  Identifier avatarTex = DiscordAvatarManager.getAvatarTexture();
                   if (avatarTex != null) {
                      try {
-                        class_1044 tex = this.client.method_1531().method_4619(avatarTex);
+                        AbstractTexture tex = this.client.getTextureManager().getTexture(avatarTex);
                         if (tex != null) {
                            Builder.texture()
                               .size(new SizeState(avatarSize, avatarSize))
@@ -627,11 +628,11 @@ public class LogoRenderer {
                      }
                   }
 
-                  if (!drawnAvatar && this.client.field_1724 != null) {
+                  if (!drawnAvatar && this.client.player != null) {
                      try {
-                        class_2960 skinTex = this.client.field_1724.method_52814().comp_1626();
+                        Identifier skinTex = this.client.player.getSkin().body().texturePath();
                         if (skinTex != null) {
-                           class_1044 tex = this.client.method_1531().method_4619(skinTex);
+                           AbstractTexture tex = this.client.getTextureManager().getTexture(skinTex);
                            if (tex != null) {
                               Builder.texture()
                                  .size(new SizeState(avatarSize, avatarSize))
@@ -665,7 +666,7 @@ public class LogoRenderer {
                   }
                }
 
-               context.method_51448().method_22909();
+               context.pose().popMatrix();
                this.drawCrashAlerts(context, x, y, totalW, totalH, scaleFactor, guiWidth, guiHeight, themeColor, deltaTime);
                if (inChat) {
                   this.drawAnimatedContextPanel(
@@ -700,7 +701,7 @@ public class LogoRenderer {
    }
 
    private void drawCrashAlerts(
-      class_332 context,
+      GuiGraphicsExtractor context,
       float wX,
       float wY,
       float wTotalW,
@@ -755,17 +756,17 @@ public class LogoRenderer {
                   }
 
                   float cardY = isBottom ? currY - cardH : currY;
-                  context.method_51448().method_22903();
+                  context.pose().pushMatrix();
                   float scale = 0.9F + 0.1F * ease;
                   if (scale < 0.999F) {
                      float cx = cardX + cardW / 2.0F;
                      float cy = cardY + cardH / 2.0F;
-                     context.method_51448().method_46416(cx, cy, 0.0F);
-                     context.method_51448().method_22905(scale, scale, 1.0F);
-                     context.method_51448().method_46416(-cx, -cy, 0.0F);
+                     context.pose().translate(cx, cy);
+                     context.pose().scale(scale, scale);
+                     context.pose().translate(-cx, -cy);
                   }
 
-                  Matrix4f matrix = context.method_51448().method_23760().method_23761();
+                  Matrix4f matrix = GuiCompat.matrix4f(context);
 
                   for (int s = 6; s >= 0; s--) {
                      float progress = s / 6.0F;
@@ -824,7 +825,7 @@ public class LogoRenderer {
                         .render(matrix, cardX + 7.0F, cardY + cardH - 2.5F);
                   }
 
-                  context.method_51448().method_22909();
+                  context.pose().popMatrix();
                   if (isBottom) {
                      currY -= cardH + 4.0F;
                   } else {
@@ -837,7 +838,7 @@ public class LogoRenderer {
    }
 
    private void drawAnimatedContextPanel(
-      class_332 context,
+      GuiGraphicsExtractor context,
       float wX,
       float wY,
       float wTotalW,
@@ -901,16 +902,16 @@ public class LogoRenderer {
          MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
          float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
          float mainScale = 0.88F + 0.12F * mainEase;
-         context.method_51448().method_22903();
+         context.pose().pushMatrix();
          if (mainScale < 0.999F) {
             float cx = mX + mainW / 2.0F;
             float cy = mY + mainH / 2.0F;
-            context.method_51448().method_46416(cx, cy, 0.0F);
-            context.method_51448().method_22905(mainScale, mainScale, 1.0F);
-            context.method_51448().method_46416(-cx, -cy, 0.0F);
+            context.pose().translate(cx, cy);
+            context.pose().scale(mainScale, mainScale);
+            context.pose().translate(-cx, -cy);
          }
 
-         Matrix4f matrix = context.method_51448().method_23760().method_23761();
+         Matrix4f matrix = GuiCompat.matrix4f(context);
 
          for (int i = 6; i >= 0; i--) {
             float progress = i / 6.0F;
@@ -954,7 +955,7 @@ public class LogoRenderer {
          if (closeHover && isMouseDown && !wasMouseDown) {
             this.panelOpen = false;
             this.activeSubmenu = LogoRenderer.SubmenuType.NONE;
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
          } else {
             float c1X = mX + 4.0F;
             float c1Y = mY + 20.0F;
@@ -1132,22 +1133,22 @@ public class LogoRenderer {
                showAvatar = !showAvatar;
             }
 
-            context.method_51448().method_22909();
+            context.pose().popMatrix();
             if (this.subPanelAnim > 0.005F) {
                float subEase = 1.0F - (float)Math.pow(1.0F - this.subPanelAnim, 3.0);
                float subScale = 0.88F + 0.12F * subEase;
                float sX = mX + mainW + 5.0F;
                float sY = mY;
-               context.method_51448().method_22903();
+               context.pose().pushMatrix();
                if (subScale < 0.999F) {
                   float scx = sX + subW / 2.0F;
                   float scy = sY + subH / 2.0F;
-                  context.method_51448().method_46416(scx, scy, 0.0F);
-                  context.method_51448().method_22905(subScale, subScale, 1.0F);
-                  context.method_51448().method_46416(-scx, -scy, 0.0F);
+                  context.pose().translate(scx, scy);
+                  context.pose().scale(subScale, subScale);
+                  context.pose().translate(-scx, -scy);
                }
 
-               matrix = context.method_51448().method_23760().method_23761();
+               matrix = GuiCompat.matrix4f(context);
 
                for (int i = 6; i >= 0; i--) {
                   float progress = i / 6.0F;
@@ -1262,7 +1263,7 @@ public class LogoRenderer {
                   }
                }
 
-               context.method_51448().method_22909();
+               context.pose().popMatrix();
             }
          }
       }
@@ -1368,8 +1369,8 @@ public class LogoRenderer {
    }
 
    private String getServerStr() {
-      return this.client.method_1558() != null && this.client.method_1558().field_3761 != null && !this.client.method_1558().field_3761.trim().isEmpty()
-         ? this.client.method_1558().field_3761
+      return this.client.getCurrentServer() != null && this.client.getCurrentServer().ip != null && !this.client.getCurrentServer().ip.trim().isEmpty()
+         ? this.client.getCurrentServer().ip
          : "Local";
    }
 
@@ -1388,8 +1389,8 @@ public class LogoRenderer {
    }
 
    private int getGpuUsage() {
-      if (this.client.method_47599() > 0) {
-         int fps = this.client.method_47599();
+      if (this.client.getFps() > 0) {
+         int fps = this.client.getFps();
          return Math.min(99, Math.max(10, 100 - fps / 12));
       } else {
          return 24;
@@ -1405,10 +1406,10 @@ public class LogoRenderer {
    }
 
    private int getPing() {
-      if (this.client.method_1562() != null && this.client.field_1724 != null) {
-         class_640 info = this.client.method_1562().method_2871(this.client.field_1724.method_5667());
+      if (this.client.getConnection() != null && this.client.player != null) {
+         PlayerInfo info = this.client.getConnection().getPlayerInfo(this.client.player.getUUID());
          if (info != null) {
-            return info.method_2959();
+            return info.getLatency();
          }
       }
 
@@ -1416,15 +1417,15 @@ public class LogoRenderer {
    }
 
    private int getFps() {
-      return this.client.method_47599();
+      return this.client.getFps();
    }
 
    private String getUserName() {
-      return this.client.method_1548() != null && this.client.method_1548().method_1676() != null ? this.client.method_1548().method_1676() : "User";
+      return this.client.getUser() != null && this.client.getUser().getName() != null ? this.client.getUser().getName() : "User";
    }
 
    private boolean isAnyScreenOpen() {
-      return this.client.field_1755 != null;
+      return this.client.gui.screen() != null;
    }
 
    @Environment(EnvType.CLIENT)

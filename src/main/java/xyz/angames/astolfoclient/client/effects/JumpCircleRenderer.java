@@ -1,32 +1,34 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.platform.GlStateManager.class_4534;
-import com.mojang.blaze3d.platform.GlStateManager.class_4535;
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.GlCompat;
+import xyz.angames.astolfoclient.client.compat.Vtx;
+import xyz.angames.astolfoclient.client.compat.DestFactor;
+import xyz.angames.astolfoclient.client.compat.SourceFactor;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import java.nio.FloatBuffer;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.minecraft.class_10142;
-import net.minecraft.class_276;
-import net.minecraft.class_286;
-import net.minecraft.class_287;
-import net.minecraft.class_289;
-import net.minecraft.class_290;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_4587;
-import net.minecraft.class_6367;
-import net.minecraft.class_7833;
-import net.minecraft.class_293.class_5596;
+import xyz.angames.astolfoclient.client.compat.WorldRenderContext;
+import xyz.angames.astolfoclient.client.compat.CoreShaders;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import xyz.angames.astolfoclient.client.compat.BufferUploader;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import xyz.angames.astolfoclient.client.compat.Tesselator;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.math.Axis;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL20;
+import xyz.angames.astolfoclient.client.compat.GL20;
 import org.lwjgl.opengl.GL30;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -35,11 +37,11 @@ import xyz.angames.astolfoclient.client.module.modules.JumpCircleModule;
 
 @Environment(EnvType.CLIENT)
 public class JumpCircleRenderer {
-   private static final class_2960 TEXTURE_CLIENT = class_2960.method_60655("astolfoclient", "textures/effects/circle.png");
-   private static final class_2960 TEXTURE_LARGE = class_2960.method_60655("astolfoclient", "textures/effects/jump_circle/circle_large.png");
-   private static final class_2960 TEXTURE_SLIM = class_2960.method_60655("astolfoclient", "textures/effects/jump_circle/circle_slim.png");
+   private static final Identifier TEXTURE_CLIENT = Identifier.fromNamespaceAndPath("astolfoclient", "textures/effects/circle.png");
+   private static final Identifier TEXTURE_LARGE = Identifier.fromNamespaceAndPath("astolfoclient", "textures/effects/jump_circle/circle_large.png");
+   private static final Identifier TEXTURE_SLIM = Identifier.fromNamespaceAndPath("astolfoclient", "textures/effects/jump_circle/circle_slim.png");
    private final JumpCircleManager manager;
-   private class_276 distortionFbo = null;
+   private RenderTarget distortionFbo = null;
    private int distortionProgram = -1;
    private int distortionVao = -1;
    private int distortionVbo = -1;
@@ -48,7 +50,7 @@ public class JumpCircleRenderer {
       this.manager = manager;
    }
 
-   private class_2960 getCircleTexture(JumpCircleModule module) {
+   private Identifier getCircleTexture(JumpCircleModule module) {
       return switch (module.style.get()) {
          case "circle_large.png", "Large", "circle_large" -> TEXTURE_LARGE;
          case "circle_slim.png", "Slim", "circle_slim" -> TEXTURE_SLIM;
@@ -75,12 +77,12 @@ public class JumpCircleRenderer {
    }
 
    private void renderDistortionShader(WorldRenderContext context, JumpCircleModule jcm, List<JumpCircle> circles) {
-      class_310 mc = class_310.method_1551();
-      if (mc.field_1724 != null && context.camera() != null) {
-         class_276 mainFbo = mc.method_1522();
+      Minecraft mc = Minecraft.getInstance();
+      if (mc.player != null && context.camera() != null) {
+         RenderTarget mainFbo = mc.gameRenderer.mainRenderTarget();
          if (mainFbo != null) {
-            int width = mainFbo.field_1482;
-            int height = mainFbo.field_1481;
+            int width = mainFbo.width;
+            int height = mainFbo.height;
             if (width > 0 && height > 0) {
                this.initDistortionShader();
                if (this.distortionProgram != -1) {
@@ -89,12 +91,12 @@ public class JumpCircleRenderer {
                      this.ensureDistortionFbo(width, height);
                      int prevReadFbo = GL11.glGetInteger(36010);
                      int prevDrawFbo = GL11.glGetInteger(36006);
-                     GL30.glBindFramebuffer(36008, mainFbo.field_1476);
-                     GL30.glBindFramebuffer(36009, this.distortionFbo.field_1476);
+                     GL30.glBindFramebuffer(36008, GlCompat.fbo(mainFbo));
+                     GL30.glBindFramebuffer(36009, GlCompat.fbo(this.distortionFbo));
                      GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, 16384, 9728);
                      GL30.glBindFramebuffer(36008, prevReadFbo);
                      GL30.glBindFramebuffer(36009, prevDrawFbo);
-                     GL30.glBindFramebuffer(36160, mainFbo.field_1476);
+                     GL30.glBindFramebuffer(36160, GlCompat.fbo(mainFbo));
                      int prevProgram = GL11.glGetInteger(35725);
                      int prevVao = GL11.glGetInteger(34229);
                      int prevVbo = GL11.glGetInteger(34964);
@@ -112,7 +114,7 @@ public class JumpCircleRenderer {
                      RenderSystem.disableCull();
                      RenderSystem.disableBlend();
                      GL20.glUseProgram(this.distortionProgram);
-                     Matrix4f viewRotMat = new Matrix4f().rotation(new Quaternionf(context.camera().method_23767()).conjugate());
+                     Matrix4f viewRotMat = new Matrix4f().rotation(new Quaternionf(context.camera().rotation()).conjugate());
                      Matrix4f projMat = new Matrix4f(context.projectionMatrix());
                      Matrix4f viewProjMat = new Matrix4f(projMat).mul(viewRotMat);
                      Matrix4f invViewProjMat = new Matrix4f(viewProjMat).invert();
@@ -121,9 +123,9 @@ public class JumpCircleRenderer {
                      float[] viewProjArr = new float[16];
                      viewProjMat.get(viewProjArr);
                      GL13.glActiveTexture(33984);
-                     GL11.glBindTexture(3553, this.distortionFbo.method_30277());
+                     GL11.glBindTexture(3553, GlCompat.colorId(this.distortionFbo));
                      GL13.glActiveTexture(33985);
-                     GL11.glBindTexture(3553, mainFbo.method_30278());
+                     GL11.glBindTexture(3553, GlCompat.depthId(mainFbo));
                      GL11.glTexParameteri(3553, 34892, 0);
                      GL11.glTexParameteri(3553, 10241, 9728);
                      GL11.glTexParameteri(3553, 10240, 9728);
@@ -136,9 +138,9 @@ public class JumpCircleRenderer {
                      this.setUniform2f("uResolution", width, height);
                      this.setUniform1f("uDistortionStrength", (float)jcm.distortionStrength.get());
                      this.setUniform1i("uChromatic", jcm.chromatic.get() ? 1 : 0);
-                     double camX = context.camera().method_19326().field_1352;
-                     double camY = context.camera().method_19326().field_1351;
-                     double camZ = context.camera().method_19326().field_1350;
+                     double camX = context.camera().position().x;
+                     double camY = context.camera().position().y;
+                     double camZ = context.camera().position().z;
                      float baseRadius = (float)jcm.radius.get();
                      int maxCircles = 16;
                      int count = 0;
@@ -200,23 +202,23 @@ public class JumpCircleRenderer {
    }
 
    private void renderJumpCircleMeshes(WorldRenderContext context, JumpCircleModule jcm, List<JumpCircle> circles) {
-      double camX = context.camera().method_19326().field_1352;
-      double camY = context.camera().method_19326().field_1351;
-      double camZ = context.camera().method_19326().field_1350;
+      double camX = context.camera().position().x;
+      double camY = context.camera().position().y;
+      double camZ = context.camera().position().z;
       int themeColorInt = ThemeManager.getThemedColor(0L);
       float r = (themeColorInt >> 16 & 0xFF) / 255.0F;
       float g = (themeColorInt >> 8 & 0xFF) / 255.0F;
       float b = (themeColorInt & 0xFF) / 255.0F;
       float baseRadius = (float)jcm.radius.get();
-      class_289 tessellator = class_289.method_1348();
+      Tesselator tessellator = Tesselator.getInstance();
       RenderSystem.enableBlend();
-      RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE);
+      RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
       RenderSystem.disableCull();
       RenderSystem.enableDepthTest();
       RenderSystem.depthFunc(515);
       RenderSystem.depthMask(false);
       RenderSystem.setShaderTexture(0, this.getCircleTexture(jcm));
-      RenderSystem.setShader(class_10142.field_53880);
+      RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
 
       for (JumpCircle circle : circles) {
          long age = System.currentTimeMillis() - circle.creationTime;
@@ -228,20 +230,20 @@ public class JumpCircleRenderer {
             float rotationAngle = spinEase * 360.0F;
             float alpha = 1.0F - progress;
             if (!(alpha <= 0.0F)) {
-               class_4587 matrixStack = context.matrixStack();
-               matrixStack.method_22903();
-               matrixStack.method_22904(circle.x - camX, circle.y - camY + 0.02, circle.z - camZ);
-               matrixStack.method_22907(class_7833.field_40716.rotationDegrees(rotationAngle));
-               matrixStack.method_22907(class_7833.field_40714.rotationDegrees(90.0F));
-               matrixStack.method_22905(size, size, size);
-               Matrix4f matrix = matrixStack.method_23760().method_23761();
-               class_287 buffer = tessellator.method_60827(class_5596.field_27382, class_290.field_1575);
-               buffer.method_22918(matrix, -0.5F, -0.5F, 0.0F).method_22913(0.0F, 0.0F).method_22915(r, g, b, alpha);
-               buffer.method_22918(matrix, -0.5F, 0.5F, 0.0F).method_22913(0.0F, 1.0F).method_22915(r, g, b, alpha);
-               buffer.method_22918(matrix, 0.5F, 0.5F, 0.0F).method_22913(1.0F, 1.0F).method_22915(r, g, b, alpha);
-               buffer.method_22918(matrix, 0.5F, -0.5F, 0.0F).method_22913(1.0F, 0.0F).method_22915(r, g, b, alpha);
-               class_286.method_43433(buffer.method_60800());
-               matrixStack.method_22909();
+               PoseStack matrixStack = context.matrixStack();
+               matrixStack.pushPose();
+               matrixStack.translate(circle.x - camX, circle.y - camY + 0.02, circle.z - camZ);
+               matrixStack.rotate(Axis.YP.rotationDegrees(rotationAngle));
+               matrixStack.rotate(Axis.XP.rotationDegrees(90.0F));
+               matrixStack.scale(size, size, size);
+               Matrix4f matrix = matrixStack.last().pose();
+               BufferBuilder buffer = tessellator.begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+               Vtx.vertex(buffer, matrix, -0.5F, -0.5F, 0.0F).setUv(0.0F, 0.0F).setColor(r, g, b, alpha);
+               Vtx.vertex(buffer, matrix, -0.5F, 0.5F, 0.0F).setUv(0.0F, 1.0F).setColor(r, g, b, alpha);
+               Vtx.vertex(buffer, matrix, 0.5F, 0.5F, 0.0F).setUv(1.0F, 1.0F).setColor(r, g, b, alpha);
+               Vtx.vertex(buffer, matrix, 0.5F, -0.5F, 0.0F).setUv(1.0F, 0.0F).setColor(r, g, b, alpha);
+               BufferUploader.drawWithShader(buffer.buildOrThrow());
+               matrixStack.popPose();
             }
          }
       }
@@ -254,14 +256,14 @@ public class JumpCircleRenderer {
    }
 
    private void ensureDistortionFbo(int width, int height) {
-      if (this.distortionFbo == null || this.distortionFbo.field_1482 != width || this.distortionFbo.field_1481 != height) {
+      if (this.distortionFbo == null || this.distortionFbo.width != width || this.distortionFbo.height != height) {
          if (this.distortionFbo != null) {
-            this.distortionFbo.method_1238();
+            this.distortionFbo.destroyBuffers();
          }
 
-         this.distortionFbo = new class_6367(width, height, false);
-         this.distortionFbo.method_1236(0.0F, 0.0F, 0.0F, 0.0F);
-         GL11.glBindTexture(3553, this.distortionFbo.method_30277());
+         this.distortionFbo = GlCompat.newTarget(width, height, false);
+         GlCompat.setClearColor(this.distortionFbo, 0.0F, 0.0F, 0.0F, 0.0F);
+         GL11.glBindTexture(3553, GlCompat.colorId(this.distortionFbo));
          GL11.glTexParameteri(3553, 10241, 9729);
          GL11.glTexParameteri(3553, 10240, 9729);
          GL11.glTexParameteri(3553, 10242, 33071);

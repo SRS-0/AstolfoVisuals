@@ -1,5 +1,5 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
@@ -12,8 +12,12 @@ repositories { mavenCentral() }
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation files(
+        "src/main/resources/META-INF/jars/jlayer-1.0.1.jar",
+        "src/main/resources/META-INF/jars/luaj-jse-3.0.1.jar",
+        "src/main/resources/META-INF/jars/media-player-info-0.1.0.jar")
 }
 
 processResources {
@@ -21,5 +25,7 @@ processResources {
     filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }
 }
 
-tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
-java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+tasks.withType(JavaCompile).configureEach { it.options.release = 25 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_25; targetCompatibility = JavaVersion.VERSION_25 }
+
+tasks.withType(JavaCompile).configureEach { it.options.compilerArgs += ['-Xmaxerrs', '10000'] }

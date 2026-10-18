@@ -1,40 +1,42 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.platform.GlStateManager.class_4534;
-import com.mojang.blaze3d.platform.GlStateManager.class_4535;
-import com.mojang.blaze3d.systems.RenderSystem;
+import xyz.angames.astolfoclient.client.compat.GlCompat;
+import xyz.angames.astolfoclient.client.compat.Vtx;
+import xyz.angames.astolfoclient.client.compat.DestFactor;
+import xyz.angames.astolfoclient.client.compat.SourceFactor;
+import xyz.angames.astolfoclient.client.compat.RenderSystem;
 import java.nio.FloatBuffer;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.BeforeEntities;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents.Last;
+import xyz.angames.astolfoclient.client.compat.WorldRenderContext;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents.BeforeEntities;
+import xyz.angames.astolfoclient.client.compat.WorldRenderEvents.Last;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.minecraft.class_10142;
-import net.minecraft.class_1269;
-import net.minecraft.class_2398;
-import net.minecraft.class_243;
-import net.minecraft.class_276;
-import net.minecraft.class_286;
-import net.minecraft.class_287;
-import net.minecraft.class_289;
-import net.minecraft.class_290;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_4587;
-import net.minecraft.class_6367;
-import net.minecraft.class_9801;
-import net.minecraft.class_293.class_5596;
+import xyz.angames.astolfoclient.client.compat.CoreShaders;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.phys.Vec3;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import xyz.angames.astolfoclient.client.compat.BufferUploader;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import xyz.angames.astolfoclient.client.compat.Tesselator;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.pipeline.TextureTarget;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL13;
 import org.lwjgl.opengl.GL15;
-import org.lwjgl.opengl.GL20;
+import xyz.angames.astolfoclient.client.compat.GL20;
 import org.lwjgl.opengl.GL30;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -106,11 +108,11 @@ public class HitGlowModule extends Module {
          return HitGlowModule.this.particles.get();
       }
    };
-   private static final class_2960 BLOOM_TEXTURE = class_2960.method_60655("astolfoclient", "textures/effects/bloom.png");
-   private final class_310 mc = class_310.method_1551();
+   private static final Identifier BLOOM_TEXTURE = Identifier.fromNamespaceAndPath("astolfoclient", "textures/effects/bloom.png");
+   private final Minecraft mc = Minecraft.getInstance();
    private final List<HitGlowModule.GlowWave> activeWaves = new CopyOnWriteArrayList<>();
    private final List<HitGlowModule.GlowParticle> activeParticles = new CopyOnWriteArrayList<>();
-   private class_276 glowFbo = null;
+   private RenderTarget glowFbo = null;
    private int glowProgram = -1;
    private int glowVao = -1;
    private int glowVbo = -1;
@@ -137,11 +139,11 @@ public class HitGlowModule extends Module {
          this.particleDensity
       );
       AttackEntityCallback.EVENT.register((AttackEntityCallback)(player, world, hand, entity, hitResult) -> {
-         if (this.isEnabled() && player == this.mc.field_1724 && entity != null) {
-            addWave(entity.method_19538());
+         if (this.isEnabled() && player == this.mc.player && entity != null) {
+            addWave(entity.position());
          }
 
-         return class_1269.field_5811;
+         return InteractionResult.PASS;
       });
       WorldRenderEvents.BEFORE_ENTITIES.register((BeforeEntities)context -> {
          if (this.isEnabled() && !this.distortEntities.get()) {
@@ -159,7 +161,7 @@ public class HitGlowModule extends Module {
       });
    }
 
-   public static void addWave(class_243 pos) {
+   public static void addWave(Vec3 pos) {
       if (INSTANCE != null && INSTANCE.isEnabled() && pos != null) {
          INSTANCE.activeWaves.add(new HitGlowModule.GlowWave(pos));
          INSTANCE.spawnWaveParticles(pos);
@@ -178,7 +180,7 @@ public class HitGlowModule extends Module {
       this.activeParticles.clear();
    }
 
-   private void spawnWaveParticles(class_243 center) {
+   private void spawnWaveParticles(Vec3 center) {
       if (this.particles.get()) {
          int rgb = ThemeManager.getThemedColor(0L);
          float r = (rgb >> 16 & 0xFF) / 255.0F;
@@ -190,9 +192,9 @@ public class HitGlowModule extends Module {
          for (int i = 0; i < count; i++) {
             double angle = Math.random() * Math.PI * 2.0;
             double dist = Math.random() * 1.8;
-            double px = center.field_1352 + Math.cos(angle) * dist;
-            double py = center.field_1351 + 0.1 + Math.random() * 0.8;
-            double pz = center.field_1350 + Math.sin(angle) * dist;
+            double px = center.x + Math.cos(angle) * dist;
+            double py = center.y + 0.1 + Math.random() * 0.8;
+            double pz = center.z + Math.sin(angle) * dist;
             double driftX = Math.cos(angle) * (0.2 + Math.random() * 0.3);
             double driftZ = Math.sin(angle) * (0.2 + Math.random() * 0.3);
             float scale = isGlowDot ? 0.09F + (float)Math.random() * 0.06F : 0.16F + (float)Math.random() * 0.12F;
@@ -201,11 +203,11 @@ public class HitGlowModule extends Module {
                this.activeParticles.add(new HitGlowModule.GlowParticle(px, py, pz, driftX, driftZ, r, g, b, scale, maxAge));
             }
 
-            if ((this.particleMode.is("Vanilla Souls") || this.particleMode.is("Both")) && this.mc.field_1687 != null && Math.random() < 0.4) {
+            if ((this.particleMode.is("Vanilla Souls") || this.particleMode.is("Both")) && this.mc.level != null && Math.random() < 0.4) {
                this.mc
-                  .field_1687
-                  .method_8406(
-                     Math.random() < 0.5 ? class_2398.field_23114 : class_2398.field_38002, px, py, pz, driftX * 0.5, 0.05 + Math.random() * 0.04, driftZ * 0.5
+                  .level
+                  .addParticle(
+                     Math.random() < 0.5 ? ParticleTypes.SOUL : ParticleTypes.SCULK_SOUL, px, py, pz, driftX * 0.5, 0.05 + Math.random() * 0.04, driftZ * 0.5
                   );
             }
          }
@@ -213,7 +215,7 @@ public class HitGlowModule extends Module {
    }
 
    private void renderWorldPass(WorldRenderContext context) {
-      if (this.isEnabled() && this.mc.field_1687 != null && this.mc.field_1724 != null) {
+      if (this.isEnabled() && this.mc.level != null && this.mc.player != null) {
          long now = System.currentTimeMillis();
          double currentSpeed = this.speed.get();
          this.activeWaves.removeIf(wave -> (now - wave.startTime) * currentSpeed > 1400.0);
@@ -224,7 +226,7 @@ public class HitGlowModule extends Module {
    }
 
    private void renderParticlesPass(WorldRenderContext context) {
-      if (this.isEnabled() && this.mc.field_1687 != null && this.mc.field_1724 != null) {
+      if (this.isEnabled() && this.mc.level != null && this.mc.player != null) {
          long now = System.currentTimeMillis();
          this.activeParticles.removeIf(p -> now - p.spawnTime > p.maxAge);
          if (this.particles.get() && !this.activeParticles.isEmpty() && !this.particleMode.is("Vanilla Souls")) {
@@ -234,10 +236,10 @@ public class HitGlowModule extends Module {
    }
 
    private void renderGlowShader(WorldRenderContext context, long now, double currentSpeed) {
-      class_276 mainFbo = this.mc.method_1522();
+      RenderTarget mainFbo = this.mc.gameRenderer.mainRenderTarget();
       if (mainFbo != null) {
-         int width = mainFbo.field_1482;
-         int height = mainFbo.field_1481;
+         int width = mainFbo.width;
+         int height = mainFbo.height;
          if (width > 0 && height > 0) {
             this.initGlowShader();
             if (this.glowProgram != -1) {
@@ -246,12 +248,12 @@ public class HitGlowModule extends Module {
                   this.ensureGlowFbo(width, height);
                   int prevReadFbo = GL11.glGetInteger(36010);
                   int prevDrawFbo = GL11.glGetInteger(36006);
-                  GL30.glBindFramebuffer(36008, mainFbo.field_1476);
-                  GL30.glBindFramebuffer(36009, this.glowFbo.field_1476);
+                  GL30.glBindFramebuffer(36008, GlCompat.fbo(mainFbo));
+                  GL30.glBindFramebuffer(36009, GlCompat.fbo(this.glowFbo));
                   GL30.glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, 16384, 9728);
                   GL30.glBindFramebuffer(36008, prevReadFbo);
                   GL30.glBindFramebuffer(36009, prevDrawFbo);
-                  GL30.glBindFramebuffer(36160, mainFbo.field_1476);
+                  GL30.glBindFramebuffer(36160, GlCompat.fbo(mainFbo));
                   int prevProgram = GL11.glGetInteger(35725);
                   int prevVao = GL11.glGetInteger(34229);
                   int prevVbo = GL11.glGetInteger(34964);
@@ -269,7 +271,7 @@ public class HitGlowModule extends Module {
                   RenderSystem.disableCull();
                   RenderSystem.disableBlend();
                   GL20.glUseProgram(this.glowProgram);
-                  Matrix4f viewRotMat = new Matrix4f().rotation(new Quaternionf(context.camera().method_23767()).conjugate());
+                  Matrix4f viewRotMat = new Matrix4f().rotation(new Quaternionf(context.camera().rotation()).conjugate());
                   Matrix4f projMat = new Matrix4f(context.projectionMatrix());
                   Matrix4f viewProjMat = new Matrix4f(projMat).mul(viewRotMat);
                   Matrix4f invViewProjMat = new Matrix4f(viewProjMat).invert();
@@ -278,9 +280,9 @@ public class HitGlowModule extends Module {
                   float[] viewProjArr = new float[16];
                   viewProjMat.get(viewProjArr);
                   GL13.glActiveTexture(33984);
-                  GL11.glBindTexture(3553, this.glowFbo.method_30277());
+                  GL11.glBindTexture(3553, GlCompat.colorId(this.glowFbo));
                   GL13.glActiveTexture(33985);
-                  GL11.glBindTexture(3553, mainFbo.method_30278());
+                  GL11.glBindTexture(3553, GlCompat.depthId(mainFbo));
                   GL11.glTexParameteri(3553, 34892, 0);
                   GL11.glTexParameteri(3553, 10241, 9728);
                   GL11.glTexParameteri(3553, 10240, 9728);
@@ -296,8 +298,8 @@ public class HitGlowModule extends Module {
                   this.setUniform1i("uDistortion", this.distortion.get() ? 1 : 0);
                   this.setUniform1f("uDistortionStrength", (float)this.distortionStrength.get());
                   this.setUniform1i("uChromatic", this.chromatic.get() ? 1 : 0);
-                  class_243 camPos = context.camera().method_19326();
-                  this.setUniform3f("uCameraPos", (float)camPos.field_1352, (float)camPos.field_1351, (float)camPos.field_1350);
+                  Vec3 camPos = context.camera().position();
+                  this.setUniform3f("uCameraPos", (float)camPos.x, (float)camPos.y, (float)camPos.z);
                   this.setUniform1i("uBlockCorners", this.blockCorners.get() ? 1 : 0);
                   this.setUniform1f("uCornerGlow", (float)this.cornerGlow.get());
                   this.setUniform1f("uCornerSize", (float)this.cornerSize.get());
@@ -323,9 +325,9 @@ public class HitGlowModule extends Module {
                         float alpha = (float)(1.0 - Math.pow(progress, 2.0));
                         this.setUniform3f(
                            "uWavePos[" + count + "]",
-                           (float)(wave.pos.field_1352 - camPos.field_1352),
-                           (float)(wave.pos.field_1351 - camPos.field_1351),
-                           (float)(wave.pos.field_1350 - camPos.field_1350)
+                           (float)(wave.pos.x - camPos.x),
+                           (float)(wave.pos.y - camPos.y),
+                           (float)(wave.pos.z - camPos.z)
                         );
                         this.setUniform1f("uWaveRadius[" + count + "]", easeRadius);
                         this.setUniform1f("uWaveAlpha[" + count + "]", alpha);
@@ -367,17 +369,17 @@ public class HitGlowModule extends Module {
 
    private void renderParticles(WorldRenderContext context, long time) {
       RenderSystem.enableBlend();
-      RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE);
+      RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
       RenderSystem.disableCull();
       RenderSystem.disableDepthTest();
       RenderSystem.depthMask(false);
       RenderSystem.setShaderTexture(0, BLOOM_TEXTURE);
-      RenderSystem.setShader(class_10142.field_53880);
-      class_289 tessellator = class_289.method_1348();
-      class_287 particleBuffer = tessellator.method_60827(class_5596.field_27382, class_290.field_1575);
-      class_4587 matrices = context.matrixStack();
-      class_243 camPos = context.camera().method_19326();
-      Quaternionf camRot = context.camera().method_23767();
+      RenderSystem.setShader(CoreShaders.POSITION_TEX_COLOR);
+      Tesselator tessellator = Tesselator.getInstance();
+      BufferBuilder particleBuffer = tessellator.begin(PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+      PoseStack matrices = context.matrixStack();
+      Vec3 camPos = context.camera().position();
+      Quaternionf camRot = context.camera().rotation();
       boolean isGlowDot = this.particleMode.is("Glow Dots");
 
       for (HitGlowModule.GlowParticle p : this.activeParticles) {
@@ -385,43 +387,43 @@ public class HitGlowModule extends Module {
          if (!(lifePC < 0.0F) && !(lifePC >= 1.0F)) {
             float pAlpha = (float)Math.sin(lifePC * Math.PI) * (float)this.glowIntensity.get() * 0.85F;
             if (!(pAlpha <= 0.01F)) {
-               double px = p.getX(time) - camPos.field_1352;
-               double py = p.getY(time) - camPos.field_1351;
-               double pz = p.getZ(time) - camPos.field_1350;
+               double px = p.getX(time) - camPos.x;
+               double py = p.getY(time) - camPos.y;
+               double pz = p.getZ(time) - camPos.z;
                float scale = p.baseScale * (0.6F + 0.6F * (float)Math.sin(lifePC * Math.PI));
-               matrices.method_22903();
-               matrices.method_22904(px, py, pz);
-               matrices.method_22907(camRot);
-               Matrix4f matrix = matrices.method_23760().method_23761();
+               matrices.pushPose();
+               matrices.translate(px, py, pz);
+               matrices.rotate(camRot);
+               Matrix4f matrix = matrices.last().pose();
                if (!isGlowDot) {
                   float auraScale = scale * 1.5F;
                   float auraAlpha = pAlpha * 0.4F;
-                  particleBuffer.method_22918(matrix, -auraScale, -auraScale, 0.0F).method_22913(0.0F, 1.0F).method_22915(p.r, p.g, p.b, auraAlpha);
-                  particleBuffer.method_22918(matrix, auraScale, -auraScale, 0.0F).method_22913(1.0F, 1.0F).method_22915(p.r, p.g, p.b, auraAlpha);
-                  particleBuffer.method_22918(matrix, auraScale, auraScale, 0.0F).method_22913(1.0F, 0.0F).method_22915(p.r, p.g, p.b, auraAlpha);
-                  particleBuffer.method_22918(matrix, -auraScale, auraScale, 0.0F).method_22913(0.0F, 0.0F).method_22915(p.r, p.g, p.b, auraAlpha);
+                  Vtx.vertex(particleBuffer, matrix, -auraScale, -auraScale, 0.0F).setUv(0.0F, 1.0F).setColor(p.r, p.g, p.b, auraAlpha);
+                  Vtx.vertex(particleBuffer, matrix, auraScale, -auraScale, 0.0F).setUv(1.0F, 1.0F).setColor(p.r, p.g, p.b, auraAlpha);
+                  Vtx.vertex(particleBuffer, matrix, auraScale, auraScale, 0.0F).setUv(1.0F, 0.0F).setColor(p.r, p.g, p.b, auraAlpha);
+                  Vtx.vertex(particleBuffer, matrix, -auraScale, auraScale, 0.0F).setUv(0.0F, 0.0F).setColor(p.r, p.g, p.b, auraAlpha);
                   float coreR = Math.min(1.0F, p.r * 0.65F + 0.35F);
                   float coreG = Math.min(1.0F, p.g * 0.65F + 0.35F);
                   float coreB = Math.min(1.0F, p.b * 0.65F + 0.35F);
-                  particleBuffer.method_22918(matrix, -scale, -scale, 0.0F).method_22913(0.0F, 1.0F).method_22915(coreR, coreG, coreB, pAlpha);
-                  particleBuffer.method_22918(matrix, scale, -scale, 0.0F).method_22913(1.0F, 1.0F).method_22915(coreR, coreG, coreB, pAlpha);
-                  particleBuffer.method_22918(matrix, scale, scale, 0.0F).method_22913(1.0F, 0.0F).method_22915(coreR, coreG, coreB, pAlpha);
-                  particleBuffer.method_22918(matrix, -scale, scale, 0.0F).method_22913(0.0F, 0.0F).method_22915(coreR, coreG, coreB, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, -scale, -scale, 0.0F).setUv(0.0F, 1.0F).setColor(coreR, coreG, coreB, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, scale, -scale, 0.0F).setUv(1.0F, 1.0F).setColor(coreR, coreG, coreB, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, scale, scale, 0.0F).setUv(1.0F, 0.0F).setColor(coreR, coreG, coreB, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, -scale, scale, 0.0F).setUv(0.0F, 0.0F).setColor(coreR, coreG, coreB, pAlpha);
                } else {
-                  particleBuffer.method_22918(matrix, -scale, -scale, 0.0F).method_22913(0.0F, 1.0F).method_22915(p.r, p.g, p.b, pAlpha);
-                  particleBuffer.method_22918(matrix, scale, -scale, 0.0F).method_22913(1.0F, 1.0F).method_22915(p.r, p.g, p.b, pAlpha);
-                  particleBuffer.method_22918(matrix, scale, scale, 0.0F).method_22913(1.0F, 0.0F).method_22915(p.r, p.g, p.b, pAlpha);
-                  particleBuffer.method_22918(matrix, -scale, scale, 0.0F).method_22913(0.0F, 0.0F).method_22915(p.r, p.g, p.b, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, -scale, -scale, 0.0F).setUv(0.0F, 1.0F).setColor(p.r, p.g, p.b, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, scale, -scale, 0.0F).setUv(1.0F, 1.0F).setColor(p.r, p.g, p.b, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, scale, scale, 0.0F).setUv(1.0F, 0.0F).setColor(p.r, p.g, p.b, pAlpha);
+                  Vtx.vertex(particleBuffer, matrix, -scale, scale, 0.0F).setUv(0.0F, 0.0F).setColor(p.r, p.g, p.b, pAlpha);
                }
 
-               matrices.method_22909();
+               matrices.popPose();
             }
          }
       }
 
-      class_9801 built = particleBuffer.method_60794();
+      MeshData built = particleBuffer.build();
       if (built != null) {
-         class_286.method_43433(built);
+         BufferUploader.drawWithShader(built);
       }
 
       RenderSystem.enableDepthTest();
@@ -432,14 +434,14 @@ public class HitGlowModule extends Module {
    }
 
    private void ensureGlowFbo(int width, int height) {
-      if (this.glowFbo == null || this.glowFbo.field_1482 != width || this.glowFbo.field_1481 != height) {
+      if (this.glowFbo == null || this.glowFbo.width != width || this.glowFbo.height != height) {
          if (this.glowFbo != null) {
-            this.glowFbo.method_1238();
+            this.glowFbo.destroyBuffers();
          }
 
-         this.glowFbo = new class_6367(width, height, false);
-         this.glowFbo.method_1236(0.0F, 0.0F, 0.0F, 0.0F);
-         GL11.glBindTexture(3553, this.glowFbo.method_30277());
+         this.glowFbo = GlCompat.newTarget(width, height, false);
+         GlCompat.setClearColor(this.glowFbo, 0.0F, 0.0F, 0.0F, 0.0F);
+         GL11.glBindTexture(3553, GlCompat.colorId(this.glowFbo));
          GL11.glTexParameteri(3553, 10241, 9729);
          GL11.glTexParameteri(3553, 10240, 9729);
          GL11.glTexParameteri(3553, 10242, 33071);
@@ -627,10 +629,10 @@ public class HitGlowModule extends Module {
 
    @Environment(EnvType.CLIENT)
    public static class GlowWave {
-      public final class_243 pos;
+      public final Vec3 pos;
       public final long startTime;
 
-      public GlowWave(class_243 pos) {
+      public GlowWave(Vec3 pos) {
          this.pos = pos;
          this.startTime = System.currentTimeMillis();
       }

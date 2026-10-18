@@ -5,31 +5,31 @@ import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.msdf.MsdfFont;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2960;
+import net.minecraft.resources.Identifier;
 
 @Environment(EnvType.CLIENT)
 public class ClickGuiIcons {
    public static final Supplier<MsdfFont> CLICKGUI_ICONS = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("clickgui_icons")
-         .data(class_2960.method_60655("mre", "icons/clickgui/clickgui.json"))
-         .atlas(class_2960.method_60655("mre", "icons/clickgui/clickgui.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/clickgui/clickgui.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/clickgui/clickgui.png"))
          .glyphMapper(g -> 65 + g.index())
          .build()
    );
    public static final Supplier<MsdfFont> SP_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("settings_panel")
-         .data(class_2960.method_60655("mre", "icons/watermark/seting-panel/watermark-sp.json"))
-         .atlas(class_2960.method_60655("mre", "icons/watermark/seting-panel/watermark-sp.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/watermark/seting-panel/watermark-sp.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/watermark/seting-panel/watermark-sp.png"))
          .glyphMapper(g -> 65 + g.index())
          .build()
    );
    public static final Supplier<MsdfFont> ASTOLFO_LOGO = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("astolfo_logo")
-         .data(class_2960.method_60655("mre", "fonts/astolfo.json"))
-         .atlas(class_2960.method_60655("mre", "fonts/astolfo.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "fonts/astolfo.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "fonts/astolfo.png"))
          .build()
    );
    public static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
