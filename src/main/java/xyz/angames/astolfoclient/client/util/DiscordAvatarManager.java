@@ -1,15 +1,15 @@
 package xyz.angames.astolfoclient.client.util;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
 
 @Environment(value=EnvType.CLIENT)
 public class DiscordAvatarManager {
@@ -52,9 +52,9 @@ public class DiscordAvatarManager {
                     try (InputStream in = conn.getInputStream();){
                         NativeImage img = NativeImage.read((InputStream)in);
                         if (img != null) {
-                            MinecraftClient.getInstance().execute(() -> {
-                                Identifier id = Identifier.of((String)"astolfoclient", (String)("discord_avatar_" + System.currentTimeMillis()));
-                                MinecraftClient.getInstance().getTextureManager().registerTexture(id, (AbstractTexture)new NativeImageBackedTexture(() -> "Astolfo avatar", img));
+                            Minecraft.getInstance().execute(() -> {
+                                Identifier id = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)("discord_avatar_" + System.currentTimeMillis()));
+                                Minecraft.getInstance().getTextureManager().register(id, (AbstractTexture)new DynamicTexture(() -> "Astolfo avatar", img));
                                 avatarTexture = id;
                             });
                         }

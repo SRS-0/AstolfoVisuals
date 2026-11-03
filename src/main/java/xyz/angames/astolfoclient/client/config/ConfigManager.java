@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.GuiScaleSettings;
 import xyz.angames.astolfoclient.client.config.SoundSettings;
@@ -131,7 +131,7 @@ public class ConfigManager {
             if (config == null) {
                 return false;
             }
-            MinecraftClient.getInstance().execute(() -> {
+            Minecraft.getInstance().execute(() -> {
                 this.applyModuleData(config);
                 if (config.specialBinds != null) {
                     AstolfoclientClient.clickGuiKeyCode = config.specialBinds.getOrDefault("clickgui", 260);

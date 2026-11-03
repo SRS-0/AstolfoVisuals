@@ -7,5 +7,5 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(GuiRenderer.class)
 public class GuiRendererGpuMixin {
-    @Inject(method="render(Lcom/mojang/blaze3d/buffers/GpuBufferSlice;)V",at=@At("HEAD")) private void astolfo$prepare(CallbackInfo ci){GuiContext.finish();}
+    @Inject(method="render()V",at=@At("HEAD")) private void astolfo$prepare(CallbackInfo ci){GuiContext.finish();}
 }

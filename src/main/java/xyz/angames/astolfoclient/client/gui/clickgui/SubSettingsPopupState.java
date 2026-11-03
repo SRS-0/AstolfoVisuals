@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.gui.clickgui.ClickGuiIcons;
 import xyz.angames.astolfoclient.client.gui.clickgui.GuiUtils;
@@ -116,11 +116,11 @@ public class SubSettingsPopupState {
             sX = SubSettingsPopupState.ACTIVE.triggerX + SubSettingsPopupState.ACTIVE.triggerW - subW;
         }
         float sY = SubSettingsPopupState.ACTIVE.triggerY - 2.0f;
-        sY = MathHelper.clamp((float)sY, (float)(winY + 38.0f), (float)(winY + winH - subH - 8.0f));
+        sY = Mth.clamp((float)sY, (float)(winY + 38.0f), (float)(winY + winH - subH - 8.0f));
         return new float[]{sX, sY, subW, subH, bodyH, totalContentH};
     }
 
-    public static void renderActive(DrawContext context, float winX, float winY, float winW, float winH, int mouseX, int mouseY, float deltaTime, float masterAlpha, Color themeColor) {
+    public static void renderActive(GuiGraphicsExtractor context, float winX, float winY, float winW, float winH, int mouseX, int mouseY, float deltaTime, float masterAlpha, Color themeColor) {
         if (ACTIVE == null) {
             return;
         }
@@ -154,17 +154,17 @@ public class SubSettingsPopupState {
         float bodyH = bounds[4];
         float totalContentH = bounds[5];
         float maxScroll = Math.max(0.0f, totalContentH + 8.0f - bodyH);
-        SubSettingsPopupState.ACTIVE.targetScrollY = MathHelper.clamp((float)SubSettingsPopupState.ACTIVE.targetScrollY, (float)(-maxScroll), (float)0.0f);
+        SubSettingsPopupState.ACTIVE.targetScrollY = Mth.clamp((float)SubSettingsPopupState.ACTIVE.targetScrollY, (float)(-maxScroll), (float)0.0f);
         SubSettingsPopupState.ACTIVE.scrollY = GuiUtils.animate(SubSettingsPopupState.ACTIVE.scrollY, SubSettingsPopupState.ACTIVE.targetScrollY, 20.0f, deltaTime);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (scale < 0.999f) {
             float scx = sX + subW / 2.0f;
             float scy = sY + subH / 2.0f;
-            context.getMatrices().translate(scx, scy);
-            context.getMatrices().scale(scale, scale);
-            context.getMatrices().translate(-scx, -scy);
+            context.pose().translate(scx, scy);
+            context.pose().scale(scale, scale);
+            context.pose().translate(-scx, -scy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         for (int i = 6; i >= 0; --i) {
             float progress = (float)i / 6.0f;
             float spread = progress * 4.0f;
@@ -207,18 +207,18 @@ public class SubSettingsPopupState {
             float scrollTrackH = bodyH - 8.0f;
             float scrollThumbH = Math.max(16.0f, bodyH / (totalContentH + 8.0f) * scrollTrackH);
             float scrollProgress = -SubSettingsPopupState.ACTIVE.scrollY / maxScroll;
-            scrollProgress = MathHelper.clamp((float)scrollProgress, (float)0.0f, (float)1.0f);
+            scrollProgress = Mth.clamp((float)scrollProgress, (float)0.0f, (float)1.0f);
             float scrollThumbY = contentTop + 4.0f + scrollProgress * (scrollTrackH - scrollThumbH);
             ((BuiltRectangle)Builder.rectangle().size(new SizeState(2.5f, scrollThumbH)).radius(new QuadRadiusState(1.25f)).color(new QuadColorState(new Color(70, 70, 90, (int)(220.0f * alpha)))).build()).render(matrix, sX + subW - 5.0f, scrollThumbY);
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     private void renderSlider(Matrix4f mx, float rowY, NumberSetting ns, Color themeColor, float x, float w, float alpha, int mouseX, int mouseY, float deltaTime, boolean isDragging) {
         float sx = x + 10.0f;
         float sw = w - 20.0f;
         float val = (float)ns.get();
-        float targetRatio = MathHelper.clamp((float)((val - (float)ns.getMin()) / ((float)ns.getMax() - (float)ns.getMin())), (float)0.0f, (float)1.0f);
+        float targetRatio = Mth.clamp((float)((val - (float)ns.getMin()) / ((float)ns.getMax() - (float)ns.getMin())), (float)0.0f, (float)1.0f);
         float animRatio = this.sliderRatioAnimMap.getOrDefault(ns, Float.valueOf(targetRatio)).floatValue();
         animRatio = GuiUtils.animate(animRatio, targetRatio, 20.0f, deltaTime);
         this.sliderRatioAnimMap.put(ns, Float.valueOf(animRatio));
@@ -354,7 +354,7 @@ public class SubSettingsPopupState {
         float totalContentH = bounds[5];
         if (GuiUtils.isMouseOver((float)mouseX, (float)mouseY, sX, sY, subW, subH)) {
             float maxScroll = Math.max(0.0f, totalContentH + 8.0f - bodyH);
-            SubSettingsPopupState.ACTIVE.targetScrollY = MathHelper.clamp((float)(SubSettingsPopupState.ACTIVE.targetScrollY + (float)amount * 28.0f), (float)(-maxScroll), (float)0.0f);
+            SubSettingsPopupState.ACTIVE.targetScrollY = Mth.clamp((float)(SubSettingsPopupState.ACTIVE.targetScrollY + (float)amount * 28.0f), (float)(-maxScroll), (float)0.0f);
             return true;
         }
         return false;
@@ -364,14 +364,14 @@ public class SubSettingsPopupState {
         double newVal;
         double oldVal;
         float sw = w - 20.0f;
-        float ratio = (float)MathHelper.clamp((double)((mx - (double)(startX + 10.0f)) / (double)sw), (double)0.0, (double)1.0);
+        float ratio = (float)Mth.clamp((double)((mx - (double)(startX + 10.0f)) / (double)sw), (double)0.0, (double)1.0);
         double range = ns.getMax() - ns.getMin();
         double rawVal = ns.getMin() + (double)ratio * range;
         double inc = ns.getIncrement();
         if (inc > 0.0) {
             rawVal = (double)Math.round(rawVal / inc) * inc;
         }
-        if (Double.compare(oldVal = ns.get(), newVal = MathHelper.clamp((double)rawVal, (double)ns.getMin(), (double)ns.getMax())) != 0) {
+        if (Double.compare(oldVal = ns.get(), newVal = Mth.clamp((double)rawVal, (double)ns.getMin(), (double)ns.getMax())) != 0) {
             ns.set(newVal);
             ModSounds.playSliderMove();
         }

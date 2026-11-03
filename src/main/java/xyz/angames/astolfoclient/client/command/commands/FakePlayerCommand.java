@@ -4,8 +4,8 @@ import com.mojang.authlib.GameProfile;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.util.FakePlayerEntity;
 
@@ -18,7 +18,7 @@ extends Command {
 
     @Override
     public void execute(String[] args) {
-        if (this.mc.player == null || this.mc.world == null) {
+        if (this.mc.player == null || this.mc.level == null) {
             this.sendError("You must be in-game to use this command.");
             return;
         }
@@ -49,23 +49,23 @@ extends Command {
             this.despawn();
         }
         GameProfile profile = new GameProfile(UUID.randomUUID(), name);
-        FakePlayerEntity fakePlayer = new FakePlayerEntity(this.mc.world, profile);
-        fakePlayer.copyPositionAndRotation((Entity)this.mc.player);
-        fakePlayer.headYaw = this.mc.player.headYaw;
-        fakePlayer.bodyYaw = this.mc.player.bodyYaw;
-        fakePlayer.getInventory().clone(this.mc.player.getInventory());
+        FakePlayerEntity fakePlayer = new FakePlayerEntity(this.mc.level, profile);
+        fakePlayer.copyPosition((Entity)this.mc.player);
+        fakePlayer.yHeadRot = this.mc.player.yHeadRot;
+        fakePlayer.yBodyRot = this.mc.player.yBodyRot;
+        fakePlayer.getInventory().replaceWith(this.mc.player.getInventory());
         int fakeId = -987654;
         fakePlayer.setId(fakeId);
-        this.mc.world.addEntity((Entity)fakePlayer);
+        this.mc.level.addEntity((Entity)fakePlayer);
         FakePlayerEntity.instance = fakePlayer;
-        FakePlayerCommand.sendMessage("Spawned fake player: " + String.valueOf(Formatting.AQUA) + name + String.valueOf(Formatting.GRAY) + " (ID: " + fakeId + ")");
+        FakePlayerCommand.sendMessage("Spawned fake player: " + String.valueOf(ChatFormatting.AQUA) + name + String.valueOf(ChatFormatting.GRAY) + " (ID: " + fakeId + ")");
     }
 
     private void despawn() {
         if (FakePlayerEntity.instance != null) {
             int id = FakePlayerEntity.instance.getId();
             FakePlayerEntity.instance.discard();
-            this.mc.world.removeEntity(id, Entity.RemovalReason.DISCARDED);
+            this.mc.level.removeEntity(id, Entity.RemovalReason.DISCARDED);
             FakePlayerEntity.instance = null;
             FakePlayerCommand.sendMessage("Despawned fake player.");
         } else {

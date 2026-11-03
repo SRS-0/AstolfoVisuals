@@ -8,7 +8,7 @@ import dev.sxmurxy.mre.renderers.impl.BuiltLiquidGlass;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 
 @Environment(value=EnvType.CLIENT)
 public final class LiquidGlassBuilder

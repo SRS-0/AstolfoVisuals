@@ -1,6 +1,4 @@
 package xyz.angames.astolfoclient.client.effects;
-import net.minecraft.client.MinecraftClient;
-
 import com.mojang.blaze3d.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
@@ -8,20 +6,21 @@ import java.util.ArrayList;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Vec3d;
+import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -32,14 +31,14 @@ import xyz.angames.astolfoclient.client.util.TargetUtils;
 
 @Environment(value=EnvType.CLIENT)
 public class DiamondEspRenderer {
-    private static final Identifier BLOOM_TEXTURE = Identifier.of((String)"astolfoclient", (String)"textures/effects/bloom.png");
+    private static final Identifier BLOOM_TEXTURE = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"textures/effects/bloom.png");
     private final DiamondEspManager manager;
 
     public DiamondEspRenderer(DiamondEspManager manager) {
         this.manager = manager;
     }
 
-    public void render(WorldRenderContext context) {
+    public void render(LevelRenderContext context) {
         Map<Entity, DiamondEspManager.DiamondEffect> allEffects;
         Module targetEspModule = AstolfoclientClient.moduleManager.getModuleByName("TargetESP");
         if (targetEspModule == null || !targetEspModule.isEnabled()) {
@@ -63,10 +62,10 @@ public class DiamondEspRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc((int)515);
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
-        Tessellator tessellator = Tessellator.getInstance();
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        Tesselator tessellator = Tesselator.getInstance();
         long currentTime = System.currentTimeMillis();
-        Vec3d cameraPos = context.gameRenderer().getCamera().getCameraPos();
+        Vec3 cameraPos = context.gameRenderer().mainCamera().position();
         for (DiamondEspManager.DiamondEffect effect : validEffects) {
             float baseAlpha;
             Entity target = effect.target;
@@ -75,11 +74,11 @@ public class DiamondEspRenderer {
             long timeSinceHit = currentTime - effect.lastHitTime;
             if (timeSinceHit > 450L) continue;
             float fastTime = (float)timeSinceStart / 1000.0f;
-            float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true);
-            double tX = target.lastRenderX + (target.getX() - target.lastRenderX) * (double)tickDelta;
-            double tY = target.lastRenderY + (target.getY() - target.lastRenderY) * (double)tickDelta;
-            double tZ = target.lastRenderZ + (target.getZ() - target.lastRenderZ) * (double)tickDelta;
-            float entityCenterY = (float)(tY + (double)(target.getHeight() * 0.5f));
+            float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
+            double tX = target.xOld + (target.getX() - target.xOld) * (double)tickDelta;
+            double tY = target.yOld + (target.getY() - target.yOld) * (double)tickDelta;
+            double tZ = target.zOld + (target.getZ() - target.zOld) * (double)tickDelta;
+            float entityCenterY = (float)(tY + (double)(target.getBbHeight() * 0.5f));
             float arriveProgress = Math.min(1.0f, (float)timeSinceStart / 400.0f);
             float arriveEase = this.easeOutCubic(arriveProgress);
             float scatterProgress = Math.max(0.0f, ((float)timeSinceHit - 360.0f) / 90.0f);
@@ -100,45 +99,45 @@ public class DiamondEspRenderer {
             float cg = 1.0f - hitColorFactor;
             float cb = 1.0f - hitColorFactor;
             int numDiamonds = 18;
-            float baseRadius = target.getWidth() * 1.1f;
-            MatrixStack matrices = context.matrices();
+            float baseRadius = target.getBbWidth() * 1.1f;
+            PoseStack matrices = context.poseStack();
             RenderSystem.setShaderTexture((int)0, (Identifier)BLOOM_TEXTURE);
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-            BufferBuilder bbBloom = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+            BufferBuilder bbBloom = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             for (int i = 0; i < numDiamonds; ++i) {
-                float[] pos = this.calculateDiamondPosition(i, numDiamonds, fastTime, baseRadius, target.getHeight(), arriveEase, scatterEase);
-                matrices.push();
+                float[] pos = this.calculateDiamondPosition(i, numDiamonds, fastTime, baseRadius, target.getBbHeight(), arriveEase, scatterEase);
+                matrices.pushPose();
                 matrices.translate(tX + (double)pos[0] - cameraPos.x, (double)(entityCenterY + pos[1]) - cameraPos.y, tZ + (double)pos[2] - cameraPos.z);
-                matrices.multiply(context.gameRenderer().getCamera().getRotation());
+                matrices.mulPose(context.gameRenderer().mainCamera().rotation());
                 this.drawBloom(matrices, bbBloom, 0.35f, r, g, b, baseAlpha * 0.6f * pos[3]);
-                matrices.pop();
+                matrices.popPose();
             }
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)bbBloom.end());
+            BufferRenderer.drawWithGlobalProgram((MeshData)bbBloom.buildOrThrow());
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder bbSolid = tessellator.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
+            BufferBuilder bbSolid = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
             for (int i = 0; i < numDiamonds; ++i) {
-                float[] pos = this.calculateDiamondPosition(i, numDiamonds, fastTime, baseRadius, target.getHeight(), arriveEase, scatterEase);
-                matrices.push();
+                float[] pos = this.calculateDiamondPosition(i, numDiamonds, fastTime, baseRadius, target.getBbHeight(), arriveEase, scatterEase);
+                matrices.pushPose();
                 matrices.translate(tX + (double)pos[0] - cameraPos.x, (double)(entityCenterY + pos[1]) - cameraPos.y, tZ + (double)pos[2] - cameraPos.z);
-                matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(fastTime * 60.0f + (float)i * 15.0f));
-                matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(fastTime * 40.0f + (float)i * 10.0f));
+                matrices.mulPose(Axis.YP.rotationDegrees(fastTime * 60.0f + (float)i * 15.0f));
+                matrices.mulPose(Axis.XP.rotationDegrees(fastTime * 40.0f + (float)i * 10.0f));
                 this.draw3DDiamond(matrices, bbSolid, 0.08f, r, g, b, baseAlpha * 0.8f * pos[3]);
                 this.draw3DDiamond(matrices, bbSolid, 0.07f, cr, cg, cb, baseAlpha * pos[3]);
-                matrices.pop();
+                matrices.popPose();
             }
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)bbSolid.end());
+            BufferRenderer.drawWithGlobalProgram((MeshData)bbSolid.buildOrThrow());
             RenderSystem.lineWidth((float)1.5f);
-            BufferBuilder bbLines = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
+            BufferBuilder bbLines = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
             for (int i = 0; i < numDiamonds; ++i) {
-                float[] pos = this.calculateDiamondPosition(i, numDiamonds, fastTime, baseRadius, target.getHeight(), arriveEase, scatterEase);
-                matrices.push();
+                float[] pos = this.calculateDiamondPosition(i, numDiamonds, fastTime, baseRadius, target.getBbHeight(), arriveEase, scatterEase);
+                matrices.pushPose();
                 matrices.translate(tX + (double)pos[0] - cameraPos.x, (double)(entityCenterY + pos[1]) - cameraPos.y, tZ + (double)pos[2] - cameraPos.z);
-                matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(fastTime * 60.0f + (float)i * 15.0f));
-                matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(fastTime * 40.0f + (float)i * 10.0f));
+                matrices.mulPose(Axis.YP.rotationDegrees(fastTime * 60.0f + (float)i * 15.0f));
+                matrices.mulPose(Axis.XP.rotationDegrees(fastTime * 40.0f + (float)i * 10.0f));
                 this.draw3DDiamondLines(matrices, bbLines, 0.08f, r, g, b, baseAlpha * pos[3]);
-                matrices.pop();
+                matrices.popPose();
             }
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)bbLines.end());
+            BufferRenderer.drawWithGlobalProgram((MeshData)bbLines.buildOrThrow());
             RenderSystem.lineWidth((float)1.0f);
         }
         RenderSystem.enableDepthTest();
@@ -187,16 +186,16 @@ public class DiamondEspRenderer {
         return t * t;
     }
 
-    private void drawBloom(MatrixStack stack, BufferBuilder buffer, float size, float r, float g, float b, float a) {
-        Matrix4f m = stack.peek().getPositionMatrix();
-        buffer.vertex(m, -size, size, 0.0f).texture(0.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, size, size, 0.0f).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, size, -size, 0.0f).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, -size, -size, 0.0f).texture(0.0f, 0.0f).color(r, g, b, a);
+    private void drawBloom(PoseStack stack, BufferBuilder buffer, float size, float r, float g, float b, float a) {
+        Matrix4f m = stack.last().pose();
+        buffer.addVertex(m, -size, size, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, size, size, 0.0f).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, size, -size, 0.0f).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, -size, -size, 0.0f).setUv(0.0f, 0.0f).setColor(r, g, b, a);
     }
 
-    private void draw3DDiamond(MatrixStack stack, BufferBuilder buffer, float size, float r, float g, float b, float a) {
-        Matrix4f m = stack.peek().getPositionMatrix();
+    private void draw3DDiamond(PoseStack stack, BufferBuilder buffer, float size, float r, float g, float b, float a) {
+        Matrix4f m = stack.last().pose();
         float h = size * 1.8f;
         float w = size * 0.7f;
         this.drawTri(m, buffer, 0.0f, h, 0.0f, -w, 0.0f, -w, w, 0.0f, -w, r, g, b, a);
@@ -210,13 +209,13 @@ public class DiamondEspRenderer {
     }
 
     private void drawTri(Matrix4f m, BufferBuilder b, float x1, float y1, float z1, float x2, float y2, float z2, float x3, float y3, float z3, float r, float g, float bl, float a) {
-        b.vertex(m, x1, y1, z1).color(r, g, bl, a);
-        b.vertex(m, x2, y2, z2).color(r, g, bl, a);
-        b.vertex(m, x3, y3, z3).color(r, g, bl, a);
+        b.addVertex(m, x1, y1, z1).setColor(r, g, bl, a);
+        b.addVertex(m, x2, y2, z2).setColor(r, g, bl, a);
+        b.addVertex(m, x3, y3, z3).setColor(r, g, bl, a);
     }
 
-    private void draw3DDiamondLines(MatrixStack stack, BufferBuilder buffer, float size, float r, float g, float b, float a) {
-        Matrix4f m = stack.peek().getPositionMatrix();
+    private void draw3DDiamondLines(PoseStack stack, BufferBuilder buffer, float size, float r, float g, float b, float a) {
+        Matrix4f m = stack.last().pose();
         float h = size * 1.8f;
         float w = size * 0.7f;
         this.drawLine(m, buffer, -w, 0.0f, -w, w, 0.0f, -w, r, g, b, a);
@@ -234,8 +233,8 @@ public class DiamondEspRenderer {
     }
 
     private void drawLine(Matrix4f m, BufferBuilder b, float x1, float y1, float z1, float x2, float y2, float z2, float r, float g, float bl, float a) {
-        b.vertex(m, x1, y1, z1).color(r, g, bl, a);
-        b.vertex(m, x2, y2, z2).color(r, g, bl, a);
+        b.addVertex(m, x1, y1, z1).setColor(r, g, bl, a);
+        b.addVertex(m, x2, y2, z2).setColor(r, g, bl, a);
     }
 }
 

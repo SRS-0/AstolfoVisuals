@@ -1,6 +1,7 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import java.awt.Color;
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -10,15 +11,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
@@ -138,10 +136,10 @@ extends Module {
     private int sphereBlurProgram = -1;
     private int sphereBlurVao = -1;
     private int sphereBlurVbo = -1;
-    private Framebuffer sphereBlurFbo = null;
-    private Vec3d smoothSphereCenter = null;
+    private RenderTarget sphereBlurFbo = null;
+    private Vec3 smoothSphereCenter = null;
     private long lastSphereUpdateTime = 0L;
-    private Framebuffer saturationFbo = null;
+    private RenderTarget saturationFbo = null;
     private int saturationProgram = -1;
     private int saturationVao = -1;
     private int saturationVbo = -1;
@@ -178,27 +176,27 @@ extends Module {
         this.addSetting(this.blurSky);
         this.addSetting(this.blurThemeTint);
         this.addSetting(this.blurThemeStrength);
-        WorldRenderEvents.AFTER_ENTITIES.register(context -> {
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(context -> {
             if (this.isEnabled() && this.customSkybox.get()) {
                 this.renderShaderSkybox(context);
             }
         });
-        WorldRenderEvents.AFTER_ENTITIES.register(context -> {
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(context -> {
             if (this.isEnabled() && this.fogShader.get()) {
                 this.renderShaderFog(context);
             }
         });
-        WorldRenderEvents.AFTER_ENTITIES.register(context -> {
+        LevelRenderEvents.AFTER_SOLID_FEATURES.register(context -> {
             if (this.isEnabled() && this.blockBrightness.get() < 1.0) {
                 this.renderBlackShader(context);
             }
         });
-        WorldRenderEvents.END_MAIN.register(context -> {
+        LevelRenderEvents.END_MAIN.register(context -> {
             if (this.isEnabled() && this.sphereBlur.get()) {
                 this.renderSphereBlur(context);
             }
         });
-        WorldRenderEvents.END_MAIN.register(context -> {
+        LevelRenderEvents.END_MAIN.register(context -> {
             if (this.isEnabled() && Math.abs(this.saturation.get() - 1.0) > 0.001) {
                 this.renderSaturation(context);
             }
@@ -213,7 +211,7 @@ extends Module {
      * Enabled aggressive exception aggregation
      */
     private String loadShaderSource(String path) {
-        try (InputStream is = MinecraftClient.getInstance().getResourceManager().open(Identifier.of((String)"astolfoclient", (String)path));){
+        try (InputStream is = Minecraft.getInstance().getResourceManager().open(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)path));){
             String string;
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8));){
                 string = reader.lines().collect(Collectors.joining("\n"));
@@ -242,20 +240,20 @@ extends Module {
 
     
 
-    private void renderShaderSkybox(WorldRenderContext context) {
- if(MinecraftClient.getInstance().player==null)return;
+    private void renderShaderSkybox(LevelRenderContext context) {
+ if(Minecraft.getInstance().player==null)return;
  String name=switch(skyboxMode.get()) {case "Smoke" -> "ambient_smoke";case "Clouds" -> "ambient_clouds";case "Caustic" -> "ambient_caustic";case "Nebula" -> "ambient_nebula";case "Radiant" -> "ambient_radiant";case "Sunset" -> "ambient_sunset";default -> "ambient_textured";};
  var pass=skyPass(name,context);
  float t=(System.currentTimeMillis()%100000L)/1000f;var color=new Color(ThemeManager.getThemedColor(0));float r=color.getRed()/255f,g=color.getGreen()/255f,b=color.getBlue()/255f,a=skyboxStrength.getFloat();
  pass.uniform("time",t).uniform("Time",t).uniform("themeColor",r,g,b).uniform("Accent",r,g,b).uniform("alpha",a).uniform("ColorModulator",1,1,1,a).uniform("themeSync",themeSync.get()?1:0);
  boolean textured=name.equals("ambient_textured");
- if(textured) {int index=switch(skyboxMode.get()){case "Lake"->2;case "Cloud Space"->3;case "Clear Evening"->4;case "Underwater"->5;default->1;};var texture=MinecraftClient.getInstance().getTextureManager().getTexture(Identifier.of("astolfoclient","sky/"+index+".png"));pass.texture(0,texture.getGlTextureView(),true);}
+ if(textured) {int index=switch(skyboxMode.get()){case "Lake"->2;case "Cloud Space"->3;case "Clear Evening"->4;case "Underwater"->5;default->1;};var texture=Minecraft.getInstance().getTextureManager().getTexture(Identifier.fromNamespaceAndPath("astolfoclient","sky/"+index+".png"));pass.texture(0,texture.getTextureView(),true);}
  drawSky(pass,textured,false);
 }
 
     
 
-    private void renderBlackShader(WorldRenderContext context) {var pass=skyPass("ambient_black",context).uniform("alpha",1-blockBrightness.getFloat());drawSky(pass,false,true);}
+    private void renderBlackShader(LevelRenderContext context) {var pass=skyPass("ambient_black",context).uniform("alpha",1-blockBrightness.getFloat());drawSky(pass,false,true);}
 
     
 
@@ -269,8 +267,8 @@ extends Module {
 
     
 
-    private void renderShaderFog(WorldRenderContext context) {
- if(MinecraftClient.getInstance().player==null)return;
+    private void renderShaderFog(LevelRenderContext context) {
+ if(Minecraft.getInstance().player==null)return;
  String name=switch(fogShaderMode.get()){case "Smoke"->"ambient_fogsmoke";case "Caustic"->"ambient_fogcaustic";case "Nebula"->"ambient_fognebula";case "Waves"->"ambient_fogwaves";case "Abyss"->"ambient_fogabyss";default->"ambient_fogmist";};
  var color=new Color(ThemeManager.getThemedColor(0));float r=fogShaderThemeSync.get()?color.getRed()/255f:1,g=fogShaderThemeSync.get()?color.getGreen()/255f:1,b=fogShaderThemeSync.get()?color.getBlue()/255f:1;
  var pass=skyPass(name,context).uniform("time",(System.currentTimeMillis()%100000L)/1000f).uniform("themeColor",r,g,b).uniform("alpha",fogShaderStrength.getFloat()).uniform("speed",fogShaderSpeed.getFloat()).uniform("density",fogShaderDensity.getFloat()).uniform("horizon",fogShaderHorizon.getFloat());drawSky(pass,false,false);
@@ -282,44 +280,44 @@ extends Module {
 
     
 
-    private Vec3d getSmoothSphereCenter(float tickDelta) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+    private Vec3 getSmoothSphereCenter(float tickDelta) {
+        Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) {
-            return Vec3d.ZERO;
+            return Vec3.ZERO;
         }
-        double targetX = MathHelper.lerp((double)tickDelta, (double)mc.player.lastRenderX, (double)mc.player.getX());
-        double targetY = MathHelper.lerp((double)tickDelta, (double)mc.player.lastRenderY, (double)mc.player.getY()) + (double)mc.player.getHeight() * 0.5;
-        double targetZ = MathHelper.lerp((double)tickDelta, (double)mc.player.lastRenderZ, (double)mc.player.getZ());
-        Vec3d targetPos = new Vec3d(targetX, targetY, targetZ);
+        double targetX = Mth.lerp((double)tickDelta, (double)mc.player.xOld, (double)mc.player.getX());
+        double targetY = Mth.lerp((double)tickDelta, (double)mc.player.yOld, (double)mc.player.getY()) + (double)mc.player.getBbHeight() * 0.5;
+        double targetZ = Mth.lerp((double)tickDelta, (double)mc.player.zOld, (double)mc.player.getZ());
+        Vec3 targetPos = new Vec3(targetX, targetY, targetZ);
         if (this.smoothSphereCenter == null || !this.smoothFollow.get()) {
             this.smoothSphereCenter = targetPos;
             return targetPos;
         }
-        if (this.smoothSphereCenter.squaredDistanceTo(targetPos) > 40000.0) {
+        if (this.smoothSphereCenter.distanceToSqr(targetPos) > 40000.0) {
             this.smoothSphereCenter = targetPos;
             return targetPos;
         }
         long now = System.currentTimeMillis();
         float dt = this.lastSphereUpdateTime == 0L ? 0.016f : (float)(now - this.lastSphereUpdateTime) / 1000.0f;
-        dt = MathHelper.clamp((float)dt, (float)0.001f, (float)0.1f);
+        dt = Mth.clamp((float)dt, (float)0.001f, (float)0.1f);
         this.lastSphereUpdateTime = now;
         float speed = (float)this.blurFollowSpeed.get();
         float t = 1.0f - (float)Math.exp(-speed * dt);
-        this.smoothSphereCenter = new Vec3d(MathHelper.lerp((double)t, (double)this.smoothSphereCenter.x, (double)targetPos.x), MathHelper.lerp((double)t, (double)this.smoothSphereCenter.y, (double)targetPos.y), MathHelper.lerp((double)t, (double)this.smoothSphereCenter.z, (double)targetPos.z));
+        this.smoothSphereCenter = new Vec3(Mth.lerp((double)t, (double)this.smoothSphereCenter.x, (double)targetPos.x), Mth.lerp((double)t, (double)this.smoothSphereCenter.y, (double)targetPos.y), Mth.lerp((double)t, (double)this.smoothSphereCenter.z, (double)targetPos.z));
         return this.smoothSphereCenter;
     }
 
-    private void renderSphereBlur(WorldRenderContext context) {
- var mc=MinecraftClient.getInstance();if(mc.player==null)return;var mainFbo=mc.getFramebuffer();if(mainFbo.getDepthAttachmentView()==null)return;int width=mainFbo.textureWidth,height=mainFbo.textureHeight;
-         Matrix4f viewRotMat = new Matrix4f().rotation((Quaternionfc)new Quaternionf((Quaternionfc)context.gameRenderer().getCamera().getRotation()).conjugate());
+    private void renderSphereBlur(LevelRenderContext context) {
+ var mc=Minecraft.getInstance();if(mc.player==null)return;var mainFbo=mc.gameRenderer.mainRenderTarget();if(mainFbo.getDepthTextureView()==null)return;int width=mainFbo.width,height=mainFbo.height;
+         Matrix4f viewRotMat = new Matrix4f().rotation((Quaternionfc)new Quaternionf((Quaternionfc)context.gameRenderer().mainCamera().rotation()).conjugate());
         Matrix4f projMat = new Matrix4f((Matrix4fc)RenderSystem.getProjectionMatrix());
         Matrix4f invViewProjMat = new Matrix4f((Matrix4fc)projMat).mul((Matrix4fc)viewRotMat).invert();
         float[] invViewProjArr = new float[16];
         invViewProjMat.get(invViewProjArr);
-        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter() != null ? MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true) : 1.0f;
-        Vec3d sphereCenter = this.getSmoothSphereCenter(tickDelta);
-        Vec3d camPos = context.gameRenderer().getCamera().getCameraPos();
-        Vec3d sphereCenterRelCam = sphereCenter.subtract(camPos);
+        float tickDelta = Minecraft.getInstance().getDeltaTracker() != null ? Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true) : 1.0f;
+        Vec3 sphereCenter = this.getSmoothSphereCenter(tickDelta);
+        Vec3 camPos = context.gameRenderer().mainCamera().position();
+        Vec3 sphereCenterRelCam = sphereCenter.subtract(camPos);
         int sampleCount = 32;
         String quality = this.blurQuality.get();
         if (quality.equals("Low")) {
@@ -338,7 +336,7 @@ extends Module {
         float tintStrength = this.blurThemeTint.get() ? (float)this.blurThemeStrength.get() : 0.0f;
 
  var copy=dev.sxmurxy.mre.renderers.GpuSceneCopy.capture();
- var pass=new xyz.angames.astolfoclient.client.render.compat.ScreenPass("ambient_sphereblur").texture(0,copy.getColorAttachmentView(),true).texture(1,mainFbo.getDepthAttachmentView(),false);
+ var pass=new xyz.angames.astolfoclient.client.render.compat.ScreenPass("ambient_sphereblur").texture(0,copy.getColorTextureView(),true).texture(1,mainFbo.getDepthTextureView(),false);
  pass.uniform("uInvViewProjMat",invViewProjArr).uniform("uSphereCenterRelCam",(float)sphereCenterRelCam.x,(float)sphereCenterRelCam.y,(float)sphereCenterRelCam.z).uniform("uSphereRadius",sphereRadius.getFloat()).uniform("uSmoothness",blurSmoothness.getFloat()).uniform("uBlurStrength",blurStrength.getFloat()).uniform("uResolution",width,height).uniform("uSampleCount",sampleCount).uniform("uBlurSky",blurSky.get()?1:0).uniform("uThemeColor",r,g,b).uniform("uThemeTint",tintStrength).draw(mainFbo);
 }
 
@@ -348,7 +346,7 @@ extends Module {
 
     
 
-    private void renderSaturation(WorldRenderContext context) {if(Math.abs(saturation.get()-1)<0.001)return;var copy=dev.sxmurxy.mre.renderers.GpuSceneCopy.capture();new xyz.angames.astolfoclient.client.render.compat.ScreenPass("ambient_saturation").texture(0,copy.getColorAttachmentView(),true).uniform("uSaturation",saturation.getFloat()).draw(MinecraftClient.getInstance().getFramebuffer());}
+    private void renderSaturation(LevelRenderContext context) {if(Math.abs(saturation.get()-1)<0.001)return;var copy=dev.sxmurxy.mre.renderers.GpuSceneCopy.capture();new xyz.angames.astolfoclient.client.render.compat.ScreenPass("ambient_saturation").texture(0,copy.getColorTextureView(),true).uniform("uSaturation",saturation.getFloat()).draw(Minecraft.getInstance().gameRenderer.mainRenderTarget());}
 
     @Override
     public void onEnable() {
@@ -360,7 +358,7 @@ extends Module {
     @Override
     public void onTick() {
     }
- private xyz.angames.astolfoclient.client.render.compat.ScreenPass skyPass(String name,WorldRenderContext context) {float[] view=new float[16],projection=new float[16];new Matrix4f().rotation(new Quaternionf(context.gameRenderer().getCamera().getRotation()).conjugate()).get(view);RenderSystem.getProjectionMatrix().get(projection);return new xyz.angames.astolfoclient.client.render.compat.ScreenPass(name).uniform("uModelViewMat",view).uniform("uProjMat",projection);}
+ private xyz.angames.astolfoclient.client.render.compat.ScreenPass skyPass(String name,LevelRenderContext context) {float[] view=new float[16],projection=new float[16];new Matrix4f().rotation(new Quaternionf(context.gameRenderer().mainCamera().rotation()).conjugate()).get(view);RenderSystem.getProjectionMatrix().get(projection);return new xyz.angames.astolfoclient.client.render.compat.ScreenPass(name).uniform("uModelViewMat",view).uniform("uProjMat",projection);}
  private float[] texturedVertices() {        float size = 100.0f;
         float[] vertices = new float[180];
         int index = 0;
@@ -421,8 +419,8 @@ extends Module {
  return vertices;}
  private void drawSky(xyz.angames.astolfoclient.client.render.compat.ScreenPass pass,boolean textured,boolean greater) {
  float[] vertices=textured?texturedVertices():new float[]{-1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f};int stride=textured?5:3;
- var builder=net.minecraft.client.render.Tessellator.getInstance().begin(com.mojang.blaze3d.vertex.VertexFormat.DrawMode.TRIANGLES,textured?net.minecraft.client.render.VertexFormats.POSITION_TEXTURE:net.minecraft.client.render.VertexFormats.POSITION);
- for(int i=0;i<vertices.length;i+=stride){var vertex=builder.vertex(vertices[i],vertices[i+1],vertices[i+2]);if(textured)vertex.texture(vertices[i+3],vertices[i+4]);}
- pass.drawMesh(builder.end(),MinecraftClient.getInstance().getFramebuffer(),true,greater?com.mojang.blaze3d.platform.DepthTestFunction.GREATER_DEPTH_TEST:com.mojang.blaze3d.platform.DepthTestFunction.LEQUAL_DEPTH_TEST,true);
+ var builder=xyz.angames.astolfoclient.client.render.compat.Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES,textured?com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX:com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION);
+ for(int i=0;i<vertices.length;i+=stride){var vertex=builder.addVertex(vertices[i],vertices[i+1],vertices[i+2]);if(textured)vertex.setUv(vertices[i+3],vertices[i+4]);}
+ pass.drawMesh(builder.buildOrThrow(),Minecraft.getInstance().gameRenderer.mainRenderTarget(),true,greater?com.mojang.blaze3d.platform.CompareOp.LESS_THAN:com.mojang.blaze3d.platform.CompareOp.GREATER_THAN_OR_EQUAL,true);
  }
 }

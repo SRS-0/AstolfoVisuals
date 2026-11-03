@@ -3,20 +3,20 @@ package xyz.angames.astolfoclient.client.util;
 import com.mojang.authlib.GameProfile;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.network.OtherClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.RemotePlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
 
 @Environment(value=EnvType.CLIENT)
 public class FakePlayerEntity
-extends OtherClientPlayerEntity {
+extends RemotePlayer {
     public static FakePlayerEntity instance = null;
 
-    public FakePlayerEntity(ClientWorld world, GameProfile profile) {
+    public FakePlayerEntity(ClientLevel world, GameProfile profile) {
         super(world, profile);
         this.setHealth(20.0f);
     }
@@ -29,18 +29,18 @@ extends OtherClientPlayerEntity {
         return false;
     }
 
-    public boolean collidesWith(Entity other) {
+    public boolean canCollideWith(Entity other) {
         return false;
     }
 
-    public void takeKnockback(double strength, double x, double z) {
+    public void knockback(double strength, double x, double z) {
     }
 
-    public ItemStack getEquippedStack(EquipmentSlot slot) {
+    public ItemStack getItemBySlot(EquipmentSlot slot) {
         if (slot == EquipmentSlot.OFFHAND) {
-            return new ItemStack((ItemConvertible)Items.TOTEM_OF_UNDYING);
+            return new ItemStack((ItemLike)Items.TOTEM_OF_UNDYING);
         }
-        return super.getEquippedStack(slot);
+        return super.getItemBySlot(slot);
     }
 }
 

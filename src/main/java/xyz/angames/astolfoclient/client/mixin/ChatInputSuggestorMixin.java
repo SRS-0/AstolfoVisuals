@@ -13,10 +13,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ChatInputSuggestor;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.command.CommandSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.CommandSuggestions;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.commands.SharedSuggestionProvider;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -25,23 +25,23 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={ChatInputSuggestor.class})
+@Mixin(value={CommandSuggestions.class})
 public abstract class ChatInputSuggestorMixin {
     @Shadow
-    private TextFieldWidget textField;
+    private EditBox input;
     @Shadow
     private CompletableFuture<Suggestions> pendingSuggestions;
     @Shadow
-    private ParseResults<CommandSource> parse;
+    private ParseResults<SharedSuggestionProvider> currentParse;
 
     @Shadow
-    public abstract void showCommandSuggestions();
+    public abstract void updateUsageInfo(ParseResults<SharedSuggestionProvider> parse, Suggestions suggestions);
 
-    @Inject(method={"refresh"}, at={@At(value="HEAD")}, cancellable=true)
+    @Inject(method={"updateCommandInfo"}, at={@At(value="HEAD")}, cancellable=true)
     public void onRefresh(CallbackInfo ci) {
-        String text = this.textField.getText();
+        String text = this.input.getValue();
         if (text.startsWith("$")) {
-            int cursor = this.textField.getCursor();
+            int cursor = this.input.getCursorPosition();
             int lastSpace = text.lastIndexOf(32, cursor - 1);
             int start = lastSpace == -1 ? 1 : lastSpace + 1;
             List<String> suggestionsList = AstolfoclientClient.commandManager.getSuggestions(text);
@@ -50,15 +50,15 @@ public abstract class ChatInputSuggestorMixin {
                 builder.suggest(s);
             }
             this.pendingSuggestions = builder.buildFuture();
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player != null && client.player.networkHandler != null) {
+            Minecraft client = Minecraft.getInstance();
+            if (client.player != null && client.player.connection != null) {
                 CommandDispatcher dummyDispatcher = new CommandDispatcher();
                 StringReader reader = new StringReader(text);
                 reader.setCursor(text.length());
-                CommandContextBuilder contextBuilder = new CommandContextBuilder(dummyDispatcher, (Object)client.player.networkHandler.getCommandSource(), (CommandNode)dummyDispatcher.getRoot(), 0);
-                this.parse = new ParseResults(contextBuilder, (ImmutableStringReader)reader, Collections.emptyMap());
+                CommandContextBuilder contextBuilder = new CommandContextBuilder(dummyDispatcher, (Object)client.player.connection.getSuggestionsProvider(), (CommandNode)dummyDispatcher.getRoot(), 0);
+                this.currentParse = new ParseResults(contextBuilder, (ImmutableStringReader)reader, Collections.emptyMap());
             }
-            this.showCommandSuggestions();
+            this.updateUsageInfo(this.currentParse,this.pendingSuggestions.join());
             ci.cancel();
         }
     }

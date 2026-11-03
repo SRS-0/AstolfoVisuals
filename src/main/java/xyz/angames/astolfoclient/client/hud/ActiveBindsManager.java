@@ -16,9 +16,9 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -33,7 +33,7 @@ public class ActiveBindsManager {
     private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
     private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
     private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
-    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().name("interface_icons_activebinds").data(Identifier.of((String)"mre", (String)"icons/interface/interface.json")).atlas(Identifier.of((String)"mre", (String)"icons/interface/interface.png")).glyphMapper(g -> {
+    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().name("interface_icons_activebinds").data(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/interface/interface.json")).atlas(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/interface/interface.png")).glyphMapper(g -> {
         int idx = g.index();
         if (idx == 3) {
             return 75;
@@ -60,14 +60,14 @@ public class ActiveBindsManager {
     private float masterAlpha = 0.0f;
     private long lastUpdateTimeNs = -1L;
 
-    public void render(DrawContext context, float tickDelta) {
+    public void render(GuiGraphicsExtractor context, float tickDelta) {
         float headerContentW;
         List<Module> allModules;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.world == null) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
             return;
         }
-        boolean isEditing = mc.currentScreen instanceof HudEditorScreen;
+        boolean isEditing = mc.gui.screen() instanceof HudEditorScreen;
         InterfaceModule interfaceMod = (InterfaceModule)(AstolfoclientClient.moduleManager != null ? AstolfoclientClient.moduleManager.getModuleByName("Interface") : null);
         boolean isModuleOn = interfaceMod != null && interfaceMod.isEnabled() && interfaceMod.activeBinds.get();
         long nowNs = System.nanoTime();
@@ -143,11 +143,11 @@ public class ActiveBindsManager {
         this.currentWidth += (targetWidth - this.currentWidth) * (float)(1.0 - Math.exp(-15.0 * deltaSeconds));
         this.currentHeight += (targetHeight - this.currentHeight) * (float)(1.0 - Math.exp(-15.0 * deltaSeconds));
         float scaleModifier = this.getScaleModifier();
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(this.x, this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate(-this.x, -this.y);
-        Matrix4f baseMatrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        context.pose().pushMatrix();
+        context.pose().translate(this.x, this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate(-this.x, -this.y);
+        Matrix4f baseMatrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         this.renderShadow(baseMatrix, this.x, this.y, this.currentWidth, this.currentHeight, radius, this.masterAlpha);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(this.currentWidth, this.currentHeight)).radius(new QuadRadiusState(radius)).color(new QuadColorState(new Color(0, 0, 0, (int)(255.0f * this.masterAlpha)))).build()).render(baseMatrix, this.x, this.y);
         float headerCenterY = this.y + headerHeight / 2.0f;
@@ -181,7 +181,7 @@ public class ActiveBindsManager {
             float rightX = this.x + this.currentWidth - paddingX - keyW;
             ((BuiltText)Builder.text().font(medium).text(bind.key).color(rowDim).size(moduleNameSize).build()).render(baseMatrix, rightX, rowCenterY - 2.5f);
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
@@ -218,8 +218,8 @@ public class ActiveBindsManager {
     }
 
     private float getScaleModifier() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        double currentGuiScale = mc.getWindow().getScaleFactor();
+        Minecraft mc = Minecraft.getInstance();
+        double currentGuiScale = mc.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
@@ -228,8 +228,8 @@ public class ActiveBindsManager {
 
     public boolean onMouseClicked(double mouseX, double mouseY, int button) {
         boolean isSettingEnabled;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        boolean isEditing = mc.currentScreen instanceof HudEditorScreen;
+        Minecraft mc = Minecraft.getInstance();
+        boolean isEditing = mc.gui.screen() instanceof HudEditorScreen;
         InterfaceModule interfaceMod = (InterfaceModule)(AstolfoclientClient.moduleManager != null ? AstolfoclientClient.moduleManager.getModuleByName("Interface") : null);
         boolean bl = isSettingEnabled = interfaceMod != null && interfaceMod.activeBinds.get();
         if (!(isEditing || interfaceMod != null && isSettingEnabled && interfaceMod.isEnabled())) {
@@ -249,10 +249,10 @@ public class ActiveBindsManager {
 
     public boolean onMouseDragged(double mouseX, double mouseY, int button) {
         if (this.dragging && button == 0) {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             float scaleModifier = this.getScaleModifier();
-            float screenW = mc.getWindow().getScaledWidth();
-            float screenH = mc.getWindow().getScaledHeight();
+            float screenW = mc.getWindow().getGuiScaledWidth();
+            float screenH = mc.getWindow().getGuiScaledHeight();
             float effectiveW = this.currentWidth * scaleModifier;
             float effectiveH = this.currentHeight * scaleModifier;
             float targetX = (float)(mouseX - (double)this.dragOffsetX);

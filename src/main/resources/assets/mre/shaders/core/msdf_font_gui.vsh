@@ -1,4 +1,5 @@
 #version 150
+in vec2 EffectLocal;
 in vec4 Effect0;
 flat out vec4 Effect0Value;
 in vec4 Effect1;

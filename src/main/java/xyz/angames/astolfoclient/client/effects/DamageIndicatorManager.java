@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.modules.render.DamageIndicatorModule;
 
@@ -20,8 +20,8 @@ public class DamageIndicatorManager {
     private final DecimalFormat format = new DecimalFormat("#.#");
 
     public void tick() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.player == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null) {
             this.particles.clear();
             this.healthCache.clear();
             return;
@@ -31,7 +31,7 @@ public class DamageIndicatorManager {
             this.healthCache.clear();
             return;
         }
-        for (Entity entity : client.world.getEntities()) {
+        for (Entity entity : client.level.entitiesForRendering()) {
             float previousHealth;
             float damageAmount;
             if (!(entity instanceof LivingEntity)) continue;
@@ -61,7 +61,7 @@ public class DamageIndicatorManager {
     private void spawnParticle(LivingEntity target, float damage) {
         DamageParticle p = new DamageParticle();
         p.x = target.getX() + (Math.random() - 0.5) * 0.8;
-        p.y = target.getY() + (double)target.getHeight() * 0.5 + Math.random() * 0.5;
+        p.y = target.getY() + (double)target.getBbHeight() * 0.5 + Math.random() * 0.5;
         p.z = target.getZ() + (Math.random() - 0.5) * 0.8;
         double angle = Math.random() * Math.PI * 2.0;
         double speed = 0.15 + Math.random() * 0.1;

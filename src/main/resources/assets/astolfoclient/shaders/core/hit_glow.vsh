@@ -20,6 +20,7 @@ layout(std140) uniform EffectData {
     float uWaveRadius[16];
     float uWaveAlpha[16];
     float uWaveProgress[16];
+    float uDepthZeroToOne;
 };
 
 in vec2 Position;

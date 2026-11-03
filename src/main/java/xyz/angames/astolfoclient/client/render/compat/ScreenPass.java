@@ -1,15 +1,15 @@
 package xyz.angames.astolfoclient.client.render.compat;
 
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.gl.Defines;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.util.Identifier;
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.client.renderer.ShaderDefines;
+import net.minecraft.resources.Identifier;
 
 /** Fullscreen effect that uses the active GPU backend and explicit source views. */
 public final class ScreenPass {
@@ -17,21 +17,21 @@ public final class ScreenPass {
     private final ShaderProgram program;
     private final Map<Integer, RenderSystem.TextureBinding> inputs = new HashMap<>();
     private com.mojang.blaze3d.pipeline.BlendFunction blendFunction=com.mojang.blaze3d.pipeline.BlendFunction.TRANSLUCENT;
-    public ScreenPass(String name) {program=PROGRAMS.computeIfAbsent(name,n->new ShaderProgram(new ShaderProgramKey(Identifier.of("astolfoclient","core/"+n),VertexFormats.POSITION_TEXTURE,Defines.EMPTY)));}
+    public ScreenPass(String name) {program=PROGRAMS.computeIfAbsent(name,n->new ShaderProgram(new ShaderProgramKey(Identifier.fromNamespaceAndPath("astolfoclient","core/"+n),DefaultVertexFormat.POSITION_TEX,ShaderDefines.EMPTY)));}
     public ScreenPass uniform(String name,float... values) {var uniform=program.getUniform(name);if(uniform!=null)uniform.set(values);return this;}
     public ScreenPass blend(com.mojang.blaze3d.pipeline.BlendFunction value) {blendFunction=value;return this;}
     public ScreenPass texture(int slot,GpuTextureView texture,boolean linear) {
-        var sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().get(linear?FilterMode.LINEAR:FilterMode.NEAREST);
+        var sampler=com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(linear?FilterMode.LINEAR:FilterMode.NEAREST);
         inputs.put(slot,new RenderSystem.TextureBinding(texture,sampler));return this;
     }
-    public void draw(Framebuffer target) {draw(target,false);}
-    public void draw(Framebuffer target,boolean blending) {
-        var mesh=Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS,VertexFormats.POSITION_TEXTURE);
-        mesh.vertex(-1,-1,0).texture(0,0);mesh.vertex(1,-1,0).texture(1,0);
-        mesh.vertex(1,1,0).texture(1,1);mesh.vertex(-1,1,0).texture(0,1);
-        drawMesh(mesh.end(),target,false,com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST,blending);
+    public void draw(RenderTarget target) {draw(target,false);}
+    public void draw(RenderTarget target,boolean blending) {
+        var mesh=Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS,DefaultVertexFormat.POSITION_TEX);
+        mesh.addVertex(-1,-1,0).setUv(0,0);mesh.addVertex(1,-1,0).setUv(1,0);
+        mesh.addVertex(1,1,0).setUv(1,1);mesh.addVertex(-1,1,0).setUv(0,1);
+        drawMesh(mesh.buildOrThrow(),target,false,com.mojang.blaze3d.platform.CompareOp.ALWAYS_PASS,blending);
     }
-    public void drawMesh(net.minecraft.client.render.BuiltBuffer mesh,Framebuffer target,boolean depthTest,com.mojang.blaze3d.platform.DepthTestFunction depthFunction,boolean blending) {
+    public void drawMesh(com.mojang.blaze3d.vertex.MeshData mesh,RenderTarget target,boolean depthTest,com.mojang.blaze3d.platform.CompareOp depthFunction,boolean blending) {
         var savedProgram=RenderSystem.program;var savedTarget=RenderSystem.target;
         var savedTextures=new HashMap<>(RenderSystem.textures);
         boolean blend=RenderSystem.blend,depth=RenderSystem.depth,write=RenderSystem.depthWrite,cull=RenderSystem.cull;

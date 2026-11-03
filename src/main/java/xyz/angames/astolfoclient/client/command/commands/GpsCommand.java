@@ -3,7 +3,7 @@ package xyz.angames.astolfoclient.client.command.commands;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.manager.GpsManager;
 
@@ -22,7 +22,7 @@ extends Command {
         }
         if (args[0].equalsIgnoreCase("clear")) {
             GpsManager.getInstance().clear();
-            GpsCommand.sendMessage(String.valueOf(Formatting.GREEN) + "GPS Waypoint cleared.");
+            GpsCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "GPS Waypoint cleared.");
             return;
         }
         if (args.length < 2) {
@@ -33,7 +33,7 @@ extends Command {
             double x = Double.parseDouble(args[0]);
             double z = Double.parseDouble(args[1]);
             GpsManager.getInstance().setWaypoint(x, z);
-            GpsCommand.sendMessage(String.valueOf(Formatting.GREEN) + String.format("GPS set to X: %.1f, Z: %.1f", x, z));
+            GpsCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + String.format("GPS set to X: %.1f, Z: %.1f", x, z));
         }
         catch (NumberFormatException e) {
             this.sendError("Invalid coordinates. Please enter numbers.");

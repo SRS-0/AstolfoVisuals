@@ -3,7 +3,7 @@ package xyz.angames.astolfoclient.client.command.commands;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 
@@ -28,11 +28,11 @@ extends Command {
                     return;
                 }
                 String saveName = args[1];
-                ConfigCommand.sendMessage(String.valueOf(Formatting.GRAY) + "Saving local config...");
+                ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "Saving local config...");
                 new Thread(() -> {
                     String error = AstolfoclientClient.configManager.saveConfig(saveName);
                     if (error == null) {
-                        ConfigCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Successfully saved config: " + String.valueOf(Formatting.AQUA) + saveName);
+                        ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Successfully saved config: " + String.valueOf(ChatFormatting.AQUA) + saveName);
                     } else {
                         this.sendError("Failed to save config: " + error);
                     }
@@ -45,10 +45,10 @@ extends Command {
                     return;
                 }
                 String loadName = args[1];
-                ConfigCommand.sendMessage(String.valueOf(Formatting.GRAY) + "Loading local config...");
+                ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "Loading local config...");
                 new Thread(() -> {
                     if (AstolfoclientClient.configManager.loadConfig(loadName)) {
-                        ConfigCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Successfully loaded config: " + String.valueOf(Formatting.AQUA) + loadName);
+                        ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Successfully loaded config: " + String.valueOf(ChatFormatting.AQUA) + loadName);
                     } else {
                         this.sendError("Could not find a config named: " + loadName);
                     }
@@ -56,15 +56,15 @@ extends Command {
                 break;
             }
             case "list": {
-                ConfigCommand.sendMessage(String.valueOf(Formatting.GRAY) + "Fetching your local configs...");
+                ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "Fetching your local configs...");
                 new Thread(() -> {
                     List<String> configs = AstolfoclientClient.configManager.getLocalConfigs();
                     if (configs.isEmpty()) {
-                        ConfigCommand.sendMessage(String.valueOf(Formatting.GRAY) + "You have no saved configs.");
+                        ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "You have no saved configs.");
                     } else {
-                        ConfigCommand.sendMessage(String.valueOf(Formatting.GOLD) + "--- Your Configs ---");
+                        ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GOLD) + "--- Your Configs ---");
                         for (String cfg : configs) {
-                            ConfigCommand.sendMessage(String.valueOf(Formatting.GRAY) + "- " + String.valueOf(Formatting.AQUA) + cfg);
+                            ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "- " + String.valueOf(ChatFormatting.AQUA) + cfg);
                         }
                     }
                 }).start();
@@ -80,10 +80,10 @@ extends Command {
                     this.sendError("Cannot delete the default config profile.");
                     return;
                 }
-                ConfigCommand.sendMessage(String.valueOf(Formatting.GRAY) + "Deleting config: " + deleteName + "...");
+                ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "Deleting config: " + deleteName + "...");
                 new Thread(() -> {
                     if (AstolfoclientClient.configManager.deleteConfig(deleteName)) {
-                        ConfigCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Successfully deleted config: " + String.valueOf(Formatting.AQUA) + deleteName);
+                        ConfigCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Successfully deleted config: " + String.valueOf(ChatFormatting.AQUA) + deleteName);
                     } else {
                         this.sendError("Failed to delete config: " + deleteName + ". Ensure it exists.");
                     }

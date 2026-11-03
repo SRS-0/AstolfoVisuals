@@ -13,8 +13,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.SoundSettings;
 import xyz.angames.astolfoclient.client.gui.clickgui.ClickGuiIcons;
@@ -26,7 +26,7 @@ public class SoundSettingsPopup {
     private static final List<SoundEntry> ENTRIES = new ArrayList<SoundEntry>();
     private static int draggingIndex = -1;
 
-    public static void render(DrawContext context, float x, float y, float w, float h, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    public static void render(GuiGraphicsExtractor context, float x, float y, float w, float h, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         MsdfFont medFont = null;
         try {
             medFont = (MsdfFont)ClickGuiIcons.MEDIUM_FONT.get();
@@ -34,7 +34,7 @@ public class SoundSettingsPopup {
         catch (Exception exception) {
             // empty catch block
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         GuiUtils.renderTextSafely(matrix, "Client Sounds", x + 10.0f, y + 8.0f, GuiUtils.withAlpha(Color.WHITE, alpha), 8.5f);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(w - 20.0f, 1.0f)).color(new QuadColorState(GuiUtils.withAlpha(new Color(30, 30, 40), alpha))).build()).render(matrix, x + 10.0f, y + 21.0f);
         float startY = y + 26.0f;
@@ -104,7 +104,7 @@ public class SoundSettingsPopup {
             return;
         }
         SoundEntry entry = ENTRIES.get(draggingIndex);
-        float progress = MathHelper.clamp((float)((mx - tX) / trackW), (float)0.0f, (float)1.0f);
+        float progress = Mth.clamp((float)((mx - tX) / trackW), (float)0.0f, (float)1.0f);
         float newVal = Math.round(progress * 100.0f);
         entry.setter.accept(Float.valueOf(newVal));
         if (draggingIndex == 4) {

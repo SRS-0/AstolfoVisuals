@@ -1,11 +1,11 @@
 package xyz.angames.astolfoclient.client.mixin;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.hud.InGameOverlayRenderer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.texture.Sprite;
-import net.minecraft.client.util.math.MatrixStack;
+import xyz.angames.astolfoclient.client.render.compat.MultiBufferSource;
+import net.minecraft.client.renderer.ScreenEffectRenderer;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -13,18 +13,18 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.angames.astolfoclient.client.module.modules.render.NoRenderModule;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={InGameOverlayRenderer.class})
+@Mixin(value={ScreenEffectRenderer.class})
 public class MixinInGameOverlayRenderer {
-    @Inject(method={"renderFireOverlay"}, at={@At(value="HEAD")}, cancellable=true)
-    private static void onRenderFireOverlay(MatrixStack matrices, VertexConsumerProvider vertexConsumers, Sprite sprite, CallbackInfo ci) {
+    @Inject(method={"submitFire"}, at={@At(value="HEAD")}, cancellable=true)
+    private static void onRenderFireOverlay(CallbackInfo ci) {
         NoRenderModule noRender = NoRenderModule.getInstance();
         if (noRender != null && noRender.isEnabled() && noRender.fire.get()) {
             ci.cancel();
         }
     }
 
-    @Inject(method={"renderInWallOverlay"}, at={@At(value="HEAD")}, cancellable=true)
-    private static void onRenderInWallOverlay(Sprite sprite, MatrixStack matrices, VertexConsumerProvider vertexConsumers, CallbackInfo ci) {
+    @Inject(method={"submitBlockSprite"}, at={@At(value="HEAD")}, cancellable=true)
+    private static void onRenderInWallOverlay(CallbackInfo ci) {
         NoRenderModule noRender = NoRenderModule.getInstance();
         if (noRender != null && noRender.isEnabled() && noRender.blockOverlay.get()) {
             ci.cancel();

@@ -1,4 +1,5 @@
 #version 150
+in vec2 EffectLocal;
 in vec4 Effect0;
 flat out vec4 Effect0Value;
 in vec4 Effect1;
@@ -51,7 +52,7 @@ void main() {
     Effect10Value = Effect10;
     Effect11Value = Effect11;
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
-    FragCoord = rvertexcoord(gl_VertexID);
+    FragCoord = EffectLocal;
     TexCoord = UV0;
     FragColor = Color;
 } 

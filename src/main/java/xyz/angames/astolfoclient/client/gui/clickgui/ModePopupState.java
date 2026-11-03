@@ -14,8 +14,8 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.gui.clickgui.ClickGuiIcons;
 import xyz.angames.astolfoclient.client.gui.clickgui.GuiUtils;
@@ -136,10 +136,10 @@ public class ModePopupState {
             return winY;
         }
         float sY = ModePopupState.ACTIVE.triggerY - 2.0f;
-        return MathHelper.clamp((float)sY, (float)(winY + 38.0f), (float)(winY + winH - subH - 8.0f));
+        return Mth.clamp((float)sY, (float)(winY + 38.0f), (float)(winY + winH - subH - 8.0f));
     }
 
-    public static void renderActive(DrawContext context, float winX, float winY, float winW, float winH, int mouseX, int mouseY, float deltaTime, float masterAlpha, Color themeColor) {
+    public static void renderActive(GuiGraphicsExtractor context, float winX, float winY, float winW, float winH, int mouseX, int mouseY, float deltaTime, float masterAlpha, Color themeColor) {
         if (ACTIVE == null) {
             return;
         }
@@ -181,15 +181,15 @@ public class ModePopupState {
         float subH = (float)visibleCount * 16.0f + 8.0f;
         float sX = ModePopupState.calculatePopupX(winX, winW, subW);
         float sY = ModePopupState.calculatePopupY(winY, winH, subH);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (scale < 0.999f) {
             float scx = sX + subW / 2.0f;
             float scy = sY + subH / 2.0f;
-            context.getMatrices().translate(scx, scy);
-            context.getMatrices().scale(scale, scale);
-            context.getMatrices().translate(-scx, -scy);
+            context.pose().translate(scx, scy);
+            context.pose().scale(scale, scale);
+            context.pose().translate(-scx, -scy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         for (int i = 6; i >= 0; --i) {
             float progress = (float)i / 6.0f;
             float spread = progress * 4.0f;
@@ -265,11 +265,11 @@ public class ModePopupState {
         if (maxScroll > 0.5f) {
             float scrollTrackH = subH - 12.0f;
             float scrollThumbH = Math.max(14.0f, contentH / totalContentH * scrollTrackH);
-            float scrollProgress = MathHelper.clamp((float)(-ModePopupState.ACTIVE.scrollY / maxScroll), (float)0.0f, (float)1.0f);
+            float scrollProgress = Mth.clamp((float)(-ModePopupState.ACTIVE.scrollY / maxScroll), (float)0.0f, (float)1.0f);
             float scrollThumbY = sY + 6.0f + scrollProgress * (scrollTrackH - scrollThumbH);
             ((BuiltRectangle)Builder.rectangle().size(new SizeState(2.5f, scrollThumbH)).radius(new QuadRadiusState(1.25f)).color(new QuadColorState(new Color(70, 70, 90, (int)(220.0f * alpha)))).build()).render(matrix, sX + subW - 4.5f, scrollThumbY);
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     public static boolean mouseClicked(double mouseX, double mouseY, int button, float winX, float winY, float winW, float winH) {
@@ -328,7 +328,7 @@ public class ModePopupState {
         float maxScroll = Math.max(0.0f, totalContentH - (float)visibleCount * 16.0f);
         if (GuiUtils.isMouseOver((float)mouseX, (float)mouseY, sX, sY, subW, subH)) {
             if (maxScroll > 0.5f) {
-                ModePopupState.ACTIVE.targetScrollY = MathHelper.clamp((float)(ModePopupState.ACTIVE.targetScrollY + (float)amount * 18.0f), (float)(-maxScroll), (float)0.0f);
+                ModePopupState.ACTIVE.targetScrollY = Mth.clamp((float)(ModePopupState.ACTIVE.targetScrollY + (float)amount * 18.0f), (float)(-maxScroll), (float)0.0f);
             }
             return true;
         }

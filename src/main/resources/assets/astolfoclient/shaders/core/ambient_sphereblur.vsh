@@ -10,6 +10,7 @@ layout(std140) uniform EffectData {
     int uBlurSky;
     vec3 uThemeColor;
     float uThemeTint;
+    float uDepthZeroToOne;
 };
 
 in vec2 Position;

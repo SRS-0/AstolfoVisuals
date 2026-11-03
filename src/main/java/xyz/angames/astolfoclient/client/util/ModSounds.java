@@ -2,37 +2,37 @@ package xyz.angames.astolfoclient.client.util;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.sound.SoundInstance;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.resources.sounds.SoundInstance;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvent;
 import xyz.angames.astolfoclient.client.config.SoundSettings;
 
 @Environment(value=EnvType.CLIENT)
 public class ModSounds {
-    public static final Identifier ENABLE_ID = Identifier.of((String)"astolfoclient", (String)"module_enable");
-    public static final SoundEvent ENABLE_SOUND = SoundEvent.of((Identifier)ENABLE_ID);
-    public static final Identifier DISABLE_ID = Identifier.of((String)"astolfoclient", (String)"module_disable");
-    public static final SoundEvent DISABLE_SOUND = SoundEvent.of((Identifier)DISABLE_ID);
-    public static final Identifier CRASH_DETECTION_ID = Identifier.of((String)"astolfoclient", (String)"crash_detection");
-    public static final SoundEvent CRASH_DETECTION_SOUND = SoundEvent.of((Identifier)CRASH_DETECTION_ID);
-    public static final Identifier CRASH_DETECTION_HYPHEN_ID = Identifier.of((String)"astolfoclient", (String)"crash-detection");
-    public static final SoundEvent CRASH_DETECTION_HYPHEN_SOUND = SoundEvent.of((Identifier)CRASH_DETECTION_HYPHEN_ID);
-    public static final Identifier GUI_OPEN_ID = Identifier.of((String)"astolfoclient", (String)"clickgui_open");
-    public static final SoundEvent GUI_OPEN_SOUND = SoundEvent.of((Identifier)GUI_OPEN_ID);
-    public static final Identifier CATEGORY_ID = Identifier.of((String)"astolfoclient", (String)"clickgui_category");
-    public static final SoundEvent CATEGORY_SOUND = SoundEvent.of((Identifier)CATEGORY_ID);
-    public static final Identifier MODULE_SELECT_ID = Identifier.of((String)"astolfoclient", (String)"clickgui_module");
-    public static final SoundEvent MODULE_SELECT_SOUND = SoundEvent.of((Identifier)MODULE_SELECT_ID);
-    public static final Identifier SLIDER_MOVING_ID = Identifier.of((String)"astolfoclient", (String)"clickgui_slider");
-    public static final SoundEvent SLIDER_MOVING_SOUND = SoundEvent.of((Identifier)SLIDER_MOVING_ID);
-    public static final Identifier SEARCH_CLICK_ID = Identifier.of((String)"astolfoclient", (String)"clickgui_search");
-    public static final SoundEvent SEARCH_CLICK_SOUND = SoundEvent.of((Identifier)SEARCH_CLICK_ID);
-    public static final Identifier MODE_OPEN_ID = Identifier.of((String)"astolfoclient", (String)"clickgui_mode_open");
-    public static final SoundEvent MODE_OPEN_SOUND = SoundEvent.of((Identifier)MODE_OPEN_ID);
+    public static final Identifier ENABLE_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"module_enable");
+    public static final SoundEvent ENABLE_SOUND = SoundEvent.createVariableRangeEvent((Identifier)ENABLE_ID);
+    public static final Identifier DISABLE_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"module_disable");
+    public static final SoundEvent DISABLE_SOUND = SoundEvent.createVariableRangeEvent((Identifier)DISABLE_ID);
+    public static final Identifier CRASH_DETECTION_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"crash_detection");
+    public static final SoundEvent CRASH_DETECTION_SOUND = SoundEvent.createVariableRangeEvent((Identifier)CRASH_DETECTION_ID);
+    public static final Identifier CRASH_DETECTION_HYPHEN_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"crash-detection");
+    public static final SoundEvent CRASH_DETECTION_HYPHEN_SOUND = SoundEvent.createVariableRangeEvent((Identifier)CRASH_DETECTION_HYPHEN_ID);
+    public static final Identifier GUI_OPEN_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"clickgui_open");
+    public static final SoundEvent GUI_OPEN_SOUND = SoundEvent.createVariableRangeEvent((Identifier)GUI_OPEN_ID);
+    public static final Identifier CATEGORY_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"clickgui_category");
+    public static final SoundEvent CATEGORY_SOUND = SoundEvent.createVariableRangeEvent((Identifier)CATEGORY_ID);
+    public static final Identifier MODULE_SELECT_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"clickgui_module");
+    public static final SoundEvent MODULE_SELECT_SOUND = SoundEvent.createVariableRangeEvent((Identifier)MODULE_SELECT_ID);
+    public static final Identifier SLIDER_MOVING_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"clickgui_slider");
+    public static final SoundEvent SLIDER_MOVING_SOUND = SoundEvent.createVariableRangeEvent((Identifier)SLIDER_MOVING_ID);
+    public static final Identifier SEARCH_CLICK_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"clickgui_search");
+    public static final SoundEvent SEARCH_CLICK_SOUND = SoundEvent.createVariableRangeEvent((Identifier)SEARCH_CLICK_ID);
+    public static final Identifier MODE_OPEN_ID = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"clickgui_mode_open");
+    public static final SoundEvent MODE_OPEN_SOUND = SoundEvent.createVariableRangeEvent((Identifier)MODE_OPEN_ID);
     private static long lastSliderSoundTime = 0L;
 
     public static void register() {
@@ -49,8 +49,8 @@ public class ModSounds {
     }
 
     private static void registerSound(Identifier id, SoundEvent sound) {
-        if (!Registries.SOUND_EVENT.containsId(id)) {
-            Registry.register((Registry)Registries.SOUND_EVENT, (Identifier)id, (Object)sound);
+        if (!BuiltInRegistries.SOUND_EVENT.containsKey(id)) {
+            Registry.register((Registry)BuiltInRegistries.SOUND_EVENT, (Identifier)id, (Object)sound);
         }
     }
 
@@ -63,14 +63,14 @@ public class ModSounds {
         if (vol <= 0.001f) {
             return;
         }
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         if (mc == null) {
             return;
         }
         mc.execute(() -> {
             try {
                 if (mc.getSoundManager() != null) {
-                    mc.getSoundManager().play((SoundInstance)PositionedSoundInstance.ui((SoundEvent)sound, (float)1.0f, (float)vol));
+                    mc.getSoundManager().play((SoundInstance)SimpleSoundInstance.forUI((SoundEvent)sound, (float)1.0f, (float)vol));
                 }
             }
             catch (Exception exception) {

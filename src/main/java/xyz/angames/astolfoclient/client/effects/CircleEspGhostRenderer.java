@@ -1,24 +1,23 @@
 package xyz.angames.astolfoclient.client.effects;
-import net.minecraft.client.MinecraftClient;
-
 import com.mojang.blaze3d.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -27,7 +26,7 @@ import xyz.angames.astolfoclient.client.util.TargetUtils;
 
 @Environment(value=EnvType.CLIENT)
 public class CircleEspGhostRenderer {
-    public void render(WorldRenderContext context, List<CircleEspManager.CircleEspEffect> effects) {
+    public void render(LevelRenderContext context, List<CircleEspManager.CircleEspEffect> effects) {
         if (effects.isEmpty()) {
             return;
         }
@@ -36,34 +35,34 @@ public class CircleEspGhostRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc((int)515);
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
-        Tessellator tessellator = Tessellator.getInstance();
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        Tesselator tessellator = Tesselator.getInstance();
         long currentTime = System.currentTimeMillis();
-        MatrixStack matrices = context.matrices();
-        double camX = context.gameRenderer().getCamera().getCameraPos().x;
-        double camY = context.gameRenderer().getCamera().getCameraPos().y;
-        double camZ = context.gameRenderer().getCamera().getCameraPos().z;
-        Quaternionf cameraRot = context.gameRenderer().getCamera().getRotation();
+        PoseStack matrices = context.poseStack();
+        double camX = context.gameRenderer().mainCamera().position().x;
+        double camY = context.gameRenderer().mainCamera().position().y;
+        double camZ = context.gameRenderer().mainCamera().position().z;
+        Quaternionf cameraRot = context.gameRenderer().mainCamera().rotation();
         for (CircleEspManager.CircleEspEffect effect : effects) {
             long timeSinceHit;
             float fadeProgress;
             float baseAlpha;
             Entity target = effect.target;
-            if (!target.isAlive() || TargetUtils.isInvisible(target) || (baseAlpha = 1.0f - Math.max(0.0f, ((fadeProgress = MathHelper.clamp((float)((float)(timeSinceHit = currentTime - effect.lastHitTime) / 450.0f), (float)0.0f, (float)1.0f)) - 0.5f) * 2.0f)) <= 0.05f) continue;
+            if (!target.isAlive() || TargetUtils.isInvisible(target) || (baseAlpha = 1.0f - Math.max(0.0f, ((fadeProgress = Mth.clamp((float)((float)(timeSinceHit = currentTime - effect.lastHitTime) / 450.0f), (float)0.0f, (float)1.0f)) - 0.5f) * 2.0f)) <= 0.05f) continue;
             float animTime = (float)(currentTime - effect.startTime) / 1000.0f;
-            float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true);
-            double tX = MathHelper.lerp((double)tickDelta, (double)target.lastRenderX, (double)target.getX()) - camX;
-            double tY = MathHelper.lerp((double)tickDelta, (double)target.lastRenderY, (double)target.getY()) - camY;
-            double tZ = MathHelper.lerp((double)tickDelta, (double)target.lastRenderZ, (double)target.getZ()) - camZ;
-            float height = target.getHeight();
-            float radius = target.getWidth() / 2.0f + 0.1f;
+            float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
+            double tX = Mth.lerp((double)tickDelta, (double)target.xOld, (double)target.getX()) - camX;
+            double tY = Mth.lerp((double)tickDelta, (double)target.yOld, (double)target.getY()) - camY;
+            double tZ = Mth.lerp((double)tickDelta, (double)target.zOld, (double)target.getZ()) - camZ;
+            float height = target.getBbHeight();
+            float radius = target.getBbWidth() / 2.0f + 0.1f;
             if (timeSinceHit > 400L) {
                 float endProgress = (float)(timeSinceHit - 400L) / 200.0f;
                 radius *= Math.max(0.0f, 1.0f - endProgress);
             }
             float speedY = 3.5f;
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
             float mainY = (float)((Math.sin(animTime * speedY) + 1.0) / 2.0) * height;
             Color headColor = new Color(ThemeManager.getThemedColor(0L));
             float rH = (float)headColor.getRed() / 255.0f;
@@ -73,13 +72,13 @@ public class CircleEspGhostRenderer {
                 double rad = Math.toRadians(angle);
                 float pX = (float)Math.cos(rad) * radius;
                 float pZ = (float)Math.sin(rad) * radius;
-                matrices.push();
+                matrices.pushPose();
                 matrices.translate(tX + (double)pX, tY + (double)mainY, tZ + (double)pZ);
-                matrices.multiply(cameraRot);
+                matrices.mulPose(cameraRot);
                 float scale = 0.12f;
                 matrices.scale(scale, scale, scale);
-                this.drawBatchedGlowingDot(matrices.peek().getPositionMatrix(), buffer, rH, gH, bH, baseAlpha);
-                matrices.pop();
+                this.drawBatchedGlowingDot(matrices.last().pose(), buffer, rH, gH, bH, baseAlpha);
+                matrices.popPose();
             }
             int tailSteps = 22;
             for (int i = 1; i <= tailSteps; ++i) {
@@ -98,16 +97,16 @@ public class CircleEspGhostRenderer {
                     double rad = Math.toRadians(angle);
                     float pX = (float)Math.cos(rad) * tailRadius;
                     float pZ = (float)Math.sin(rad) * tailRadius;
-                    matrices.push();
+                    matrices.pushPose();
                     matrices.translate(tX + (double)pX, tY + (double)histY, tZ + (double)pZ);
-                    matrices.multiply(cameraRot);
+                    matrices.mulPose(cameraRot);
                     float scale = 0.12f * (1.0f - tailProgress * 0.5f);
                     matrices.scale(scale, scale, scale);
-                    this.drawBatchedGlowingDot(matrices.peek().getPositionMatrix(), buffer, rT, gT, bT, tailAlpha);
-                    matrices.pop();
+                    this.drawBatchedGlowingDot(matrices.last().pose(), buffer, rT, gT, bT, tailAlpha);
+                    matrices.popPose();
                 }
             }
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)buffer.end());
+            BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
         }
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)true);
@@ -127,9 +126,9 @@ public class CircleEspGhostRenderer {
             float py1 = (float)Math.sin(rad1);
             float px2 = (float)Math.cos(rad2);
             float py2 = (float)Math.sin(rad2);
-            buffer.vertex(matrix, 0.0f, 0.0f, 0.0f).color(coreR, coreG, coreB, alpha);
-            buffer.vertex(matrix, px1, py1, 0.0f).color(r, g, b, 0.0f);
-            buffer.vertex(matrix, px2, py2, 0.0f).color(r, g, b, 0.0f);
+            buffer.addVertex(matrix, 0.0f, 0.0f, 0.0f).setColor(coreR, coreG, coreB, alpha);
+            buffer.addVertex(matrix, px1, py1, 0.0f).setColor(r, g, b, 0.0f);
+            buffer.addVertex(matrix, px2, py2, 0.0f).setColor(r, g, b, 0.0f);
         }
     }
 }

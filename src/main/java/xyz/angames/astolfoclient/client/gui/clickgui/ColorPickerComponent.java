@@ -9,7 +9,7 @@ import dev.sxmurxy.mre.renderers.impl.BuiltRectangle;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.clickgui.GuiUtils;
@@ -71,8 +71,8 @@ public class ColorPickerComponent {
         Color cBlack = GuiUtils.withAlpha(Color.BLACK, alpha);
         Color cBlackTrans = new Color(0, 0, 0, 0);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(padW, padH)).radius(new QuadRadiusState(5.0f)).color(new QuadColorState(cBlackTrans, cBlack, cBlack, cBlackTrans)).build()).render(matrix, padX, padY);
-        float curX = padX + MathHelper.clamp((float)this.animSat, (float)0.0f, (float)1.0f) * padW;
-        float curY = padY + (1.0f - MathHelper.clamp((float)this.animBri, (float)0.0f, (float)1.0f)) * padH;
+        float curX = padX + Mth.clamp((float)this.animSat, (float)0.0f, (float)1.0f) * padW;
+        float curY = padY + (1.0f - Mth.clamp((float)this.animBri, (float)0.0f, (float)1.0f)) * padH;
         ((BuiltBorder)Builder.border().size(new SizeState(8.5f, 8.5f)).radius(new QuadRadiusState(4.25f)).thickness(1.6f).color(new QuadColorState(GuiUtils.withAlpha(new Color(0, 0, 0, 160), alpha))).build()).render(matrix, curX - 4.25f, curY - 4.25f);
         ((BuiltBorder)Builder.border().size(new SizeState(7.0f, 7.0f)).radius(new QuadRadiusState(3.5f)).thickness(1.4f).color(new QuadColorState(GuiUtils.withAlpha(Color.WHITE, alpha))).build()).render(matrix, curX - 3.5f, curY - 3.5f);
         int slices = 6;
@@ -90,7 +90,7 @@ public class ColorPickerComponent {
             }
             ((BuiltRectangle)Builder.rectangle().size(new SizeState(sliceW + 0.5f, hueBarH)).radius(rad).smoothness(0.0f).color(new QuadColorState(c1, c1, c2, c2)).build()).render(matrix, hueBarX + (float)i * sliceW, hueBarY);
         }
-        float hueHandleX = hueBarX + MathHelper.clamp((float)this.animHue, (float)0.0f, (float)1.0f) * hueBarW;
+        float hueHandleX = hueBarX + Mth.clamp((float)this.animHue, (float)0.0f, (float)1.0f) * hueBarW;
         float hueHandleY = hueBarY + hueBarH / 2.0f;
         ((BuiltBorder)Builder.border().size(new SizeState(8.5f, 8.5f)).radius(new QuadRadiusState(4.25f)).thickness(1.6f).color(new QuadColorState(GuiUtils.withAlpha(new Color(0, 0, 0, 160), alpha))).build()).render(matrix, hueHandleX - 4.25f, hueHandleY - 4.25f);
         ((BuiltBorder)Builder.border().size(new SizeState(7.0f, 7.0f)).radius(new QuadRadiusState(3.5f)).thickness(1.4f).color(new QuadColorState(GuiUtils.withAlpha(Color.WHITE, alpha))).build()).render(matrix, hueHandleX - 3.5f, hueHandleY - 3.5f);
@@ -128,12 +128,12 @@ public class ColorPickerComponent {
         float hueBarX = padX;
         float hueBarW = padW;
         if (this.draggingPad) {
-            this.sat = MathHelper.clamp((float)((float)(mx - (double)padX) / padW), (float)0.0f, (float)1.0f);
-            this.bri = 1.0f - MathHelper.clamp((float)((float)(my - (double)padY) / padH), (float)0.0f, (float)1.0f);
+            this.sat = Mth.clamp((float)((float)(mx - (double)padX) / padW), (float)0.0f, (float)1.0f);
+            this.bri = 1.0f - Mth.clamp((float)((float)(my - (double)padY) / padH), (float)0.0f, (float)1.0f);
             this.updateTheme();
         }
         if (this.draggingHue) {
-            this.hue = MathHelper.clamp((float)((float)(mx - (double)hueBarX) / hueBarW), (float)0.0f, (float)1.0f);
+            this.hue = Mth.clamp((float)((float)(mx - (double)hueBarX) / hueBarW), (float)0.0f, (float)1.0f);
             this.updateTheme();
         }
     }

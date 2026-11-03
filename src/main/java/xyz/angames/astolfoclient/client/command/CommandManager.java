@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.command.commands.BindCommand;
 import xyz.angames.astolfoclient.client.command.commands.ConfigCommand;
@@ -66,8 +66,8 @@ public class CommandManager {
                 return true;
             }
         }
-        if (MinecraftClient.getInstance().inGameHud != null) {
-            MinecraftClient.getInstance().inGameHud.getChatHud().addMessage((Text)Text.literal((String)("\u00a7d[Astolfo] " + String.valueOf(Formatting.RED) + "Unknown command: " + commandName + ". Try $help.")));
+        if (Minecraft.getInstance().gui != null) {
+            Minecraft.getInstance().gui.hud.getChat().addClientSystemMessage((Component)Component.literal((String)("\u00a7d[Astolfo] " + String.valueOf(ChatFormatting.RED) + "Unknown command: " + commandName + ". Try $help.")));
         }
         return true;
     }

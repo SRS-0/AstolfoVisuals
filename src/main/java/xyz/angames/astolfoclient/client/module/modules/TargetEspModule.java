@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.module.modules;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;

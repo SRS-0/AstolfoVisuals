@@ -7,20 +7,20 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -29,11 +29,11 @@ import xyz.angames.astolfoclient.client.module.modules.render.BabyPlayerModule;
 
 @Environment(value=EnvType.CLIENT)
 public class TrailsRenderer {
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private final List<TrailPoint> points = new ArrayList<TrailPoint>();
     private static final long TRAIL_LIFESPAN = 850L;
 
-    public void render(WorldRenderContext context) {
+    public void render(LevelRenderContext context) {
         float midY;
         float heightScale;
         float alpha;
@@ -42,27 +42,27 @@ public class TrailsRenderer {
         long age;
         float targetHeight;
         Module module = AstolfoclientClient.moduleManager.getModuleByName("Trails");
-        if (module == null || !module.isEnabled() || this.client.options.getPerspective().isFirstPerson()) {
+        if (module == null || !module.isEnabled() || this.client.options.getCameraType().isFirstPerson()) {
             this.points.clear();
             return;
         }
-        ClientPlayerEntity player = this.client.player;
+        LocalPlayer player = this.client.player;
         if (player == null) {
             return;
         }
-        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true);
-        double x = MathHelper.lerp((double)tickDelta, (double)player.lastRenderX, (double)player.getX());
-        double y = MathHelper.lerp((double)tickDelta, (double)player.lastRenderY, (double)player.getY());
-        double z = MathHelper.lerp((double)tickDelta, (double)player.lastRenderZ, (double)player.getZ());
-        Vec3d currentPos = new Vec3d(x, y, z);
+        float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        double x = Mth.lerp((double)tickDelta, (double)player.xOld, (double)player.getX());
+        double y = Mth.lerp((double)tickDelta, (double)player.yOld, (double)player.getY());
+        double z = Mth.lerp((double)tickDelta, (double)player.zOld, (double)player.getZ());
+        Vec3 currentPos = new Vec3(x, y, z);
         boolean isBaby = false;
         Module babyModule = AstolfoclientClient.moduleManager.getModuleByName("BabyPlayer");
         if (babyModule instanceof BabyPlayerModule) {
             BabyPlayerModule bpm = (BabyPlayerModule)babyModule;
             isBaby = bpm.isEnabled() && bpm.self.get();
         }
-        float f = targetHeight = isBaby ? 0.9f : player.getHeight();
-        if (this.points.isEmpty() || this.points.get((int)(this.points.size() - 1)).pos.squaredDistanceTo(currentPos) > 0.001) {
+        float f = targetHeight = isBaby ? 0.9f : player.getBbHeight();
+        if (this.points.isEmpty() || this.points.get((int)(this.points.size() - 1)).pos.distanceToSqr(currentPos) > 0.001) {
             this.points.add(new TrailPoint(currentPos, targetHeight, System.currentTimeMillis()));
         }
         long currentTime = System.currentTimeMillis();
@@ -74,17 +74,17 @@ public class TrailsRenderer {
         RenderSystem.disableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-        Tessellator tessellator = Tessellator.getInstance();
-        MatrixStack matrices = context.matrices();
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
-        Vec3d cameraPos = context.gameRenderer().getCamera().getCameraPos();
-        BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.TRIANGLE_STRIP, VertexFormats.POSITION_COLOR);
+        Tesselator tessellator = Tesselator.getInstance();
+        PoseStack matrices = context.poseStack();
+        Matrix4f matrix = matrices.last().pose();
+        Vec3 cameraPos = context.gameRenderer().mainCamera().position();
+        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         int index = 0;
         for (TrailPoint point : this.points) {
             age = currentTime - point.timeCreated;
-            progress = MathHelper.clamp((float)((float)age / 850.0f), (float)0.0f, (float)1.0f);
+            progress = Mth.clamp((float)((float)age / 850.0f), (float)0.0f, (float)1.0f);
             reverseProgress = 1.0f - progress;
             alpha = (float)Math.pow(reverseProgress, 2.5);
             float bodyAlpha = alpha * 0.45f;
@@ -99,17 +99,17 @@ public class TrailsRenderer {
             double renderX = point.pos.x - cameraPos.x;
             double renderY = point.pos.y - cameraPos.y;
             double renderZ = point.pos.z - cameraPos.z;
-            buffer.vertex(matrix, (float)renderX, (float)(renderY + (double)topY), (float)renderZ).color(r, g, b, bodyAlpha);
-            buffer.vertex(matrix, (float)renderX, (float)(renderY + (double)botY), (float)renderZ).color(r, g, b, bodyAlpha);
+            buffer.addVertex(matrix, (float)renderX, (float)(renderY + (double)topY), (float)renderZ).setColor(r, g, b, bodyAlpha);
+            buffer.addVertex(matrix, (float)renderX, (float)(renderY + (double)botY), (float)renderZ).setColor(r, g, b, bodyAlpha);
             ++index;
         }
-        BufferRenderer.drawWithGlobalProgram((BuiltBuffer)buffer.end());
+        BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
         RenderSystem.lineWidth((float)2.5f);
-        buffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
+        buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         index = 0;
         for (TrailPoint point : this.points) {
             age = currentTime - point.timeCreated;
-            progress = MathHelper.clamp((float)((float)age / 850.0f), (float)0.0f, (float)1.0f);
+            progress = Mth.clamp((float)((float)age / 850.0f), (float)0.0f, (float)1.0f);
             reverseProgress = 1.0f - progress;
             alpha = (float)Math.pow(reverseProgress, 2.0);
             heightScale = reverseProgress * reverseProgress;
@@ -119,15 +119,15 @@ public class TrailsRenderer {
             double renderX = point.pos.x - cameraPos.x;
             double renderY = point.pos.y - cameraPos.y;
             double renderZ = point.pos.z - cameraPos.z;
-            buffer.vertex(matrix, (float)renderX, (float)(renderY + (double)topY), (float)renderZ).color((float)c.getRed() / 255.0f, (float)c.getGreen() / 255.0f, (float)c.getBlue() / 255.0f, alpha * 0.8f);
+            buffer.addVertex(matrix, (float)renderX, (float)(renderY + (double)topY), (float)renderZ).setColor((float)c.getRed() / 255.0f, (float)c.getGreen() / 255.0f, (float)c.getBlue() / 255.0f, alpha * 0.8f);
             ++index;
         }
-        BufferRenderer.drawWithGlobalProgram((BuiltBuffer)buffer.end());
-        buffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINE_STRIP, VertexFormats.POSITION_COLOR);
+        BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
+        buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         index = 0;
         for (TrailPoint point : this.points) {
             age = currentTime - point.timeCreated;
-            progress = MathHelper.clamp((float)((float)age / 850.0f), (float)0.0f, (float)1.0f);
+            progress = Mth.clamp((float)((float)age / 850.0f), (float)0.0f, (float)1.0f);
             reverseProgress = 1.0f - progress;
             alpha = (float)Math.pow(reverseProgress, 2.0);
             heightScale = reverseProgress * reverseProgress;
@@ -137,10 +137,10 @@ public class TrailsRenderer {
             double renderX = point.pos.x - cameraPos.x;
             double renderY = point.pos.y - cameraPos.y;
             double renderZ = point.pos.z - cameraPos.z;
-            buffer.vertex(matrix, (float)renderX, (float)(renderY + (double)botY), (float)renderZ).color((float)c.getRed() / 255.0f, (float)c.getGreen() / 255.0f, (float)c.getBlue() / 255.0f, alpha * 0.8f);
+            buffer.addVertex(matrix, (float)renderX, (float)(renderY + (double)botY), (float)renderZ).setColor((float)c.getRed() / 255.0f, (float)c.getGreen() / 255.0f, (float)c.getBlue() / 255.0f, alpha * 0.8f);
             ++index;
         }
-        BufferRenderer.drawWithGlobalProgram((BuiltBuffer)buffer.end());
+        BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
         RenderSystem.lineWidth((float)1.0f);
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)true);
@@ -151,11 +151,11 @@ public class TrailsRenderer {
 
     @Environment(value=EnvType.CLIENT)
     private static class TrailPoint {
-        final Vec3d pos;
+        final Vec3 pos;
         final float height;
         final long timeCreated;
 
-        public TrailPoint(Vec3d pos, float height, long timeCreated) {
+        public TrailPoint(Vec3 pos, float height, long timeCreated) {
             this.pos = pos;
             this.height = height;
             this.timeCreated = timeCreated;

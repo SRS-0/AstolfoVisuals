@@ -6,18 +6,18 @@ import java.util.Random;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.entity.projectile.TridentEntity;
-import net.minecraft.entity.projectile.thrown.EnderPearlEntity;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.BlockView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.projectile.arrow.ThrownTrident;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownEnderpearl;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.effects.Particle;
 import xyz.angames.astolfoclient.client.module.modules.render.ParticlesModule;
@@ -32,7 +32,7 @@ public class ParticleManager {
     private static final double FRICTION = 0.98;
     private static final Color[] VANILLA_TOTEM_COLORS = new Color[]{new Color(130, 255, 60), new Color(60, 230, 80), new Color(40, 180, 70), new Color(255, 255, 140), new Color(255, 180, 30)};
 
-    public void addEffects(Vec3d origin) {
+    public void addEffects(Vec3 origin) {
         ParticlesModule mod = (ParticlesModule)AstolfoclientClient.moduleManager.getModuleByName("Particles");
         if (mod == null || !mod.isEnabled() || !mod.hits.get()) {
             return;
@@ -43,11 +43,11 @@ public class ParticleManager {
             double velX = (this.random.nextDouble() - 0.5) * 0.3;
             double velY = this.random.nextDouble() * 0.5 * 0.3;
             double velZ = (this.random.nextDouble() - 0.5) * 0.3;
-            this.particles.add(new Particle(origin, new Vec3d(velX, velY, velZ), mod.type.getValue(), true, lifespan));
+            this.particles.add(new Particle(origin, new Vec3(velX, velY, velZ), mod.type.getValue(), true, lifespan));
         }
     }
 
-    public void addTotemPop(Vec3d origin) {
+    public void addTotemPop(Vec3 origin) {
         ParticlesModule mod = (ParticlesModule)AstolfoclientClient.moduleManager.getModuleByName("Particles");
         if (mod == null || !mod.isEnabled() || !mod.totemPop.get()) {
             return;
@@ -59,7 +59,7 @@ public class ParticleManager {
         String colorMode = mod.totemColor.get();
         boolean physics = mod.totemPhysics.get();
         for (int i = 0; i < amount; ++i) {
-            Vec3d vel;
+            Vec3 vel;
             Particle.ParticleAnimation anim;
             Color color = this.getTotemParticleColor(colorMode);
             double extra1 = 0.0;
@@ -73,7 +73,7 @@ public class ParticleManager {
                     double vx = Math.sin(phi) * Math.cos(theta) * speed;
                     double vy = Math.cos(phi) * speed;
                     double vz = Math.sin(phi) * Math.sin(theta) * speed;
-                    vel = new Vec3d(vx, vy, vz);
+                    vel = new Vec3(vx, vy, vz);
                     break;
                 }
                 case "Spiral": {
@@ -81,7 +81,7 @@ public class ParticleManager {
                     double angle = Math.PI * 2 / (double)Math.max(1, amount) * (double)i * 2.5 + this.random.nextDouble() * 0.4;
                     double radius = 0.15 + this.random.nextDouble() * 0.25;
                     double upward = 0.08 + this.random.nextDouble() * 0.18;
-                    vel = new Vec3d(Math.cos(angle) * 0.1, upward, Math.sin(angle) * 0.1);
+                    vel = new Vec3(Math.cos(angle) * 0.1, upward, Math.sin(angle) * 0.1);
                     extra1 = angle;
                     extra2 = radius;
                     break;
@@ -93,7 +93,7 @@ public class ParticleManager {
                     double vx = Math.cos(angle) * spread;
                     double vy = 0.32 + this.random.nextDouble() * 0.26;
                     double vz = Math.sin(angle) * spread;
-                    vel = new Vec3d(vx, vy, vz);
+                    vel = new Vec3(vx, vy, vz);
                     break;
                 }
                 case "Shockwave": {
@@ -103,7 +103,7 @@ public class ParticleManager {
                     double vx = Math.cos(angle) * speed;
                     double vy = (this.random.nextDouble() - 0.5) * 0.05;
                     double vz = Math.sin(angle) * speed;
-                    vel = new Vec3d(vx, vy, vz);
+                    vel = new Vec3(vx, vy, vz);
                     extra1 = angle;
                     break;
                 }
@@ -112,7 +112,7 @@ public class ParticleManager {
                     double velX = (this.random.nextDouble() - 0.5) * 0.45;
                     double velY = this.random.nextDouble() * 0.45 + 0.05;
                     double velZ = (this.random.nextDouble() - 0.5) * 0.45;
-                    vel = new Vec3d(velX, velY, velZ);
+                    vel = new Vec3(velX, velY, velZ);
                     break;
                 }
                 default: {
@@ -120,7 +120,7 @@ public class ParticleManager {
                     double velX = (this.random.nextDouble() - 0.5) * 0.45;
                     double velY = this.random.nextDouble() * 0.45 + 0.05;
                     double velZ = (this.random.nextDouble() - 0.5) * 0.45;
-                    vel = new Vec3d(velX, velY, velZ);
+                    vel = new Vec3(velX, velY, velZ);
                 }
             }
             this.particles.add(new Particle(origin, vel, pType, physics, lifespan, color, anim, origin, extra1, extra2));
@@ -140,12 +140,12 @@ public class ParticleManager {
         };
     }
 
-    public void addTrail(Vec3d origin, ParticlesModule.ParticleType type, int amount, long lifespan) {
+    public void addTrail(Vec3 origin, ParticlesModule.ParticleType type, int amount, long lifespan) {
         for (int i = 0; i < amount; ++i) {
             double velX = (this.random.nextDouble() - 0.5) * 0.02;
             double velY = (this.random.nextDouble() - 0.5) * 0.02;
             double velZ = (this.random.nextDouble() - 0.5) * 0.02;
-            this.particles.add(new Particle(origin, new Vec3d(velX, velY, velZ), type, false, lifespan));
+            this.particles.add(new Particle(origin, new Vec3(velX, velY, velZ), type, false, lifespan));
         }
     }
 
@@ -154,32 +154,32 @@ public class ParticleManager {
         if (mod == null) {
             return;
         }
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.player == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null) {
             this.particles.clear();
             return;
         }
         if (mod.isEnabled()) {
-            if (mod.walk.get() && client.player.isOnGround() && client.player.getVelocity().lengthSquared() > 0.01 && this.random.nextInt(3) == 0) {
-                Vec3d footPos = client.player.getEntityPos().add((this.random.nextDouble() - 0.5) * 0.5, this.random.nextDouble() * 0.2, (this.random.nextDouble() - 0.5) * 0.5);
+            if (mod.walk.get() && client.player.onGround() && client.player.getDeltaMovement().lengthSqr() > 0.01 && this.random.nextInt(3) == 0) {
+                Vec3 footPos = client.player.position().add((this.random.nextDouble() - 0.5) * 0.5, this.random.nextDouble() * 0.2, (this.random.nextDouble() - 0.5) * 0.5);
                 this.addTrail(footPos, mod.walkType.getValue(), mod.walkAmount.getInt(), mod.walkLifespan.getInt());
             }
-            for (Entity entity : client.world.getEntities()) {
-                if (!(entity.getVelocity().lengthSquared() > 0.01)) continue;
-                if (mod.arrows.get() && entity instanceof PersistentProjectileEntity && !(entity instanceof TridentEntity)) {
-                    this.addTrail(entity.getEntityPos().add(0.0, (double)(entity.getHeight() / 2.0f), 0.0), mod.arrowType.getValue(), mod.arrowAmount.getInt(), mod.arrowLifespan.getInt());
+            for (Entity entity : client.level.entitiesForRendering()) {
+                if (!(entity.getDeltaMovement().lengthSqr() > 0.01)) continue;
+                if (mod.arrows.get() && entity instanceof AbstractArrow && !(entity instanceof ThrownTrident)) {
+                    this.addTrail(entity.position().add(0.0, (double)(entity.getBbHeight() / 2.0f), 0.0), mod.arrowType.getValue(), mod.arrowAmount.getInt(), mod.arrowLifespan.getInt());
                     continue;
                 }
-                if (mod.pearls.get() && entity instanceof EnderPearlEntity) {
-                    this.addTrail(entity.getEntityPos().add(0.0, (double)(entity.getHeight() / 2.0f), 0.0), mod.pearlType.getValue(), mod.pearlAmount.getInt(), mod.pearlLifespan.getInt());
+                if (mod.pearls.get() && entity instanceof ThrownEnderpearl) {
+                    this.addTrail(entity.position().add(0.0, (double)(entity.getBbHeight() / 2.0f), 0.0), mod.pearlType.getValue(), mod.pearlAmount.getInt(), mod.pearlLifespan.getInt());
                     continue;
                 }
-                if (mod.tridents.get() && entity instanceof TridentEntity) {
-                    this.addTrail(entity.getEntityPos().add(0.0, (double)(entity.getHeight() / 2.0f), 0.0), mod.tridentType.getValue(), mod.tridentAmount.getInt(), mod.tridentLifespan.getInt());
+                if (mod.tridents.get() && entity instanceof ThrownTrident) {
+                    this.addTrail(entity.position().add(0.0, (double)(entity.getBbHeight() / 2.0f), 0.0), mod.tridentType.getValue(), mod.tridentAmount.getInt(), mod.tridentLifespan.getInt());
                     continue;
                 }
                 if (!mod.items.get() || !(entity instanceof ItemEntity) || this.random.nextInt(2) != 0) continue;
-                this.addTrail(entity.getEntityPos().add(0.0, (double)(entity.getHeight() / 2.0f), 0.0), mod.itemType.getValue(), mod.itemAmount.getInt(), mod.itemLifespan.getInt());
+                this.addTrail(entity.position().add(0.0, (double)(entity.getBbHeight() / 2.0f), 0.0), mod.itemType.getValue(), mod.itemAmount.getInt(), mod.itemLifespan.getInt());
             }
         }
         long currentTime = System.currentTimeMillis();
@@ -190,7 +190,7 @@ public class ParticleManager {
             p.prevPosition = p.position;
             switch (p.animation) {
                 case SPHERE: {
-                    p.velocity = p.velocity.multiply(0.95);
+                    p.velocity = p.velocity.scale(0.95);
                     if (p.hasPhysics) {
                         this.handlePhysics(client, (Particle)p);
                         break;
@@ -203,12 +203,12 @@ public class ParticleManager {
                     p.extraData2 += 0.015;
                     double sx = p.origin.x + Math.cos(p.extraData1) * p.extraData2;
                     double sz = p.origin.z + Math.sin(p.extraData1) * p.extraData2;
-                    p.velocity = p.velocity.multiply(0.97);
-                    p.position = new Vec3d(sx, p.position.y + p.velocity.y, sz);
+                    p.velocity = p.velocity.scale(0.97);
+                    p.position = new Vec3(sx, p.position.y + p.velocity.y, sz);
                     break;
                 }
                 case SHOCKWAVE: {
-                    p.velocity = p.velocity.multiply(0.95);
+                    p.velocity = p.velocity.scale(0.95);
                     if (p.hasPhysics) {
                         this.handlePhysics(client, (Particle)p);
                         break;
@@ -251,26 +251,26 @@ public class ParticleManager {
         });
     }
 
-    private boolean shouldCollide(MinecraftClient client, BlockPos pos) {
-        if (client.world == null) {
+    private boolean shouldCollide(Minecraft client, BlockPos pos) {
+        if (client.level == null) {
             return false;
         }
-        BlockState state = client.world.getBlockState(pos);
+        BlockState state = client.level.getBlockState(pos);
         if (state.isAir()) {
             return false;
         }
-        if (state.isLiquid()) {
+        if (state.liquid()) {
             return false;
         }
-        if (state.isOf(Blocks.LIGHT) || state.isOf(Blocks.STRUCTURE_VOID)) {
+        if (state.is(Blocks.LIGHT) || state.is(Blocks.STRUCTURE_VOID)) {
             return false;
         }
-        VoxelShape collision = state.getCollisionShape((BlockView)client.world, pos);
+        VoxelShape collision = state.getCollisionShape((BlockGetter)client.level, pos);
         return !collision.isEmpty();
     }
 
-    private void handlePhysics(MinecraftClient client, Particle p) {
-        if (client.world == null) {
+    private void handlePhysics(Minecraft client, Particle p) {
+        if (client.level == null) {
             p.position = p.position.add(p.velocity);
             return;
         }
@@ -280,14 +280,14 @@ public class ParticleManager {
         double currX = p.position.x;
         double currY = p.position.y;
         double currZ = p.position.z;
-        if (this.shouldCollide(client, BlockPos.ofFloored((double)currX, (double)(currY + dy), (double)currZ))) {
-            p.velocity = new Vec3d(p.velocity.x, -dy * 0.6, p.velocity.z);
+        if (this.shouldCollide(client, BlockPos.containing((double)currX, (double)(currY + dy), (double)currZ))) {
+            p.velocity = new Vec3(p.velocity.x, -dy * 0.6, p.velocity.z);
         }
-        if (this.shouldCollide(client, BlockPos.ofFloored((double)(currX + dx), (double)currY, (double)currZ))) {
-            p.velocity = new Vec3d(-dx * 0.6, p.velocity.y, p.velocity.z);
+        if (this.shouldCollide(client, BlockPos.containing((double)(currX + dx), (double)currY, (double)currZ))) {
+            p.velocity = new Vec3(-dx * 0.6, p.velocity.y, p.velocity.z);
         }
-        if (this.shouldCollide(client, BlockPos.ofFloored((double)currX, (double)currY, (double)(currZ + dz)))) {
-            p.velocity = new Vec3d(p.velocity.x, p.velocity.y, -dz * 0.6);
+        if (this.shouldCollide(client, BlockPos.containing((double)currX, (double)currY, (double)(currZ + dz)))) {
+            p.velocity = new Vec3(p.velocity.x, p.velocity.y, -dz * 0.6);
         }
         p.position = p.position.add(p.velocity);
     }

@@ -1,32 +1,31 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
 import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.nio.FloatBuffer;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.particle.ParticleEffect;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
@@ -113,10 +112,10 @@ extends Module {
         }
     };
     private static final Identifier BLOOM_TEXTURE;
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
     private final List<GlowWave> activeWaves = new CopyOnWriteArrayList<GlowWave>();
     private final List<GlowParticle> activeParticles = new CopyOnWriteArrayList<GlowParticle>();
-    private Framebuffer glowFbo = null;
+    private RenderTarget glowFbo = null;
     private int glowProgram = -1;
     private int glowVao = -1;
     private int glowVbo = -1;
@@ -127,16 +126,16 @@ extends Module {
         this.addSettings(this.radius, this.glowIntensity, this.speed, this.ringWidth, this.distortion, this.distortionStrength, this.distortEntities, this.chromatic, this.blockCorners, this.cornerGlow, this.cornerSize, this.edgeLines, this.edgeWidth, this.particles, this.particleMode, this.particleDensity);
         AttackEntityCallback.EVENT.register((player, world, hand, entity, hitResult) -> {
             if (this.isEnabled() && player == this.mc.player && entity != null) {
-                HitGlowModule.addWave(entity.getEntityPos());
+                HitGlowModule.addWave(entity.position());
             }
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         });
-        WorldRenderEvents.BEFORE_ENTITIES.register(context -> {
+        LevelRenderEvents.AFTER_OPAQUE_TERRAIN.register(context -> {
             if (this.isEnabled() && !this.distortEntities.get()) {
                 this.renderWorldPass(context);
             }
         });
-        WorldRenderEvents.END_MAIN.register(context -> {
+        LevelRenderEvents.END_MAIN.register(context -> {
             if (this.isEnabled()) {
                 if (this.distortEntities.get()) {
                     this.renderWorldPass(context);
@@ -146,7 +145,7 @@ extends Module {
         });
     }
 
-    public static void addWave(Vec3d pos) {
+    public static void addWave(Vec3 pos) {
         if (INSTANCE != null && INSTANCE.isEnabled() && pos != null) {
             HitGlowModule.INSTANCE.activeWaves.add(new GlowWave(pos));
             INSTANCE.spawnWaveParticles(pos);
@@ -165,7 +164,7 @@ extends Module {
         this.activeParticles.clear();
     }
 
-    private void spawnWaveParticles(Vec3d center) {
+    private void spawnWaveParticles(Vec3 center) {
         if (!this.particles.get()) {
             return;
         }
@@ -189,13 +188,13 @@ extends Module {
             if (!this.particleMode.is("Vanilla Souls")) {
                 this.activeParticles.add(new GlowParticle(px, py, pz, driftX, driftZ, r, g, b, scale, maxAge));
             }
-            if (!this.particleMode.is("Vanilla Souls") && !this.particleMode.is("Both") || this.mc.world == null || !(Math.random() < 0.4)) continue;
-            this.mc.world.addParticleClient((ParticleEffect)(Math.random() < 0.5 ? ParticleTypes.SOUL : ParticleTypes.SCULK_SOUL), px, py, pz, driftX * 0.5, 0.05 + Math.random() * 0.04, driftZ * 0.5);
+            if (!this.particleMode.is("Vanilla Souls") && !this.particleMode.is("Both") || this.mc.level == null || !(Math.random() < 0.4)) continue;
+            this.mc.level.addParticle((ParticleOptions)(Math.random() < 0.5 ? ParticleTypes.SOUL : ParticleTypes.SCULK_SOUL), px, py, pz, driftX * 0.5, 0.05 + Math.random() * 0.04, driftZ * 0.5);
         }
     }
 
-    private void renderWorldPass(WorldRenderContext context) {
-        if (!this.isEnabled() || this.mc.world == null || this.mc.player == null) {
+    private void renderWorldPass(net.fabricmc.fabric.api.client.rendering.v1.level.LevelTerrainRenderContext context) {
+        if (!this.isEnabled() || this.mc.level == null || this.mc.player == null) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -207,8 +206,8 @@ extends Module {
         this.renderGlowShader(context, now, currentSpeed);
     }
 
-    private void renderParticlesPass(WorldRenderContext context) {
-        if (!this.isEnabled() || this.mc.world == null || this.mc.player == null) {
+    private void renderParticlesPass(LevelRenderContext context) {
+        if (!this.isEnabled() || this.mc.level == null || this.mc.player == null) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -218,14 +217,14 @@ extends Module {
         }
     }
 
-    private void renderGlowShader(WorldRenderContext context, long now, double currentSpeed) {
-        var mainFbo = MinecraftClient.getInstance().getFramebuffer();
-        if(mainFbo == null || mainFbo.getDepthAttachmentView() == null) return;
-        int width=mainFbo.textureWidth,height=mainFbo.textureHeight;
+    private void renderGlowShader(net.fabricmc.fabric.api.client.rendering.v1.level.LevelTerrainRenderContext context, long now, double currentSpeed) {
+        var mainFbo = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        if(mainFbo == null || mainFbo.getDepthTextureView() == null) return;
+        int width=mainFbo.width,height=mainFbo.height;
         var copy=dev.sxmurxy.mre.renderers.GpuSceneCopy.capture();
         var pass=new xyz.angames.astolfoclient.client.render.compat.ScreenPass("hit_glow");
-        pass.texture(0,copy.getColorAttachmentView(),true).texture(1,mainFbo.getDepthAttachmentView(),false);
-        Matrix4f viewRotMat = new Matrix4f().rotation((Quaternionfc)new Quaternionf((Quaternionfc)context.gameRenderer().getCamera().getRotation()).conjugate());
+        pass.texture(0,copy.getColorTextureView(),true).texture(1,mainFbo.getDepthTextureView(),false);
+        Matrix4f viewRotMat = new Matrix4f().rotation((Quaternionfc)new Quaternionf((Quaternionfc)context.gameRenderer().mainCamera().rotation()).conjugate());
         Matrix4f projMat = new Matrix4f((Matrix4fc)RenderSystem.getProjectionMatrix());
         Matrix4f viewProjMat = new Matrix4f((Matrix4fc)projMat).mul((Matrix4fc)viewRotMat);
         Matrix4f invViewProjMat = new Matrix4f((Matrix4fc)viewProjMat).invert();
@@ -241,7 +240,7 @@ extends Module {
         pass.uniform("uDistortion", this.distortion.get() ? 1 : 0);
         pass.uniform("uDistortionStrength", (float)this.distortionStrength.get());
         pass.uniform("uChromatic", this.chromatic.get() ? 1 : 0);
-        Vec3d camPos = context.gameRenderer().getCamera().getCameraPos();
+        Vec3 camPos = context.gameRenderer().mainCamera().position();
         pass.uniform("uCameraPos", (float)camPos.x, (float)camPos.y, (float)camPos.z);
         pass.uniform("uBlockCorners", this.blockCorners.get() ? 1 : 0);
         pass.uniform("uCornerGlow", (float)this.cornerGlow.get());
@@ -273,19 +272,19 @@ extends Module {
         pass.draw(mainFbo);
     }
 
-    private void renderParticles(WorldRenderContext context, long time) {
+    private void renderParticles(LevelRenderContext context, long time) {
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask((boolean)false);
         RenderSystem.setShaderTexture((int)0, (Identifier)BLOOM_TEXTURE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder particleBuffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-        MatrixStack matrices = context.matrices();
-        Vec3d camPos = context.gameRenderer().getCamera().getCameraPos();
-        Quaternionf camRot = context.gameRenderer().getCamera().getRotation();
+        Tesselator tessellator = Tesselator.getInstance();
+        BufferBuilder particleBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        PoseStack matrices = context.poseStack();
+        Vec3 camPos = context.gameRenderer().mainCamera().position();
+        Quaternionf camRot = context.gameRenderer().mainCamera().rotation();
         boolean isGlowDot = this.particleMode.is("Glow Dots");
         for (GlowParticle p : this.activeParticles) {
             float pAlpha;
@@ -295,35 +294,35 @@ extends Module {
             double py = p.getY(time) - camPos.y;
             double pz = p.getZ(time) - camPos.z;
             float scale = p.baseScale * (0.6f + 0.6f * (float)Math.sin((double)lifePC * Math.PI));
-            matrices.push();
+            matrices.pushPose();
             matrices.translate(px, py, pz);
-            matrices.multiply(camRot);
-            Matrix4f matrix = matrices.peek().getPositionMatrix();
+            matrices.mulPose(camRot);
+            Matrix4f matrix = matrices.last().pose();
             if (!isGlowDot) {
                 float auraScale = scale * 1.5f;
                 float auraAlpha = pAlpha * 0.4f;
-                particleBuffer.vertex(matrix, -auraScale, -auraScale, 0.0f).texture(0.0f, 1.0f).color(p.r, p.g, p.b, auraAlpha);
-                particleBuffer.vertex(matrix, auraScale, -auraScale, 0.0f).texture(1.0f, 1.0f).color(p.r, p.g, p.b, auraAlpha);
-                particleBuffer.vertex(matrix, auraScale, auraScale, 0.0f).texture(1.0f, 0.0f).color(p.r, p.g, p.b, auraAlpha);
-                particleBuffer.vertex(matrix, -auraScale, auraScale, 0.0f).texture(0.0f, 0.0f).color(p.r, p.g, p.b, auraAlpha);
+                particleBuffer.addVertex(matrix, -auraScale, -auraScale, 0.0f).setUv(0.0f, 1.0f).setColor(p.r, p.g, p.b, auraAlpha);
+                particleBuffer.addVertex(matrix, auraScale, -auraScale, 0.0f).setUv(1.0f, 1.0f).setColor(p.r, p.g, p.b, auraAlpha);
+                particleBuffer.addVertex(matrix, auraScale, auraScale, 0.0f).setUv(1.0f, 0.0f).setColor(p.r, p.g, p.b, auraAlpha);
+                particleBuffer.addVertex(matrix, -auraScale, auraScale, 0.0f).setUv(0.0f, 0.0f).setColor(p.r, p.g, p.b, auraAlpha);
                 float coreR = Math.min(1.0f, p.r * 0.65f + 0.35f);
                 float coreG = Math.min(1.0f, p.g * 0.65f + 0.35f);
                 float coreB = Math.min(1.0f, p.b * 0.65f + 0.35f);
-                particleBuffer.vertex(matrix, -scale, -scale, 0.0f).texture(0.0f, 1.0f).color(coreR, coreG, coreB, pAlpha);
-                particleBuffer.vertex(matrix, scale, -scale, 0.0f).texture(1.0f, 1.0f).color(coreR, coreG, coreB, pAlpha);
-                particleBuffer.vertex(matrix, scale, scale, 0.0f).texture(1.0f, 0.0f).color(coreR, coreG, coreB, pAlpha);
-                particleBuffer.vertex(matrix, -scale, scale, 0.0f).texture(0.0f, 0.0f).color(coreR, coreG, coreB, pAlpha);
+                particleBuffer.addVertex(matrix, -scale, -scale, 0.0f).setUv(0.0f, 1.0f).setColor(coreR, coreG, coreB, pAlpha);
+                particleBuffer.addVertex(matrix, scale, -scale, 0.0f).setUv(1.0f, 1.0f).setColor(coreR, coreG, coreB, pAlpha);
+                particleBuffer.addVertex(matrix, scale, scale, 0.0f).setUv(1.0f, 0.0f).setColor(coreR, coreG, coreB, pAlpha);
+                particleBuffer.addVertex(matrix, -scale, scale, 0.0f).setUv(0.0f, 0.0f).setColor(coreR, coreG, coreB, pAlpha);
             } else {
-                particleBuffer.vertex(matrix, -scale, -scale, 0.0f).texture(0.0f, 1.0f).color(p.r, p.g, p.b, pAlpha);
-                particleBuffer.vertex(matrix, scale, -scale, 0.0f).texture(1.0f, 1.0f).color(p.r, p.g, p.b, pAlpha);
-                particleBuffer.vertex(matrix, scale, scale, 0.0f).texture(1.0f, 0.0f).color(p.r, p.g, p.b, pAlpha);
-                particleBuffer.vertex(matrix, -scale, scale, 0.0f).texture(0.0f, 0.0f).color(p.r, p.g, p.b, pAlpha);
+                particleBuffer.addVertex(matrix, -scale, -scale, 0.0f).setUv(0.0f, 1.0f).setColor(p.r, p.g, p.b, pAlpha);
+                particleBuffer.addVertex(matrix, scale, -scale, 0.0f).setUv(1.0f, 1.0f).setColor(p.r, p.g, p.b, pAlpha);
+                particleBuffer.addVertex(matrix, scale, scale, 0.0f).setUv(1.0f, 0.0f).setColor(p.r, p.g, p.b, pAlpha);
+                particleBuffer.addVertex(matrix, -scale, scale, 0.0f).setUv(0.0f, 0.0f).setColor(p.r, p.g, p.b, pAlpha);
             }
-            matrices.pop();
+            matrices.popPose();
         }
-        BuiltBuffer built = particleBuffer.endNullable();
+        MeshData built = particleBuffer.build();
         if (built != null) {
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+            BufferRenderer.drawWithGlobalProgram((MeshData)built);
         }
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)true);
@@ -351,15 +350,15 @@ extends Module {
     
 
     static {
-        BLOOM_TEXTURE = Identifier.of((String)"astolfoclient", (String)"textures/effects/bloom.png");
+        BLOOM_TEXTURE = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"textures/effects/bloom.png");
     }
 
     @Environment(value=EnvType.CLIENT)
     public static class GlowWave {
-        public final Vec3d pos;
+        public final Vec3 pos;
         public final long startTime;
 
-        public GlowWave(Vec3d pos) {
+        public GlowWave(Vec3 pos) {
             this.pos = pos;
             this.startTime = System.currentTimeMillis();
         }

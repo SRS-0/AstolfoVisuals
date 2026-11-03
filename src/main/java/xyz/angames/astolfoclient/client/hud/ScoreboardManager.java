@@ -16,16 +16,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.scoreboard.AbstractTeam;
-import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.scoreboard.ScoreboardDisplaySlot;
-import net.minecraft.scoreboard.ScoreboardEntry;
-import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.scoreboard.Team;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.PlayerScoreEntry;
+import net.minecraft.world.scores.PlayerTeam;
+import net.minecraft.world.scores.Scoreboard;
+import net.minecraft.world.scores.Team;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -35,32 +35,32 @@ import xyz.angames.astolfoclient.client.module.Module;
 public class ScoreboardManager {
     public float x = 0.0f;
     public float y = 0.0f;
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
     private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
     private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
 
-    public void render(DrawContext context) {
+    public void render(GuiGraphicsExtractor context) {
         float titleWidth;
         Module module = AstolfoclientClient.moduleManager.getModuleByName("Scoreboard");
         if (module == null || !module.isEnabled()) {
             return;
         }
-        if (this.client.world == null || this.client.player == null) {
+        if (this.client.level == null || this.client.player == null) {
             return;
         }
-        Scoreboard scoreboard = this.client.world.getScoreboard();
-        ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.SIDEBAR);
+        Scoreboard scoreboard = this.client.level.getScoreboard();
+        Objective objective = scoreboard.getDisplayObjective(DisplaySlot.SIDEBAR);
         if (objective == null) {
             return;
         }
         ArrayList<String> lines = new ArrayList<String>();
-        Collection<ScoreboardEntry> scores = scoreboard.getScoreboardEntries(objective);
-        List<ScoreboardEntry> list = scores.stream().filter(score -> score.owner() != null && !score.owner().startsWith("#")).sorted((s1, s2) -> Integer.compare(s2.value(), s1.value())).limit(15L).collect(Collectors.toList());
+        Collection<PlayerScoreEntry> scores = scoreboard.listPlayerScores(objective);
+        List<PlayerScoreEntry> list = scores.stream().filter(score -> score.owner() != null && !score.owner().startsWith("#")).sorted((s1, s2) -> Integer.compare(s2.value(), s1.value())).limit(15L).collect(Collectors.toList());
         String title = objective.getDisplayName().getString();
-        for (ScoreboardEntry score2 : list) {
-            Team team = scoreboard.getScoreHolderTeam(score2.owner());
-            MutableText text = Team.decorateName((AbstractTeam)team, (Text)Text.literal((String)score2.owner()));
+        for (PlayerScoreEntry score2 : list) {
+            PlayerTeam team = scoreboard.getPlayersTeam(score2.owner());
+            MutableComponent text = PlayerTeam.formatNameForTeam((Team)team, (Component)Component.literal((String)score2.owner()));
             lines.add(text.getString());
         }
         MsdfFont bold = (MsdfFont)BOLD_FONT.get();
@@ -78,18 +78,18 @@ public class ScoreboardManager {
         float headerHeight = 18.0f;
         float lineHeight = 11.0f;
         float totalHeight = headerHeight + (float)lines.size() * lineHeight + 6.0f;
-        double currentGuiScale = this.client.getWindow().getScaleFactor();
+        double currentGuiScale = this.client.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
         float scaleModifier = (float)(2.0 / currentGuiScale);
-        this.x = (float)this.client.getWindow().getScaledWidth() - width * scaleModifier - 6.0f;
-        this.y = ((float)this.client.getWindow().getScaledHeight() - totalHeight * scaleModifier) / 2.0f;
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(this.x, this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate(-this.x, -this.y);
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        this.x = (float)this.client.getWindow().getGuiScaledWidth() - width * scaleModifier - 6.0f;
+        this.y = ((float)this.client.getWindow().getGuiScaledHeight() - totalHeight * scaleModifier) / 2.0f;
+        context.pose().pushMatrix();
+        context.pose().translate(this.x, this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate(-this.x, -this.y);
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         long now = System.currentTimeMillis();
         Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
         this.renderShadow(matrix, this.x, this.y, width, totalHeight, 6.5f, 1.0f);
@@ -106,7 +106,7 @@ public class ScoreboardManager {
             }
             currentY += lineHeight;
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {

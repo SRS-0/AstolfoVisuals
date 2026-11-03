@@ -10,7 +10,7 @@ import dev.sxmurxy.mre.renderers.impl.BuiltRectangle;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.ClickGuiScreen;
@@ -57,7 +57,7 @@ public class ModuleButton {
         return 24.0f + this.settingsPanel.getTotalHeight();
     }
 
-    public void render(DrawContext context, ClickGuiScreen parentGui, int mouseX, int mouseY, float alpha, float deltaTime) {
+    public void render(GuiGraphicsExtractor context, ClickGuiScreen parentGui, int mouseX, int mouseY, float alpha, float deltaTime) {
         String kn;
         float effectiveAlpha = alpha * this.renderAlpha;
         if (effectiveAlpha <= 0.02f) {
@@ -71,15 +71,15 @@ public class ModuleButton {
         boolean hov = GuiUtils.isMouseOver(mouseX, mouseY, this.x, this.y, this.width, 24.0f);
         this.hoverAnim = GuiUtils.animate(this.hoverAnim, hov ? 1.0f : 0.0f, 14.0f, deltaTime);
         Color themeColor = new Color(ThemeManager.getThemedColor(0L));
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (this.renderScale < 0.999f) {
             float cx = this.x + this.width / 2.0f;
             float cy = this.y + this.height / 2.0f;
-            context.getMatrices().translate(cx, cy);
-            context.getMatrices().scale(this.renderScale, this.renderScale);
-            context.getMatrices().translate(-cx, -cy);
+            context.pose().translate(cx, cy);
+            context.pose().scale(this.renderScale, this.renderScale);
+            context.pose().translate(-cx, -cy);
         }
-        Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         Color cardBg = GuiUtils.interpolateColor(C_CARD_BG, C_CARD_BG_HOV, this.hoverAnim);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(this.width, this.height)).radius(new QuadRadiusState(7.0f)).color(new QuadColorState(GuiUtils.withAlpha(cardBg, effectiveAlpha))).build()).render(mx, this.x, this.y);
         float cardCenterY = this.y + 12.0f;
@@ -117,7 +117,7 @@ public class ModuleButton {
         if (settingsHeight > 0.0f) {
             this.settingsPanel.render(context, this.x, this.y + 24.0f, this.width, effectiveAlpha, mouseX, mouseY, deltaTime);
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     public boolean mouseClicked(float mouseX, float mouseY, int button) {

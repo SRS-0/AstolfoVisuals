@@ -1,5 +1,6 @@
 package xyz.angames.astolfoclient.client.hud;
 
+import com.mojang.blaze3d.platform.NativeImage;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
@@ -16,11 +17,10 @@ import java.util.Arrays;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.resources.Identifier;
 
 @Environment(value=EnvType.CLIENT)
 public class MusicTracker {
@@ -36,7 +36,7 @@ public class MusicTracker {
     private static volatile long lastPollSystemTime = 0L;
     private static volatile long lastPolledPosition = 0L;
     private static Identifier artworkIdentifier = null;
-    private static NativeImageBackedTexture artworkTexture = null;
+    private static DynamicTexture artworkTexture = null;
     private static byte[] lastArtworkBytes = null;
     private static User32 user32Instance;
 
@@ -163,10 +163,10 @@ public class MusicTracker {
             return "";
         }
         String fileName = (artist + " - " + title).replaceAll("[\\\\/:*?\"<>|]", "_") + ".txt";
-        File file = new File(MinecraftClient.getInstance().runDirectory, "astolfoclient/lyrics/" + fileName);
+        File file = new File(Minecraft.getInstance().gameDirectory, "astolfoclient/lyrics/" + fileName);
         if (!file.exists()) {
             fileName = (artist + " - " + title).replaceAll("[\\\\/:*?\"<>|]", "_") + ".lrc";
-            file = new File(MinecraftClient.getInstance().runDirectory, "astolfoclient/lyrics/" + fileName);
+            file = new File(Minecraft.getInstance().gameDirectory, "astolfoclient/lyrics/" + fileName);
         }
         if (file.exists()) {
             try {
@@ -192,9 +192,9 @@ public class MusicTracker {
             if (nativeImage == null) {
                 return null;
             }
-            artworkTexture = new NativeImageBackedTexture(() -> "Astolfo artwork", nativeImage);
-            artworkIdentifier = Identifier.of((String)"astolfoclient", (String)("music_artwork_" + System.currentTimeMillis()));
-            MinecraftClient.getInstance().getTextureManager().registerTexture(artworkIdentifier, (AbstractTexture)artworkTexture);
+            artworkTexture = new DynamicTexture(() -> "Astolfo artwork", nativeImage);
+            artworkIdentifier = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)("music_artwork_" + System.currentTimeMillis()));
+            Minecraft.getInstance().getTextureManager().register(artworkIdentifier, (AbstractTexture)artworkTexture);
             lastArtworkBytes = artworkPng;
             return artworkIdentifier;
         }
@@ -207,7 +207,7 @@ public class MusicTracker {
     public static void cleanupArtwork() {
         if (artworkTexture != null) {
             try {
-                MinecraftClient.getInstance().getTextureManager().destroyTexture(artworkIdentifier);
+                Minecraft.getInstance().getTextureManager().release(artworkIdentifier);
                 artworkTexture.close();
             }
             catch (Throwable throwable) {

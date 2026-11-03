@@ -70,6 +70,7 @@ public class AuditMixins {
                                 for(var selected:list) {
                                     String selector=selected.toString(),methodName=selector.split("\\(",2)[0];
                                     for(var destination:target.methods)if(destination.name.equals(methodName)&&(selector.indexOf('(')<0||selector.equals(destination.name+destination.desc))) {
+                                        if((destination.access&Opcodes.ACC_STATIC)!=0&&(method.access&Opcodes.ACC_STATIC)==0){System.out.println(path.getFileName()+" STATIC TARGET "+method.name+" -> "+destination.name+destination.desc);failures++;}
                                         var destinationArgs=Type.getArgumentTypes(destination.desc);boolean matches=count==0||count==destinationArgs.length;
                                         if(matches)for(int i=0;i<count;i++)if(!handlerArgs[i].equals(destinationArgs[i])){matches=false;break;}
                                         if(!matches){System.out.println(path.getFileName()+" HANDLER "+method.name+method.desc+" -> "+name+"."+destination.name+destination.desc);failures++;}

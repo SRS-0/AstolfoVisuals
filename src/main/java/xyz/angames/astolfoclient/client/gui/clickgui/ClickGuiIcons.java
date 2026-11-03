@@ -5,13 +5,13 @@ import com.google.common.base.Suppliers;
 import dev.sxmurxy.mre.msdf.MsdfFont;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 
 @Environment(value=EnvType.CLIENT)
 public class ClickGuiIcons {
-    public static final Supplier<MsdfFont> CLICKGUI_ICONS = Suppliers.memoize(() -> MsdfFont.builder().name("clickgui_icons").data(Identifier.of((String)"mre", (String)"icons/clickgui/clickgui.json")).atlas(Identifier.of((String)"mre", (String)"icons/clickgui/clickgui.png")).glyphMapper(g -> 65 + g.index()).build());
-    public static final Supplier<MsdfFont> SP_FONT = Suppliers.memoize(() -> MsdfFont.builder().name("settings_panel").data(Identifier.of((String)"mre", (String)"icons/watermark/seting-panel/watermark-sp.json")).atlas(Identifier.of((String)"mre", (String)"icons/watermark/seting-panel/watermark-sp.png")).glyphMapper(g -> 65 + g.index()).build());
-    public static final Supplier<MsdfFont> ASTOLFO_LOGO = Suppliers.memoize(() -> MsdfFont.builder().name("astolfo_logo").data(Identifier.of((String)"mre", (String)"fonts/astolfo.json")).atlas(Identifier.of((String)"mre", (String)"fonts/astolfo.png")).build());
+    public static final Supplier<MsdfFont> CLICKGUI_ICONS = Suppliers.memoize(() -> MsdfFont.builder().name("clickgui_icons").data(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/clickgui/clickgui.json")).atlas(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/clickgui/clickgui.png")).glyphMapper(g -> 65 + g.index()).build());
+    public static final Supplier<MsdfFont> SP_FONT = Suppliers.memoize(() -> MsdfFont.builder().name("settings_panel").data(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/watermark/seting-panel/watermark-sp.json")).atlas(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/watermark/seting-panel/watermark-sp.png")).glyphMapper(g -> 65 + g.index()).build());
+    public static final Supplier<MsdfFont> ASTOLFO_LOGO = Suppliers.memoize(() -> MsdfFont.builder().name("astolfo_logo").data(Identifier.fromNamespaceAndPath((String)"mre", (String)"fonts/astolfo.json")).atlas(Identifier.fromNamespaceAndPath((String)"mre", (String)"fonts/astolfo.png")).build());
     public static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
     public static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
     public static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());

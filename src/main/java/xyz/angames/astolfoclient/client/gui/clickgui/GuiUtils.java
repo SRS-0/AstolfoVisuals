@@ -13,8 +13,8 @@ import java.awt.Color;
 import java.lang.reflect.Field;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
@@ -59,11 +59,11 @@ public class GuiUtils {
     }
 
     public static Color withAlpha(Color c, float alpha) {
-        return new Color(c.getRed(), c.getGreen(), c.getBlue(), (int)(MathHelper.clamp((float)alpha, (float)0.0f, (float)1.0f) * 255.0f));
+        return new Color(c.getRed(), c.getGreen(), c.getBlue(), (int)(Mth.clamp((float)alpha, (float)0.0f, (float)1.0f) * 255.0f));
     }
 
     public static Color interpolateColor(Color c1, Color c2, float factor) {
-        float f = MathHelper.clamp((float)factor, (float)0.0f, (float)1.0f);
+        float f = Mth.clamp((float)factor, (float)0.0f, (float)1.0f);
         return new Color((int)((float)c1.getRed() + (float)(c2.getRed() - c1.getRed()) * f), (int)((float)c1.getGreen() + (float)(c2.getGreen() - c1.getGreen()) * f), (int)((float)c1.getBlue() + (float)(c2.getBlue() - c1.getBlue()) * f), (int)((float)c1.getAlpha() + (float)(c2.getAlpha() - c1.getAlpha()) * f));
     }
 
@@ -94,8 +94,8 @@ public class GuiUtils {
         return mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + height;
     }
 
-    public static float getScaleModifier(MinecraftClient client) {
-        return client == null || client.getWindow() == null ? 1.0f : (float)(2.0 / client.getWindow().getScaleFactor());
+    public static float getScaleModifier(Minecraft client) {
+        return client == null || client.getWindow() == null ? 1.0f : (float)(2.0 / client.getWindow().getGuiScale());
     }
 
     public static float lerp(float a, float b, float t) {

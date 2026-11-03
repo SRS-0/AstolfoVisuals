@@ -2,9 +2,9 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ChatScreen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.ChatScreen;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -16,19 +16,19 @@ import xyz.angames.astolfoclient.client.module.modules.misc.PasswordHiderModule;
 @Mixin(value={ChatScreen.class})
 public class ChatScreenMixin {
     @Shadow
-    protected TextFieldWidget chatField;
+    protected EditBox input;
 
     @Inject(method={"init"}, at={@At(value="TAIL")})
     private void onInit(CallbackInfo ci) {
-        if (this.chatField != null) {
-            PasswordHiderModule.setupChatField(this.chatField);
+        if (this.input != null) {
+            PasswordHiderModule.setupChatField(this.input);
         }
     }
 
-    @Inject(method={"render"}, at={@At(value="TAIL")})
-    private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if (this.chatField != null) {
-            PasswordHiderModule.renderChatFieldOverlay(context, this.chatField);
+    @Inject(method={"extractRenderState"}, at={@At(value="TAIL")})
+    private void onRender(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (this.input != null) {
+            PasswordHiderModule.renderChatFieldOverlay(context, this.input);
         }
     }
 }

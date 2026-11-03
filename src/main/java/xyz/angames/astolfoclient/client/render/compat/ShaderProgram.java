@@ -2,13 +2,13 @@ package xyz.angames.astolfoclient.client.render.compat;
 
 import com.google.gson.JsonParser;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import net.minecraft.client.gl.UniformType;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.Identifier;
 import org.lwjgl.system.MemoryUtil;
 
 public final class ShaderProgram {
@@ -66,15 +66,15 @@ public final class ShaderProgram {
         uniforms.values().forEach(v -> v.write(data));
         return data.flip();
     }
-    private record Variant(VertexFormat format, VertexFormat.DrawMode mode, boolean depth, boolean depthWrite, boolean cull, boolean blend,
-            com.mojang.blaze3d.platform.DepthTestFunction depthFunction, com.mojang.blaze3d.pipeline.BlendFunction blendFunction) {}
-    RenderPipeline pipeline(VertexFormat format, VertexFormat.DrawMode mode) {
+    private record Variant(VertexFormat format, com.mojang.blaze3d.PrimitiveTopology mode, boolean depth, boolean depthWrite, boolean cull, boolean blend,
+            com.mojang.blaze3d.platform.CompareOp depthFunction, com.mojang.blaze3d.pipeline.BlendFunction blendFunction) {}
+    RenderPipeline pipeline(VertexFormat format, com.mojang.blaze3d.PrimitiveTopology mode) {
         var variant = new Variant(format,mode,RenderSystem.depth,RenderSystem.depthWrite,RenderSystem.cull,RenderSystem.blend,RenderSystem.depthFunction,RenderSystem.blendFunction);
         return variants.computeIfAbsent(variant, v -> {
-            var builder = RenderPipeline.builder().withLocation(Identifier.of("astolfoclient", "pipeline/" + key.configId().getPath().replace('/','_') + "_" + variants.size()))
+            var builder = xyz.angames.astolfoclient.client.render.compat.PipelineBuilder.builder().withLocation(Identifier.fromNamespaceAndPath("astolfoclient", "pipeline/" + key.configId().getPath().replace('/','_') + "_" + variants.size()))
                     .withVertexShader(key.configId()).withFragmentShader(key.configId())
                     .withVertexFormat(format,mode)
-                    .withDepthTestFunction(v.depth ? v.depthFunction : com.mojang.blaze3d.platform.DepthTestFunction.NO_DEPTH_TEST)
+                    .withDepthTestFunction(v.depth ? v.depthFunction : com.mojang.blaze3d.platform.CompareOp.ALWAYS_PASS)
                     .withDepthWrite(v.depthWrite).withCull(v.cull);
             if(v.blend) builder.withBlend(v.blendFunction); else builder.withoutBlend();
             if(!screen) builder.withUniform("Projection",UniformType.UNIFORM_BUFFER).withUniform("DynamicTransforms",UniformType.UNIFORM_BUFFER);

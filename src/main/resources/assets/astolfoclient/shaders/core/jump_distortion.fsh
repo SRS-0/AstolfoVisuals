@@ -10,6 +10,7 @@ layout(std140) uniform EffectData {
     float uCircleRadius[16];
     float uCircleProgress[16];
     float uCircleAlpha[16];
+    float uDepthZeroToOne;
 };
 
 in vec2 vTexCoord;
@@ -38,14 +39,14 @@ void main() {
     }
 
     float rawDepth = texture(uDepthTexture, vTexCoord).r;
-    if (rawDepth >= 0.999999) {
+    if (rawDepth <= 0.000001) {
         // Don't distort sky: Jump circle is a 2D planar floor effect
         fragColor = baseColor;
         return;
     }
 
     // Reconstruct 3D camera-relative world position
-    vec4 clipPos = vec4(vTexCoord * 2.0 - 1.0, rawDepth * 2.0 - 1.0, 1.0);
+    vec4 clipPos = vec4(vTexCoord * 2.0 - 1.0, mix(rawDepth * 2.0 - 1.0, rawDepth, uDepthZeroToOne), 1.0);
     vec4 camRelPosH = uInvViewProjMat * clipPos;
     vec3 camRelPos = camRelPosH.xyz / max(0.0001, camRelPosH.w);
 

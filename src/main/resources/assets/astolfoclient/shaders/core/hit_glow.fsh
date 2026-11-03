@@ -20,6 +20,7 @@ layout(std140) uniform EffectData {
     float uWaveRadius[16];
     float uWaveAlpha[16];
     float uWaveProgress[16];
+    float uDepthZeroToOne;
 };
 
 in vec2 vTexCoord;
@@ -59,13 +60,13 @@ void main() {
     }
 
     float rawDepth = texture(uDepthTexture, vTexCoord).r;
-    if (rawDepth >= 0.999999) {
+    if (rawDepth <= 0.000001) {
         fragColor = baseColor;
         return;
     }
 
     // Reconstruct 3D camera-relative world position
-    vec4 clipPos = vec4(vTexCoord * 2.0 - 1.0, rawDepth * 2.0 - 1.0, 1.0);
+    vec4 clipPos = vec4(vTexCoord * 2.0 - 1.0, mix(rawDepth * 2.0 - 1.0, rawDepth, uDepthZeroToOne), 1.0);
     vec4 camRelPosH = uInvViewProjMat * clipPos;
     vec3 camRelPos = camRelPosH.xyz / max(0.0001, camRelPosH.w);
     vec3 worldPos = camRelPos + uCameraPos;

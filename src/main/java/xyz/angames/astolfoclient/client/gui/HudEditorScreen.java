@@ -12,10 +12,10 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 
@@ -30,7 +30,7 @@ extends Screen {
     private static float activeHLineY = 0.0f;
 
     public HudEditorScreen() {
-        super((Text)Text.literal((String)"HUD Editor"));
+        super((Component)Component.literal((String)"HUD Editor"));
     }
 
     protected void init() {
@@ -87,11 +87,11 @@ extends Screen {
         }
     }
 
-    public void renderInGameBackground(DrawContext context) {
+    public void extractTransparentBackground(GuiGraphicsExtractor context) {
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        if (net.minecraft.client.MinecraftClient.getInstance().isShiftPressed()) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             float gridSpacing = 10.0f;
             int gridColor = 0xDFFFFFF;
             for (float x = gridSpacing; x < (float)this.width; x += gridSpacing) {
@@ -101,14 +101,14 @@ extends Screen {
                 context.fill(0, (int)y, this.width, (int)y + 1, gridColor);
             }
         }
-        MinecraftClient mc = MinecraftClient.getInstance();
-        double currentGuiScale = mc.getWindow().getScaleFactor();
+        Minecraft mc = Minecraft.getInstance();
+        double currentGuiScale = mc.getWindow().getGuiScale();
         float scaleModifier = (float)(2.0 / currentGuiScale);
         float hudWidth = (float)this.width / scaleModifier;
         float hudHeight = (float)this.height / scaleModifier;
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        context.pose().pushMatrix();
+        context.pose().scale(scaleModifier, scaleModifier);
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         MsdfFont bikoFont = (MsdfFont)BIKO_FONT.get();
         Color white = Color.WHITE;
         Color gray = new Color(170, 170, 170);
@@ -133,7 +133,7 @@ extends Screen {
         float exitY = 34.0f / scaleModifier;
         ((BuiltText)Builder.text().font(bikoFont).text(exit).color(new Color(0, 0, 0, 150)).size(exitSize).build()).render(matrix, exitX + 1.0f, exitY + 1.0f);
         ((BuiltText)Builder.text().font(bikoFont).text(exit).color(gray).size(exitSize).build()).render(matrix, exitX, exitY);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
         if (AstolfoclientClient.hudRenderer != null && AstolfoclientClient.hudRenderer.getLogoRenderer() != null) {
             AstolfoclientClient.hudRenderer.getLogoRenderer().render(context);
         }
@@ -146,7 +146,7 @@ extends Screen {
         AstolfoclientClient.testHudManager.render(context, delta);
         AstolfoclientClient.musicHudManager.render(context, delta);
         AstolfoclientClient.infoHudManager.render(context, delta);
-        if (net.minecraft.client.MinecraftClient.getInstance().isShiftPressed()) {
+        if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             int guideColor = -65281;
             if (activeVLine) {
                 context.fill((int)activeVLineX, 0, (int)activeVLineX + 1, this.height, guideColor);
@@ -195,7 +195,7 @@ extends Screen {
             this.currentlyDraggedManager = AstolfoclientClient.targetHudManager;
             return true;
         }
-        return super.mouseClicked(new net.minecraft.client.gui.Click(mouseX, mouseY, new net.minecraft.client.input.MouseInput(button, 0)), false);
+        return super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, new net.minecraft.client.input.MouseButtonInfo(button, 0)), false);
     }
 
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
@@ -220,7 +220,7 @@ extends Screen {
         }
         DraggedElement de = this.getDraggedElement();
         if (de != null) {
-            if (net.minecraft.client.MinecraftClient.getInstance().isShiftPressed()) {
+            if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
                 this.applySnapping(de);
             }
             float currentScale = de.scaleModifier;
@@ -265,7 +265,7 @@ extends Screen {
             activeVLine = false;
             activeHLine = false;
         }
-        return super.mouseDragged(new net.minecraft.client.gui.Click(mouseX, mouseY, new net.minecraft.client.input.MouseInput(button, 0)), deltaX, deltaY);
+        return super.mouseDragged(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, new net.minecraft.client.input.MouseButtonInfo(button, 0)), deltaX, deltaY);
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
@@ -299,7 +299,7 @@ extends Screen {
             AstolfoclientClient.infoHudManager.onMouseReleased(mouseX, mouseY, button);
         }
         this.currentlyDraggedManager = null;
-        return super.mouseReleased(new net.minecraft.client.gui.Click(mouseX, mouseY, new net.minecraft.client.input.MouseInput(button, 0)));
+        return super.mouseReleased(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, new net.minecraft.client.input.MouseButtonInfo(button, 0)));
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
@@ -307,7 +307,7 @@ extends Screen {
         return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
     }
 
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
@@ -437,7 +437,7 @@ extends Screen {
                 return ((Number)f.get(manager)).floatValue();
             }
             catch (Exception exception) {
-                double currentGuiScale = MinecraftClient.getInstance().getWindow().getScaleFactor();
+                double currentGuiScale = Minecraft.getInstance().getWindow().getGuiScale();
                 return (float)(2.0 / currentGuiScale);
             }
         }
@@ -552,7 +552,7 @@ extends Screen {
     }
 
     private void applySnapping(DraggedElement de) {
-        if (!net.minecraft.client.MinecraftClient.getInstance().isShiftPressed()) {
+        if (!net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             activeVLine = false;
             activeHLine = false;
             return;
@@ -730,8 +730,8 @@ extends Screen {
         private ElementRect() {
         }
     }
-    @Override public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) { return mouseClicked(click.x(), click.y(), click.button()); }
-    @Override public boolean mouseDragged(net.minecraft.client.gui.Click click, double dx, double dy) { return mouseDragged(click.x(), click.y(), click.button(), dx, dy); }
-    @Override public boolean mouseReleased(net.minecraft.client.gui.Click click) { return mouseReleased(click.x(), click.y(), click.button()); }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) { return mouseClicked(click.x(), click.y(), click.button()); }
+    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) { return mouseDragged(click.x(), click.y(), click.button(), dx, dy); }
+    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) { return mouseReleased(click.x(), click.y(), click.button()); }
 
 }

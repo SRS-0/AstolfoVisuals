@@ -1,18 +1,18 @@
 package xyz.angames.astolfoclient.client.effects;
 
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.StringVisitable;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.RotationAxis;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import xyz.angames.astolfoclient.client.render.compat.MultiBufferSource;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.network.chat.MutableComponent;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.effects.DamageIndicatorManager;
@@ -26,7 +26,7 @@ public class DamageIndicatorRenderer {
         this.manager = manager;
     }
 
-    public void render(WorldRenderContext context) {
+    public void render(LevelRenderContext context) {
         DamageIndicatorModule module = (DamageIndicatorModule)AstolfoclientClient.moduleManager.getModuleByName("DamageIndicators");
         if (module == null || !module.isEnabled()) {
             return;
@@ -34,14 +34,13 @@ public class DamageIndicatorRenderer {
         if (this.manager.getParticles().isEmpty()) {
             return;
         }
-        MinecraftClient client = MinecraftClient.getInstance();
-        TextRenderer textRenderer = client.textRenderer;
-        Camera camera = context.gameRenderer().getCamera();
-        MatrixStack matrices = context.matrices();
-        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
-        double camX = camera.getCameraPos().x;
-        double camY = camera.getCameraPos().y;
-        double camZ = camera.getCameraPos().z;
+        Minecraft client = Minecraft.getInstance();
+        Font textRenderer = client.font;
+        Camera camera = context.gameRenderer().mainCamera();
+        PoseStack matrices = context.poseStack();
+        double camX = camera.position().x;
+        double camY = camera.position().y;
+        double camZ = camera.position().z;
         float baseScale = (float)module.scale.get() * 0.02f;
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -65,19 +64,19 @@ public class DamageIndicatorRenderer {
             int color = p.isCrit ? -65536 : -22016;
             int alphaHex = (int)(alpha * 255.0f) << 24;
             color = color & 0xFFFFFF | alphaHex;
-            matrices.push();
+            matrices.pushPose();
             matrices.translate(p.x - camX, p.y - camY, p.z - camZ);
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-camera.getYaw()));
-            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
+            matrices.mulPose(Axis.YP.rotationDegrees(-camera.yRot()));
+            matrices.mulPose(Axis.XP.rotationDegrees(camera.xRot()));
             float currentScale = baseScale * (p.isCrit ? 1.3f : 1.0f) * popScale;
             matrices.scale(-currentScale, -currentScale, currentScale);
-            Matrix4f positionMatrix = matrices.peek().getPositionMatrix();
-            MutableText text = Text.literal((String)p.text);
-            float xOffset = (float)(-textRenderer.getWidth((StringVisitable)text)) / 2.0f;
-            textRenderer.draw((Text)text, xOffset, 0.0f, color, true, positionMatrix, (VertexConsumerProvider)vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0, 0xF000F0);
-            matrices.pop();
+            Matrix4f positionMatrix = matrices.last().pose();
+            MutableComponent text = Component.literal((String)p.text);
+            float xOffset = (float)(-textRenderer.width((FormattedText)text)) / 2.0f;
+            context.submitNodeCollector().submitText(matrices,xOffset,0.0f,text.getVisualOrderText(),true,Font.DisplayMode.SEE_THROUGH,0xF000F0,color,0,0);
+            matrices.popPose();
         }
-        vertexConsumers.draw();
+
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)true);
         RenderSystem.disableBlend();

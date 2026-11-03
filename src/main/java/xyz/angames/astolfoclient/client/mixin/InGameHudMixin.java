@@ -2,10 +2,10 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.hud.InGameHud;
-import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Hud;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -18,14 +18,14 @@ import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={InGameHud.class})
+@Mixin(value={Hud.class})
 public class InGameHudMixin {
     @Shadow
     @Final
-    private MinecraftClient client;
+    private Minecraft minecraft;
 
-    @Inject(method={"renderStatusEffectOverlay"}, at={@At(value="HEAD")}, cancellable=true)
-    private void onRenderStatusEffectOverlay(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+    @Inject(method={"extractEffects"}, at={@At(value="HEAD")}, cancellable=true)
+    private void onRenderStatusEffectOverlay(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
         InterfaceModule iface;
         Module interfaceMod;
         if (AstolfoclientClient.moduleManager != null && (interfaceMod = AstolfoclientClient.moduleManager.getModuleByName("Interface")) instanceof InterfaceModule && (iface = (InterfaceModule)interfaceMod).isEnabled() && iface.effectHud.get()) {
@@ -33,16 +33,16 @@ public class InGameHudMixin {
         }
     }
 
-    @Inject(method={"renderCrosshair"}, at={@At(value="HEAD")}, cancellable=true)
-    private void onRenderCrosshair(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+    @Inject(method={"extractCrosshair"}, at={@At(value="HEAD")}, cancellable=true)
+    private void onRenderCrosshair(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
         Module crosshairModule = AstolfoclientClient.moduleManager.getModuleByName("Crosshair");
         if (crosshairModule != null && crosshairModule.isEnabled()) {
             ci.cancel();
         }
     }
 
-    @Inject(method={"renderHotbar"}, at={@At(value="HEAD")}, cancellable=true)
-    private void onRenderHotbar(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+    @Inject(method={"extractItemHotbar"}, at={@At(value="HEAD")}, cancellable=true)
+    private void onRenderHotbar(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
         Module hotbarModule = AstolfoclientClient.moduleManager.getModuleByName("CustomHotbar");
         if (hotbarModule != null && hotbarModule.isEnabled()) {
             ci.cancel();
@@ -50,37 +50,37 @@ public class InGameHudMixin {
         }
         float offset = LogoRenderer.getHotbarYOffset();
         if (offset > 0.01f) {
-            context.getMatrices().pushMatrix();
-            context.getMatrices().translate(0.0f, -offset);
+            context.pose().pushMatrix();
+            context.pose().translate(0.0f, -offset);
         }
     }
 
-    @Inject(method={"renderHotbar"}, at={@At(value="RETURN")})
-    private void onAfterRenderHotbar(DrawContext context, RenderTickCounter tickCounter, CallbackInfo ci) {
+    @Inject(method={"extractItemHotbar"}, at={@At(value="RETURN")})
+    private void onAfterRenderHotbar(GuiGraphicsExtractor context, DeltaTracker tickCounter, CallbackInfo ci) {
         Module hotbarModule = AstolfoclientClient.moduleManager.getModuleByName("CustomHotbar");
         if (hotbarModule != null && hotbarModule.isEnabled()) {
             return;
         }
         float offset = LogoRenderer.getHotbarYOffset();
         if (offset > 0.01f) {
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
         }
     }
 
-    @Inject(method={"renderStatusBars"}, at={@At(value="HEAD")})
-    private void onBeforeRenderStatusBars(DrawContext context, CallbackInfo ci) {
+    @Inject(method={"extractPlayerHealth"}, at={@At(value="HEAD")})
+    private void onBeforeRenderStatusBars(GuiGraphicsExtractor context, CallbackInfo ci) {
         float offset = LogoRenderer.getHotbarYOffset();
         if (offset > 0.01f) {
-            context.getMatrices().pushMatrix();
-            context.getMatrices().translate(0.0f, -offset);
+            context.pose().pushMatrix();
+            context.pose().translate(0.0f, -offset);
         }
     }
 
-    @Inject(method={"renderStatusBars"}, at={@At(value="RETURN")})
-    private void onAfterRenderStatusBars(DrawContext context, CallbackInfo ci) {
+    @Inject(method={"extractPlayerHealth"}, at={@At(value="RETURN")})
+    private void onAfterRenderStatusBars(GuiGraphicsExtractor context, CallbackInfo ci) {
         float offset = LogoRenderer.getHotbarYOffset();
         if (offset > 0.01f) {
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
         }
     }
 
@@ -92,20 +92,20 @@ public class InGameHudMixin {
 
     
 
-    @Inject(method={"renderHeldItemTooltip"}, at={@At(value="HEAD")})
-    private void onBeforeRenderHeldItemTooltip(DrawContext context, CallbackInfo ci) {
+    @Inject(method={"extractSelectedItemName"}, at={@At(value="HEAD")})
+    private void onBeforeRenderHeldItemTooltip(GuiGraphicsExtractor context, CallbackInfo ci) {
         float offset = LogoRenderer.getHotbarYOffset();
         if (offset > 0.01f) {
-            context.getMatrices().pushMatrix();
-            context.getMatrices().translate(0.0f, -offset);
+            context.pose().pushMatrix();
+            context.pose().translate(0.0f, -offset);
         }
     }
 
-    @Inject(method={"renderHeldItemTooltip"}, at={@At(value="RETURN")})
-    private void onAfterRenderHeldItemTooltip(DrawContext context, CallbackInfo ci) {
+    @Inject(method={"extractSelectedItemName"}, at={@At(value="RETURN")})
+    private void onAfterRenderHeldItemTooltip(GuiGraphicsExtractor context, CallbackInfo ci) {
         float offset = LogoRenderer.getHotbarYOffset();
         if (offset > 0.01f) {
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
         }
     }
 }

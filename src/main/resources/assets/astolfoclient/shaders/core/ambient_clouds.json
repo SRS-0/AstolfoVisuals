@@ -1,6 +1,6 @@
 {
   "screen": true,
-  "blockSize": 160,
+  "blockSize": 176,
   "uniforms": [
     {
       "name": "uModelViewMat",
@@ -105,6 +105,22 @@
       "components": 1,
       "offset": 156,
       "stride": 4
+    },
+    {
+      "name": "uDepthRange",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec4",
+      "components": 4,
+      "length": 1,
+      "offset": 160,
+      "stride": 16
     }
   ],
   "samplers": []

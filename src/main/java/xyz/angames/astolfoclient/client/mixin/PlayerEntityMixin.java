@@ -2,10 +2,10 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,11 +16,11 @@ import xyz.angames.astolfoclient.client.module.modules.render.HitGlowModule;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={PlayerEntity.class})
+@Mixin(value={Player.class})
 public class PlayerEntityMixin {
     @Inject(method={"attack"}, at={@At(value="HEAD")})
     private void onAttack(Entity target, CallbackInfo ci) {
-        if ((Object)this == MinecraftClient.getInstance().player && target instanceof LivingEntity) {
+        if ((Object)this == Minecraft.getInstance().player && target instanceof LivingEntity) {
             LivingEntity livingTarget = (LivingEntity)target;
             if (!TargetUtils.isInvisible((Entity)livingTarget)) {
                 TargetEspModule.addTargetAttack(target);
@@ -28,9 +28,9 @@ public class PlayerEntityMixin {
                     AstolfoclientClient.targetHudManager.setTarget(livingTarget);
                 }
             }
-            HitGlowModule.addWave(target.getEntityPos());
+            HitGlowModule.addWave(target.position());
             if (AstolfoclientClient.particleManager != null) {
-                AstolfoclientClient.particleManager.addEffects(target.getEyePos());
+                AstolfoclientClient.particleManager.addEffects(target.getEyePosition());
             }
         }
     }

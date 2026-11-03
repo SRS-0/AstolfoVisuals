@@ -16,23 +16,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.scoreboard.ReadableScoreboardScore;
-import net.minecraft.scoreboard.ScoreHolder;
-import net.minecraft.scoreboard.Scoreboard;
-import net.minecraft.scoreboard.ScoreboardDisplaySlot;
-import net.minecraft.scoreboard.ScoreboardObjective;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.scores.DisplaySlot;
+import net.minecraft.world.scores.Objective;
+import net.minecraft.world.scores.ReadOnlyScoreInfo;
+import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.world.scores.Scoreboard;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
@@ -47,7 +46,7 @@ public class TargetHudManager {
     private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
     private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
     private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
-    private static final Identifier DEFAULT_MOB_ICON = Identifier.of((String)"astolfoclient", (String)"textures/gui/mob_icon.png");
+    private static final Identifier DEFAULT_MOB_ICON = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"textures/gui/mob_icon.png");
     private static final Pattern HEALTH_PATTERN = Pattern.compile("(\\d+(\\.\\d+)?)");
     private final float baseWidth = 122.0f;
     private final float baseHeight = 33.0f;
@@ -87,13 +86,13 @@ public class TargetHudManager {
         this.lastDamageTime = (long)((double)System.nanoTime() / 1000000.0);
     }
 
-    public void render(DrawContext context, float tickDelta) {
+    public void render(GuiGraphicsExtractor context, float tickDelta) {
         LivingEntity entityToRender;
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
             return;
         }
-        boolean isEditing = client.currentScreen instanceof HudEditorScreen;
+        boolean isEditing = client.gui.screen() instanceof HudEditorScreen;
         long nowNs = System.nanoTime();
         if (this.lastUpdateTimeNs == -1L) {
             this.lastUpdateTimeNs = nowNs;
@@ -126,20 +125,20 @@ public class TargetHudManager {
         MsdfFont semibold = (MsdfFont)SEMIBOLD_FONT.get();
         MsdfFont medium = (MsdfFont)MEDIUM_FONT.get();
         float scaleModifier = this.getScaleModifier();
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(this.x, this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate(-this.x, -this.y);
+        context.pose().pushMatrix();
+        context.pose().translate(this.x, this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate(-this.x, -this.y);
         float ease = 1.0f - (float)Math.pow(1.0f - this.animationProgress, 3.0);
         float popScale = 0.86f + 0.14f * ease;
         if (popScale < 0.999f) {
             float cx = this.x + 61.0f;
             float cy = this.y + 16.5f;
-            context.getMatrices().translate(cx, cy);
-            context.getMatrices().scale(popScale, popScale);
-            context.getMatrices().translate(-cx, -cy);
+            context.pose().translate(cx, cy);
+            context.pose().scale(popScale, popScale);
+            context.pose().translate(-cx, -cy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
         int shadowSteps = 12;
         float maxSpread = 7.5f;
@@ -199,31 +198,31 @@ public class TargetHudManager {
         float barWidth = 122.0f - (textStartX - this.x) - 6.0f;
         float barY = hpTopY + 9.0f;
         this.renderHpBar(matrix, textStartX, barY, barWidth, 3.2f, themeColor, this.animationProgress, entityToRender.getMaxHealth());
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     public float getRealHealth(LivingEntity entity) {
         float extracted;
-        ReadableScoreboardScore score;
-        if (entity == null || MinecraftClient.getInstance().world == null) {
+        ReadOnlyScoreInfo score;
+        if (entity == null || Minecraft.getInstance().level == null) {
             return 0.0f;
         }
-        Scoreboard scoreboard = MinecraftClient.getInstance().world.getScoreboard();
-        ScoreboardObjective objective = scoreboard.getObjectiveForSlot(ScoreboardDisplaySlot.BELOW_NAME);
-        if (objective != null && (score = scoreboard.getScore((ScoreHolder)entity, objective)) != null) {
-            return score.getScore();
+        Scoreboard scoreboard = Minecraft.getInstance().level.getScoreboard();
+        Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
+        if (objective != null && (score = scoreboard.getPlayerScoreInfo((ScoreHolder)entity, objective)) != null) {
+            return score.value();
         }
-        if (entity instanceof PlayerEntity) {
+        if (entity instanceof Player) {
             String suffix;
-            PlayerEntity player = (PlayerEntity)entity;
-            PlayerListEntry entry = MinecraftClient.getInstance().getNetworkHandler().getPlayerListEntry(player.getUuid());
-            if (entry != null && entry.getScoreboardTeam() != null && (extracted = this.extractHealthFromString(suffix = entry.getScoreboardTeam().getSuffix().getString())) != -1.0f) {
+            Player player = (Player)entity;
+            PlayerInfo entry = Minecraft.getInstance().getConnection().getPlayerInfo(player.getUUID());
+            if (entry != null && entry.getTeam() != null && (extracted = this.extractHealthFromString(suffix = entry.getTeam().getPlayerSuffix().getString())) != -1.0f) {
                 return extracted;
             }
         }
-        List<Entity> nearby = MinecraftClient.getInstance().world.getOtherEntities((Entity)entity, entity.getBoundingBox().expand(4.0, 2.0, 4.0));
+        List<Entity> nearby = Minecraft.getInstance().level.getEntities((Entity)entity, entity.getBoundingBox().inflate(4.0, 2.0, 4.0));
         for (Entity e : nearby) {
-            if (!e.isCustomNameVisible() && !(e instanceof ArmorStandEntity) || (extracted = this.extractHealthFromString(e.getDisplayName().getString())) == -1.0f) continue;
+            if (!e.isCustomNameVisible() && !(e instanceof ArmorStand) || (extracted = this.extractHealthFromString(e.getDisplayName().getString())) == -1.0f) continue;
             return extracted;
         }
         return entity.getHealth();
@@ -249,11 +248,11 @@ public class TargetHudManager {
     private void renderHpBar(Matrix4f matrix, float bx, float by, float bw, float bh, Color theme, float alpha, float maxHp) {
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(bw, bh)).radius(new QuadRadiusState(bh / 2.0f)).color(new QuadColorState(GuiUtils.withAlpha(new Color(18, 18, 22), alpha))).build()).render(matrix, bx, by);
         float safeMax = Math.max(maxHp, 20.0f);
-        float hpPct = MathHelper.clamp((float)(this.visualHealth / safeMax), (float)0.0f, (float)1.0f);
+        float hpPct = Mth.clamp((float)(this.visualHealth / safeMax), (float)0.0f, (float)1.0f);
         float hpWidth = bw * hpPct;
-        float absPct = MathHelper.clamp((float)(this.visualAbsorption / safeMax), (float)0.0f, (float)1.0f);
+        float absPct = Mth.clamp((float)(this.visualAbsorption / safeMax), (float)0.0f, (float)1.0f);
         float absWidth = bw * absPct;
-        float dmgPct = MathHelper.clamp((float)(this.damageHealth / safeMax), (float)0.0f, (float)1.0f);
+        float dmgPct = Mth.clamp((float)(this.damageHealth / safeMax), (float)0.0f, (float)1.0f);
         float dmgWidth = bw * dmgPct;
         if (hpWidth > 2.0f) {
             this.drawBarGlowShadow(matrix, bx, by, hpWidth, bh, bh / 2.0f, theme, 0.2f * alpha);
@@ -278,9 +277,9 @@ public class TargetHudManager {
         }
     }
 
-    private void renderEntityHead(MinecraftClient client, LivingEntity entity, Matrix4f matrix, float hX, float hY, float size, Color tint, float alpha) {
-        if (entity instanceof AbstractClientPlayerEntity) {
-            AbstractClientPlayerEntity player = (AbstractClientPlayerEntity)entity;
+    private void renderEntityHead(Minecraft client, LivingEntity entity, Matrix4f matrix, float hX, float hY, float size, Color tint, float alpha) {
+        if (entity instanceof AbstractClientPlayer) {
+            AbstractClientPlayer player = (AbstractClientPlayer)entity;
             AbstractTexture skin = client.getTextureManager().getTexture(player.getSkin().body().texturePath());
             ((BuiltTexture)Builder.texture().size(new SizeState(size, size)).radius(new QuadRadiusState(4.0f)).texture(0.125f, 0.125f, 0.125f, 0.125f, skin).color(new QuadColorState(GuiUtils.withAlpha(tint, alpha))).build()).render(matrix, hX, hY);
             ((BuiltTexture)Builder.texture().size(new SizeState(size, size)).radius(new QuadRadiusState(4.0f)).texture(0.625f, 0.125f, 0.125f, 0.125f, skin).color(new QuadColorState(GuiUtils.withAlpha(tint, alpha * 0.95f))).build()).render(matrix, hX, hY);
@@ -330,8 +329,8 @@ public class TargetHudManager {
     }
 
     private float getScaleModifier() {
-        MinecraftClient client = MinecraftClient.getInstance();
-        double currentGuiScale = client.getWindow().getScaleFactor();
+        Minecraft client = Minecraft.getInstance();
+        double currentGuiScale = client.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
@@ -339,7 +338,7 @@ public class TargetHudManager {
     }
 
     private float lerp(float start, float end, float delta) {
-        return start + (end - start) * MathHelper.clamp((float)delta, (float)0.0f, (float)1.0f);
+        return start + (end - start) * Mth.clamp((float)delta, (float)0.0f, (float)1.0f);
     }
 
     public boolean onMouseClicked(double mouseX, double mouseY, int button) {
@@ -357,10 +356,10 @@ public class TargetHudManager {
 
     public boolean onMouseDragged(double mouseX, double mouseY, int button) {
         if (this.dragging && button == 0) {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             float scaleModifier = this.getScaleModifier();
-            float screenW = mc.getWindow().getScaledWidth();
-            float screenH = mc.getWindow().getScaledHeight();
+            float screenW = mc.getWindow().getGuiScaledWidth();
+            float screenH = mc.getWindow().getGuiScaledHeight();
             float effectiveW = 122.0f * scaleModifier;
             float effectiveH = 33.0f * scaleModifier;
             float targetX = (float)(mouseX - (double)this.dragOffsetX);

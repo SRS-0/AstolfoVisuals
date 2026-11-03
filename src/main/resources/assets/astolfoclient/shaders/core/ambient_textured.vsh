@@ -5,6 +5,7 @@ layout(std140) uniform EffectData {
     float alpha;
     vec3 themeColor;
     bool themeSync;
+    vec4 uDepthRange;
 };
 
 in vec3 Position;
@@ -15,5 +16,5 @@ out vec2 vTexCoord;
 void main() {
     vTexCoord = UV0;
     vec4 pos = uProjMat * uModelViewMat * vec4(Position, 1.0);
-    gl_Position = vec4(pos.xy, pos.w * 0.9999, pos.w);
+    gl_Position = vec4(pos.xy, mix(-pos.w, 0.0, uDepthRange.x) * 0.9999, pos.w);
 }

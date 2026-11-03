@@ -1,26 +1,35 @@
 package dev.sxmurxy.mre.renderers;
 
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.SimpleFramebuffer;
+import net.minecraft.client.Minecraft;
 
 /** Separate source texture prevents sampling the attachment currently being drawn. */
 public final class GpuSceneCopy {
-    private static SimpleFramebuffer copy;
+    private static TextureTarget copy;
     static {
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
-            if (copy != null) { copy.delete(); copy = null; }
+            if (copy != null) { copy.destroyBuffers(); copy = null; }
         });
     }
     private GpuSceneCopy() {}
-    public static SimpleFramebuffer capture() {
+    private static TextureTarget target() {
         RenderSystem.assertOnRenderThread();
-        var source = MinecraftClient.getInstance().getFramebuffer();
-        if (copy == null) copy = new SimpleFramebuffer("Astolfo scene copy", source.textureWidth, source.textureHeight, false);
-        else if (copy.textureWidth != source.textureWidth || copy.textureHeight != source.textureHeight) copy.resize(source.textureWidth, source.textureHeight);
-        if(GuiContext.current()!=null)GuiContext.requestScene();
-        else RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(source.getColorAttachment(), copy.getColorAttachment(), 0, 0, 0, 0, 0, source.textureWidth, source.textureHeight);
+        var source = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        if (copy == null) copy = new TextureTarget("Astolfo scene copy", source.width, source.height, false, source.getColorTexture().getFormat());
+        else if (copy.width != source.width || copy.height != source.height) copy.resize(source.width, source.height);
         return copy;
+    }
+    public static TextureTarget capture() {
+        var result = target();
+        var source = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(source.getColorTexture(), result.getColorTexture(), 0, 0, 0, 0, 0, source.width, source.height);
+        return result;
+    }
+    public static TextureTarget gui() {
+        if (GuiContext.current() == null) return capture();
+        GuiContext.requestScene();
+        return target();
     }
 }

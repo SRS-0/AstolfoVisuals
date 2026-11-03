@@ -3,7 +3,7 @@ package xyz.angames.astolfoclient.client.effects;
 import java.util.ArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.effects.CircleEspGalaxyRenderer;
 import xyz.angames.astolfoclient.client.effects.CircleEspGhostRenderer;
@@ -23,7 +23,7 @@ public class CircleEspRenderer {
         this.ghostRenderer = new CircleEspGhostRenderer();
     }
 
-    public void render(WorldRenderContext context) {
+    public void render(LevelRenderContext context) {
         Module targetEspModule = AstolfoclientClient.moduleManager.getModuleByName("TargetESP");
         if (targetEspModule == null || !targetEspModule.isEnabled()) {
             return;

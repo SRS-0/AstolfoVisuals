@@ -7,13 +7,13 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.PlainTextContent;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.text.TranslatableTextContent;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
@@ -73,19 +73,19 @@ extends Module {
         return sb.toString();
     }
 
-    public static void setupChatField(TextFieldWidget chatField) {
+    public static void setupChatField(EditBox chatField) {
         if (chatField == null) {
             return;
         }
         chatField.addFormatter((originalStr, firstCharacterIndex) -> {
             if (AstolfoclientClient.moduleManager == null) {
-                return Text.literal((String)originalStr).asOrderedText();
+                return Component.literal((String)originalStr).getVisualOrderText();
             }
             Module mod = AstolfoclientClient.moduleManager.getModuleByName("PasswordHider");
             if (mod == null || !mod.isEnabled()) {
-                return Text.literal((String)originalStr).asOrderedText();
+                return Component.literal((String)originalStr).getVisualOrderText();
             }
-            String fullText = chatField.getText();
+            String fullText = chatField.getValue();
             if (PasswordHiderModule.isPasswordCommand(fullText)) {
                 int firstSpace = fullText.indexOf(32);
                 int passStart = firstSpace + 1;
@@ -99,16 +99,16 @@ extends Module {
                     }
                     sb.append(c);
                 }
-                return Text.literal((String)sb.toString()).asOrderedText();
+                return Component.literal((String)sb.toString()).getVisualOrderText();
             }
-            return Text.literal((String)originalStr).asOrderedText();
+            return Component.literal((String)originalStr).getVisualOrderText();
         });
     }
 
-    public static void renderChatFieldOverlay(DrawContext context, TextFieldWidget chatField) {
+    public static void renderChatFieldOverlay(GuiGraphicsExtractor context, EditBox chatField) {
     }
 
-    public static Text getProtectedChat(Text message) {
+    public static Component getProtectedChat(Component message) {
         if (message == null) {
             return null;
         }
@@ -131,31 +131,31 @@ extends Module {
         }
     }
 
-    private static Text protectChatTree(Text text) {
-        TextContent content;
+    private static Component protectChatTree(Component text) {
+        ComponentContents content;
         if (text == null) {
             return null;
         }
-        TextContent newContent = content = text.getContent();
+        ComponentContents newContent = content = text.getContents();
         boolean contentChanged = false;
-        if (content instanceof PlainTextContent.Literal) {
-            PlainTextContent.Literal literal = (PlainTextContent.Literal)content;
-            String str = literal.string();
+        if (content instanceof PlainTextContents.LiteralContents) {
+            PlainTextContents.LiteralContents literal = (PlainTextContents.LiteralContents)content;
+            String str = literal.text();
             String masked = PasswordHiderModule.maskChatString(str);
             if (!masked.equals(str)) {
-                newContent = Text.literal((String)masked).getContent();
+                newContent = Component.literal((String)masked).getContents();
                 contentChanged = true;
             }
-        } else if (content instanceof TranslatableTextContent) {
-            TranslatableTextContent trans = (TranslatableTextContent)content;
+        } else if (content instanceof TranslatableContents) {
+            TranslatableContents trans = (TranslatableContents)content;
             Object[] args = trans.getArgs();
             Object[] newArgs = new Object[args.length];
             boolean argsChanged = false;
             for (int i = 0; i < args.length; ++i) {
                 Object arg = args[i];
-                if (arg instanceof Text) {
-                    Text argText = (Text)arg;
-                    Text protectedArg = PasswordHiderModule.protectChatTree(argText);
+                if (arg instanceof Component) {
+                    Component argText = (Component)arg;
+                    Component protectedArg = PasswordHiderModule.protectChatTree(argText);
                     newArgs[i] = protectedArg;
                     if (protectedArg == argText) continue;
                     argsChanged = true;
@@ -172,15 +172,15 @@ extends Module {
                 newArgs[i] = arg;
             }
             if (argsChanged) {
-                newContent = new TranslatableTextContent(trans.getKey(), trans.getFallback(), newArgs);
+                newContent = new TranslatableContents(trans.getKey(), trans.getFallback(), newArgs);
                 contentChanged = true;
             }
         }
-        List<Text> siblings = text.getSiblings();
-        ArrayList<Text> newSiblings = new ArrayList<Text>(siblings.size());
+        List<Component> siblings = text.getSiblings();
+        ArrayList<Component> newSiblings = new ArrayList<Component>(siblings.size());
         boolean siblingsChanged = false;
-        for (Text sibling : siblings) {
-            Text protectedSibling = PasswordHiderModule.protectChatTree(sibling);
+        for (Component sibling : siblings) {
+            Component protectedSibling = PasswordHiderModule.protectChatTree(sibling);
             newSiblings.add(protectedSibling);
             if (protectedSibling == sibling) continue;
             siblingsChanged = true;
@@ -188,8 +188,8 @@ extends Module {
         if (!contentChanged && !siblingsChanged) {
             return text;
         }
-        MutableText result = MutableText.of((TextContent)newContent).setStyle(text.getStyle());
-        for (Text sibling : newSiblings) {
+        MutableComponent result = MutableComponent.create((ComponentContents)newContent).setStyle(text.getStyle());
+        for (Component sibling : newSiblings) {
             result.append(sibling);
         }
         return result;

@@ -20,6 +20,7 @@ layout(std140) uniform EffectData {
     int u_Ripples;
     vec3 u_ThemeColor;
     int u_UseThemeColor;
+    float uDepthZeroToOne;
 };
 
 

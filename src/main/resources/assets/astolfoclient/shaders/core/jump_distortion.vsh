@@ -10,6 +10,7 @@ layout(std140) uniform EffectData {
     float uCircleRadius[16];
     float uCircleProgress[16];
     float uCircleAlpha[16];
+    float uDepthZeroToOne;
 };
 
 in vec2 Position;

@@ -1,7 +1,7 @@
 {
   "required": true,
   "package": "xyz.angames.astolfoclient.client.mixin",
-  "compatibilityLevel": "JAVA_21",
+  "compatibilityLevel": "JAVA_25",
   "client": [
     "AbstractBlockStateMixin",
     "AbstractClientPlayerEntityMixin",
@@ -18,7 +18,6 @@
     "DebugHudMixin",
     "EntityMixin",
     "EntityRendererMixin",
-    "GameRendererAccessor",
     "GameRendererMixin",
     "HeldItemRendererAccessor",
     "HeldItemRendererMixin",
@@ -60,7 +59,10 @@
     "ExperienceBarMixin",
     "BufferBuilderGpuAccessor",
     "DrawContextGpuMixin",
-    "GuiRendererGpuMixin"
+    "GuiRendererGpuMixin",
+    "AspectProjectionMixin",
+    "HandRenderTargetMixin",
+    "GuiExtractionMixin"
   ],
   "injectors": {
     "defaultRequire": 1

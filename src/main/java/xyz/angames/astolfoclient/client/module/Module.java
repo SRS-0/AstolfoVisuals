@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import xyz.angames.astolfoclient.client.module.setting.Setting;
 import xyz.angames.astolfoclient.client.util.ModSounds;
 
@@ -79,7 +79,7 @@ public abstract class Module {
     public void setEnabled(boolean enabled) {
         if (this.enabled != enabled) {
             this.enabled = enabled;
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (this.enabled) {
                 this.onEnable();
                 ModSounds.playEnable();

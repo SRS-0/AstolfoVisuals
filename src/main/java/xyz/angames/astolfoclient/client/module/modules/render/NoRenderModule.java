@@ -2,10 +2,10 @@ package xyz.angames.astolfoclient.client.module.modules.render;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
 
@@ -69,9 +69,9 @@ extends Module {
     }
 
     private void reloadWorldRenderer() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.worldRenderer != null) {
-            mc.worldRenderer.reload();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.levelRenderer != null) {
+            mc.levelRenderer.invalidateCompiledGeometry(mc.level,mc.options,mc.gameRenderer.mainCamera(),mc.getBlockColors());
         }
     }
 

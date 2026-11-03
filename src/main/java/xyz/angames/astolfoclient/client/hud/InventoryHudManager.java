@@ -3,11 +3,11 @@ package xyz.angames.astolfoclient.client.hud;
 import java.util.ArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.ItemConvertible;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.ItemLike;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -23,16 +23,16 @@ public class InventoryHudManager {
     private boolean dragging = false;
     private float dragOffsetX;
     private float dragOffsetY;
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private Module cachedModule;
 
-    public void render(DrawContext context) {
+    public void render(GuiGraphicsExtractor context) {
         ItemStack stack;
         int i;
         if (this.cachedModule == null) {
             this.cachedModule = AstolfoclientClient.moduleManager.getModuleByName("Interface");
         }
-        boolean isEditing = this.client.currentScreen instanceof HudEditorScreen;
+        boolean isEditing = this.client.gui.screen() instanceof HudEditorScreen;
         InterfaceModule interfaceMod = (InterfaceModule)this.cachedModule;
         if (interfaceMod == null) {
             return;
@@ -43,36 +43,36 @@ public class InventoryHudManager {
         if (this.client.player == null) {
             return;
         }
-        double currentGuiScale = this.client.getWindow().getScaleFactor();
+        double currentGuiScale = this.client.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
         float scaleModifier = (float)(2.0 / currentGuiScale);
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(this.x, this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate(-this.x, -this.y);
+        context.pose().pushMatrix();
+        context.pose().translate(this.x, this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate(-this.x, -this.y);
         ArrayList<ItemStack> inventoryList = new ArrayList<ItemStack>();
         boolean hasItems = false;
         for (i = 0; i < 27; ++i) {
-            stack = (ItemStack)this.client.player.getInventory().getStack(9 + i);
+            stack = (ItemStack)this.client.player.getInventory().getItem(9 + i);
             inventoryList.add(stack);
             if (stack.isEmpty()) continue;
             hasItems = true;
         }
         if (isEditing && !hasItems) {
-            inventoryList.set(0, new ItemStack((ItemConvertible)Items.DIAMOND_SWORD));
-            inventoryList.set(1, new ItemStack((ItemConvertible)Items.ENCHANTED_GOLDEN_APPLE, 64));
-            inventoryList.set(2, new ItemStack((ItemConvertible)Items.ENDER_PEARL, 16));
-            inventoryList.set(3, new ItemStack((ItemConvertible)Items.COBWEB, 64));
-            inventoryList.set(4, new ItemStack((ItemConvertible)Items.OBSIDIAN, 64));
-            inventoryList.set(5, new ItemStack((ItemConvertible)Items.TOTEM_OF_UNDYING));
-            inventoryList.set(6, new ItemStack((ItemConvertible)Items.DIAMOND_PICKAXE));
-            inventoryList.set(7, new ItemStack((ItemConvertible)Items.BOW));
-            inventoryList.set(8, new ItemStack((ItemConvertible)Items.ARROW, 64));
+            inventoryList.set(0, new ItemStack((ItemLike)Items.DIAMOND_SWORD));
+            inventoryList.set(1, new ItemStack((ItemLike)Items.ENCHANTED_GOLDEN_APPLE, 64));
+            inventoryList.set(2, new ItemStack((ItemLike)Items.ENDER_PEARL, 16));
+            inventoryList.set(3, new ItemStack((ItemLike)Items.COBWEB, 64));
+            inventoryList.set(4, new ItemStack((ItemLike)Items.OBSIDIAN, 64));
+            inventoryList.set(5, new ItemStack((ItemLike)Items.TOTEM_OF_UNDYING));
+            inventoryList.set(6, new ItemStack((ItemLike)Items.DIAMOND_PICKAXE));
+            inventoryList.set(7, new ItemStack((ItemLike)Items.BOW));
+            inventoryList.set(8, new ItemStack((ItemLike)Items.ARROW, 64));
         }
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(0.0f, 0.0f);
+        context.pose().pushMatrix();
+        context.pose().translate(0.0f, 0.0f);
         for (i = 0; i < 27; ++i) {
             stack = (ItemStack)inventoryList.get(i);
             if (stack.isEmpty()) continue;
@@ -80,15 +80,15 @@ public class InventoryHudManager {
             int col = i % 9;
             int ix = (int)(this.x + (float)(col * 18));
             int iy = (int)(this.y + (float)(row * 18));
-            context.drawItem(stack, ix, iy);
-            context.drawStackOverlay(this.client.textRenderer, stack, ix, iy);
+            context.item(stack, ix, iy);
+            context.itemDecorations(this.client.font, stack, ix, iy);
         }
-        context.getMatrices().popMatrix();
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
+        context.pose().popMatrix();
     }
 
     public float getScaleModifier() {
-        double currentGuiScale = this.client.getWindow().getScaleFactor();
+        double currentGuiScale = this.client.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
@@ -96,7 +96,7 @@ public class InventoryHudManager {
     }
 
     public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-        boolean isEditing = this.client.currentScreen instanceof HudEditorScreen;
+        boolean isEditing = this.client.gui.screen() instanceof HudEditorScreen;
         InterfaceModule interfaceMod = (InterfaceModule)this.cachedModule;
         if (interfaceMod == null) {
             return false;
@@ -119,8 +119,8 @@ public class InventoryHudManager {
     public void onMouseDragged(double mouseX, double mouseY, int button) {
         if (this.dragging && button == 0) {
             float scaleModifier = this.getScaleModifier();
-            float screenW = this.client.getWindow().getScaledWidth();
-            float screenH = this.client.getWindow().getScaledHeight();
+            float screenW = this.client.getWindow().getGuiScaledWidth();
+            float screenH = this.client.getWindow().getGuiScaledHeight();
             float effectiveW = 162.0f * scaleModifier;
             float effectiveH = 54.0f * scaleModifier;
             float targetX = (float)(mouseX - (double)this.dragOffsetX);

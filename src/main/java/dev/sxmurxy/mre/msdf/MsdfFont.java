@@ -1,6 +1,7 @@
 package dev.sxmurxy.mre.msdf;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.sxmurxy.mre.msdf.FontData;
 import dev.sxmurxy.mre.msdf.MsdfGlyph;
 import dev.sxmurxy.mre.providers.ResourceProvider;
@@ -9,10 +10,9 @@ import java.util.Map;
 import java.util.function.Function;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
@@ -112,7 +112,7 @@ public final class MsdfFont {
         }
 
         public Builder data(String dataFileName) {
-            this.dataIdentifer = Identifier.of((String)"mre", (String)("fonts/" + dataFileName + ".json"));
+            this.dataIdentifer = Identifier.fromNamespaceAndPath((String)"mre", (String)("fonts/" + dataFileName + ".json"));
             return this;
         }
 
@@ -122,7 +122,7 @@ public final class MsdfFont {
         }
 
         public Builder atlas(String atlasFileName) {
-            this.atlasIdentifier = Identifier.of((String)"mre", (String)("fonts/" + atlasFileName + ".png"));
+            this.atlasIdentifier = Identifier.fromNamespaceAndPath((String)"mre", (String)("fonts/" + atlasFileName + ".png"));
             return this;
         }
 
@@ -138,7 +138,7 @@ public final class MsdfFont {
 
         public MsdfFont build() {
             FontData data = ResourceProvider.fromJsonToInstance(this.dataIdentifer, FontData.class);
-            AbstractTexture texture = MinecraftClient.getInstance().getTextureManager().getTexture(this.atlasIdentifier);
+            AbstractTexture texture = Minecraft.getInstance().getTextureManager().getTexture(this.atlasIdentifier);
             if (data == null) {
                 throw new RuntimeException("Failed to read font data file: " + this.dataIdentifer.toString() + "; Are you sure this is json file? Try to check the correctness of its syntax.");
             }

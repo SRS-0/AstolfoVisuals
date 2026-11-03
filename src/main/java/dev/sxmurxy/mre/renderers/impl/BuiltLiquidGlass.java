@@ -2,6 +2,8 @@ package dev.sxmurxy.mre.renderers.impl;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.systems.RenderSystem;
 import dev.sxmurxy.mre.builders.states.QuadColorState;
 import dev.sxmurxy.mre.builders.states.QuadRadiusState;
@@ -11,25 +13,23 @@ import dev.sxmurxy.mre.providers.ResourceProvider;
 import dev.sxmurxy.mre.renderers.IRenderer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Framebuffer;
-import net.minecraft.client.gl.SimpleFramebuffer;
-import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 import org.joml.Matrix4f;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import dev.sxmurxy.mre.renderers.GpuEffect;
 import dev.sxmurxy.mre.renderers.GpuSceneCopy;
-import net.minecraft.client.texture.AbstractTexture;
 import org.joml.Vector4f;
 import org.joml.Vector4fc;
 
 @Environment(value=EnvType.CLIENT)
 public record BuiltLiquidGlass(SizeState size, QuadRadiusState radius, QuadColorState color, float smoothness, float cornerSmoothness, float globalAlpha, float fresnelPower, int fresnelColor, float fresnelAlpha, float baseAlpha, boolean fresnelInvert, float fresnelMix, float distortStrength, boolean useBackground, float u, float v, float texWidth, float texHeight, AbstractTexture textureId) implements IRenderer
 {
-    private static final GpuEffect LIQUID_GLASS_SHADER_KEY = new GpuEffect("liquidglass", VertexFormats.POSITION_TEXTURE_COLOR);
+    private static final GpuEffect LIQUID_GLASS_SHADER_KEY = new GpuEffect("liquidglass", DefaultVertexFormat.POSITION_TEX_COLOR);
 
     @Override
     public void render(Matrix4f matrix, float x, float y, float z) {
@@ -41,17 +41,17 @@ public record BuiltLiquidGlass(SizeState size, QuadRadiusState radius, QuadColor
         float u1;
         float v0;
         float u0;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        Framebuffer screenFBO = mc.getFramebuffer();
+        Minecraft mc = Minecraft.getInstance();
+        RenderTarget screenFBO = mc.gameRenderer.mainRenderTarget();
 
 
 
         float width = this.size.width();
         float height = this.size.height();
-        SimpleFramebuffer scene = this.useBackground ? GpuSceneCopy.capture() : null;
+        TextureTarget scene = this.useBackground ? GpuSceneCopy.gui() : null;
         if (this.useBackground) {
-            float scaledW = mc.getWindow().getScaledWidth();
-            float scaledH = mc.getWindow().getScaledHeight();
+            float scaledW = mc.getWindow().getGuiScaledWidth();
+            float scaledH = mc.getWindow().getGuiScaledHeight();
             Vector4f pos0 = matrix.transform((Vector4fc)new Vector4f(x, y, z, 1.0f), new Vector4f());
             u0 = pos0.x / scaledW;
             v0 = (scaledH - pos0.y) / scaledH;
@@ -115,15 +115,15 @@ public record BuiltLiquidGlass(SizeState size, QuadRadiusState radius, QuadColor
                 shader.getUniform("DistortStrength").set(this.distortStrength);
             }
         }
-        BufferBuilder builder = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-        builder.vertex(matrix, x, y, z).texture(u0, v0).color(this.color.color1());
-        builder.vertex(matrix, x, y + height, z).texture(u1, v1).color(this.color.color2());
-        builder.vertex(matrix, x + width, y + height, z).texture(u2, v2).color(this.color.color3());
-        builder.vertex(matrix, x + width, y, z).texture(u3, v3).color(this.color.color4());
+        BufferBuilder builder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        builder.addVertex(matrix, x, y, z).setUv(u0, v0).setColor(this.color.color1());
+        builder.addVertex(matrix, x, y + height, z).setUv(u1, v1).setColor(this.color.color2());
+        builder.addVertex(matrix, x + width, y + height, z).setUv(u2, v2).setColor(this.color.color3());
+        builder.addVertex(matrix, x + width, y, z).setUv(u3, v3).setColor(this.color.color4());
         try {
-            BuiltBuffer data = builder.end();
+            MeshData data = builder.buildOrThrow();
             if (data != null) {
-                LIQUID_GLASS_SHADER_KEY.draw(data, shader, this.useBackground ? scene.getColorAttachmentView() : this.textureId.getGlTextureView(), this.useBackground ? RenderSystem.getSamplerCache().get(com.mojang.blaze3d.textures.FilterMode.LINEAR) : this.textureId.getSampler());
+                LIQUID_GLASS_SHADER_KEY.draw(data, shader, this.useBackground ? scene.getColorTextureView() : this.textureId.getTextureView(), this.useBackground ? RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR) : this.textureId.getSampler());
             }
         }
         catch (Exception e) {

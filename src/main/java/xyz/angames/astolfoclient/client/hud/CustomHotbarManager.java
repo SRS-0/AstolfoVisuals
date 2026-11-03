@@ -9,10 +9,10 @@ import dev.sxmurxy.mre.renderers.impl.BuiltRectangle;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -22,7 +22,7 @@ import xyz.angames.astolfoclient.client.module.Module;
 
 @Environment(value=EnvType.CLIENT)
 public class CustomHotbarManager {
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private Module cachedModule;
     private static final float SLOT_SIZE = 26.0f;
     private static final float SPACING = 4.0f;
@@ -40,23 +40,23 @@ public class CustomHotbarManager {
     private float animatedSlotPosition = 0.0f;
     private long lastUpdateTimeNs = -1L;
 
-    public void render(DrawContext context, float tickDelta) {
+    public void render(GuiGraphicsExtractor context, float tickDelta) {
         if (this.cachedModule == null) {
             this.cachedModule = AstolfoclientClient.moduleManager.getModuleByName("CustomHotbar");
         }
         if (this.cachedModule == null || !this.cachedModule.isEnabled()) {
             return;
         }
-        ClientPlayerEntity player = this.client.player;
-        if (player == null || this.client.options.hudHidden || player.isSpectator()) {
+        LocalPlayer player = this.client.player;
+        if (player == null || this.client.gameRenderer.gameRenderState().guiRenderState.isHudHidden || player.isSpectator()) {
             return;
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
-        int screenWidth = context.getScaledWindowWidth();
-        int screenHeight = context.getScaledWindowHeight();
-        context.getMatrices().pushMatrix();
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
+        int screenWidth = context.guiWidth();
+        int screenHeight = context.guiHeight();
+        context.pose().pushMatrix();
         float scaleModifier = this.getScaleModifier();
-        context.getMatrices().scale(scaleModifier, scaleModifier);
+        context.pose().scale(scaleModifier, scaleModifier);
         float scaledWidth = (float)screenWidth / scaleModifier;
         float scaledHeight = (float)screenHeight / scaleModifier;
         float startX = (scaledWidth - 266.0f) / 2.0f;
@@ -93,12 +93,12 @@ public class CustomHotbarManager {
         ((BuiltRectangle)Builder.rectangle().size(this.singleSlotSizeState).radius(this.commonRadiusState).color(new QuadColorState(faintFill)).build()).render(matrix, selectionX, selectionY);
         float itemBaseY = startY + 0.0f + 5.0f;
         for (int i = 0; i < 9; ++i) {
-            ItemStack stack = (ItemStack)player.getInventory().getStack(i);
+            ItemStack stack = (ItemStack)player.getInventory().getItem(i);
             if (stack.isEmpty()) continue;
             float itemX = startX + 0.0f + (float)i * 30.0f + 5.0f;
             this.renderItem(context, stack, (int)itemX, (int)itemBaseY);
         }
-        ItemStack offhandStack = player.getOffHandStack();
+        ItemStack offhandStack = player.getOffhandItem();
         if (!offhandStack.isEmpty()) {
             float offhandX = startX - 26.0f - 8.0f;
             float offhandY = startY;
@@ -107,12 +107,12 @@ public class CustomHotbarManager {
             ((BuiltBorder)Builder.border().size(this.singleSlotSizeState).radius(this.commonRadiusState).color(new QuadColorState(themeColor)).thickness(1.5f).build()).render(matrix, offhandX, offhandY);
             this.renderItem(context, offhandStack, (int)(offhandX + 0.0f + 5.0f), (int)(offhandY + 0.0f + 5.0f));
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
-    private void renderItem(DrawContext context, ItemStack stack, int x, int y) {
-        context.drawItem(stack, x, y);
-        context.drawStackOverlay(this.client.textRenderer, stack, x, y);
+    private void renderItem(GuiGraphicsExtractor context, ItemStack stack, int x, int y) {
+        context.item(stack, x, y);
+        context.itemDecorations(this.client.font, stack, x, y);
     }
 
     private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
@@ -131,11 +131,11 @@ public class CustomHotbarManager {
     }
 
     private float getScaleModifier() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        double currentGuiScale = mc.getWindow().getScaleFactor();
+        Minecraft mc = Minecraft.getInstance();
+        double currentGuiScale = mc.getWindow().getGuiScale();
         float baseScale = 0.8f;
         float referenceWidth = 2560.0f;
-        float screenWidth = mc.getWindow().getFramebufferWidth();
+        float screenWidth = mc.getWindow().getWidth();
         float resolutionScale = screenWidth / referenceWidth;
         resolutionScale = Math.max(0.5f, Math.min(1.5f, resolutionScale));
         return (float)(2.0 * (double)baseScale * (double)resolutionScale / currentGuiScale);

@@ -1,6 +1,6 @@
 {
   "screen": true,
-  "blockSize": 1248,
+  "blockSize": 1264,
   "uniforms": [
     {
       "name": "uInvViewProjMat",
@@ -585,6 +585,22 @@
       "components": 1,
       "offset": 992,
       "stride": 16
+    },
+    {
+      "name": "uDepthZeroToOne",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 1248,
+      "stride": 4
     }
   ],
   "samplers": [

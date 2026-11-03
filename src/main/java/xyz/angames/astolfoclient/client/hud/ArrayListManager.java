@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -25,23 +25,23 @@ import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
 @Environment(value=EnvType.CLIENT)
 public class ArrayListManager {
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
 
-    public void render(DrawContext context) {
+    public void render(GuiGraphicsExtractor context) {
         MsdfFont semibold = (MsdfFont)SEMIBOLD_FONT.get();
         if (semibold == null) {
             return;
         }
-        double currentGuiScale = this.client.getWindow().getScaleFactor();
+        double currentGuiScale = this.client.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
         float scaleModifier = (float)(2.0 / currentGuiScale);
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
-        float guiWidth = (float)this.client.getWindow().getScaledWidth() / scaleModifier;
+        context.pose().pushMatrix();
+        context.pose().scale(scaleModifier, scaleModifier);
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
+        float guiWidth = (float)this.client.getWindow().getGuiScaledWidth() / scaleModifier;
         List<Module> enabledModules = AstolfoclientClient.moduleManager.getModules().stream().filter(Module::isEnabled).filter(module -> !(module instanceof InterfaceModule)).sorted(Comparator.comparingDouble((Module m) -> semibold.getWidth(m.getName(), 7.5f)).reversed()).collect(Collectors.toList());
         float y = 3.0f;
         long timeOffset = 0L;
@@ -68,7 +68,7 @@ public class ArrayListManager {
             y += height + 2.5f;
             timeOffset += 180L;
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 }
 

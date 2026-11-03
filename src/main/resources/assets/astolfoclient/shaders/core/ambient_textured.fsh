@@ -5,6 +5,7 @@ layout(std140) uniform EffectData {
     float alpha;
     vec3 themeColor;
     bool themeSync;
+    vec4 uDepthRange;
 };
 
 in vec2 vTexCoord;

@@ -1,6 +1,7 @@
 package xyz.angames.astolfoclient.client;
 
 import com.google.common.eventbus.EventBus;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
@@ -12,21 +13,20 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.Defines;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.ShaderDefines;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.layers.RenderLayer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.LivingEntity;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.render.entity.feature.FeatureRenderer;
-import net.minecraft.client.render.entity.feature.FeatureRendererContext;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Identifier;
 import xyz.angames.astolfoclient.client.DiscordRpcManager;
 import xyz.angames.astolfoclient.client.command.CommandManager;
 import xyz.angames.astolfoclient.client.config.ConfigManager;
@@ -183,6 +183,7 @@ implements ClientModInitializer {
     }
 
     public void onInitializeClient() {
+        xyz.angames.astolfoclient.client.render.compat.EffectSubmit.register();
         instance = this;
         ModSounds.register();
         moduleManager = new ModuleManager();
@@ -272,7 +273,7 @@ implements ClientModInitializer {
             catch (Exception exception) {
                 // empty catch block
             }
-            if (FakePlayerEntity.instance != null && (client.world == null || FakePlayerEntity.instance.getEntityWorld() != client.world)) {
+            if (FakePlayerEntity.instance != null && (client.level == null || FakePlayerEntity.instance.level() != client.level)) {
                 try {
                     FakePlayerEntity.instance.discard();
                 }
@@ -290,8 +291,8 @@ implements ClientModInitializer {
                 }
                 catch (Exception exception) {}
             }
-            if (client.player != null && client.world != null) {
-                if (!(client.currentScreen instanceof HudEditorScreen)) {
+            if (client.player != null && client.level != null) {
+                if (!(client.gui.screen() instanceof HudEditorScreen)) {
                     try {
                         LivingEntity lookedTarget = TargetUtils.getLookedAtTarget(client, 40.0);
                         if (lookedTarget != null) {
@@ -357,13 +358,14 @@ implements ClientModInitializer {
                 }
             }
         });
-        LivingEntityFeatureRendererRegistrationCallback.EVENT.register((entityType, entityRenderer, registrationHelper, context) -> {
-            if (entityType == EntityType.PLAYER) {
-                registrationHelper.register((FeatureRenderer)new ChinaHatFeatureRenderer((FeatureRendererContext<PlayerEntityRenderState, PlayerEntityModel>)entityRenderer));
+        LivingEntityRenderLayerRegistrationCallback.EVENT.register((entityType, entityRenderer, registrationHelper, context) -> {
+            if (entityRenderer instanceof net.minecraft.client.renderer.entity.player.AvatarRenderer) {
+                registrationHelper.register((RenderLayer)new ChinaHatFeatureRenderer((RenderLayerParent<AvatarRenderState, PlayerModel>)entityRenderer));
             }
         });
-        WorldRenderEvents.END_MAIN.register(context -> gpsRenderer.render(context));
-        WorldRenderEvents.END_MAIN.register(context -> {
+        LevelRenderEvents.END_MAIN.register(context -> gpsRenderer.render(context));
+        LevelRenderEvents.COLLECT_SUBMITS.register(damageIndicatorRenderer::render);
+        LevelRenderEvents.END_MAIN.register(context -> {
             try {
                 lineGlyphsRenderer.render(context);
             }
@@ -377,7 +379,7 @@ implements ClientModInitializer {
                 // empty catch block
             }
             try {
-                damageIndicatorRenderer.render(context);
+
             }
             catch (Exception exception) {
                 // empty catch block
@@ -459,14 +461,14 @@ implements ClientModInitializer {
                 // empty catch block
             }
             try {
-                Render3DUtil.onRenderWorld(context.matrices());
+                Render3DUtil.onRenderWorld(context.poseStack());
             }
             catch (Exception exception) {
                 // empty catch block
             }
         });
-        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
-            MinecraftClient client = MinecraftClient.getInstance();
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("astolfovisuals", "hud"), (drawContext, tickDelta) -> {
+            Minecraft client = Minecraft.getInstance();
             for (Module module : moduleManager.getModules()) {
                 if (!module.isEnabled()) continue;
                 try {
@@ -474,10 +476,10 @@ implements ClientModInitializer {
                 }
                 catch (Exception exception) {}
             }
-            if (client.player != null && client.currentScreen == null) {
+            if (client.player != null && client.gui.screen() == null) {
                 if (AstolfoclientClient.isModuleEnabled("TargetHUD")) {
                     try {
-                        targetHudManager.render(drawContext, tickDelta.getTickProgress(true));
+                        targetHudManager.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                     }
                     catch (Exception exception) {
                         // empty catch block
@@ -501,7 +503,7 @@ implements ClientModInitializer {
                 }
                 if (AstolfoclientClient.isModuleEnabled("ActiveBinds")) {
                     try {
-                        activeBindsManager.render(drawContext, tickDelta.getTickProgress(true));
+                        activeBindsManager.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                     }
                     catch (Exception exception) {
                         // empty catch block
@@ -509,7 +511,7 @@ implements ClientModInitializer {
                 }
                 if (AstolfoclientClient.isModuleEnabled("Test")) {
                     try {
-                        testHudManager.render(drawContext, tickDelta.getTickProgress(true));
+                        testHudManager.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                     }
                     catch (Exception exception) {
                         // empty catch block
@@ -517,7 +519,7 @@ implements ClientModInitializer {
                 }
                 if (AstolfoclientClient.isModuleEnabled("InfoHud")) {
                     try {
-                        infoHudManager.render(drawContext, tickDelta.getTickProgress(true));
+                        infoHudManager.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                     }
                     catch (Exception exception) {
                         // empty catch block
@@ -549,7 +551,7 @@ implements ClientModInitializer {
                 }
                 if (AstolfoclientClient.isModuleEnabled("CustomHotbar")) {
                     try {
-                        customHotbarManager.render(drawContext, tickDelta.getTickProgress(true));
+                        customHotbarManager.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                     }
                     catch (Exception exception) {
                         // empty catch block
@@ -565,14 +567,14 @@ implements ClientModInitializer {
                 }
                 if (AstolfoclientClient.isModuleEnabled("MusicHUD")) {
                     try {
-                        musicHudManager.render(drawContext, tickDelta.getTickProgress(true));
+                        musicHudManager.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                     }
                     catch (Exception exception) {
                         // empty catch block
                     }
                 }
                 try {
-                    hudRenderer.render(drawContext, tickDelta.getTickProgress(true));
+                    hudRenderer.render(drawContext, tickDelta.getGameTimeDeltaPartialTick(true));
                 }
                 catch (Exception exception) {
                     // empty catch block
@@ -642,11 +644,11 @@ implements ClientModInitializer {
         EVENT_BUS = new EventBus();
         originalResourcePackDir = null;
         originalModsDir = null;
-        CHAMS_OUTLINE_SHADER = new ShaderProgramKey(Identifier.of((String)"astolfoclient", (String)"core/chams_outline"), VertexFormats.POSITION_TEXTURE, Defines.EMPTY);
-        LIQUID_GLASS_SHADER = new ShaderProgramKey(Identifier.of((String)"astolfoclient", (String)"core/liquid_glass"), VertexFormats.POSITION_COLOR_TEXTURE_OVERLAY_LIGHT_NORMAL, Defines.EMPTY);
-        COSMOS_FILL_SHADER = new ShaderProgramKey(Identifier.of((String)"astolfoclient", (String)"core/cosmos_fill"), VertexFormats.POSITION_TEXTURE_COLOR, Defines.EMPTY);
-        CHINA_HAT_SHADER = new ShaderProgramKey(Identifier.of((String)"astolfoclient", (String)"core/china_hat"), VertexFormats.POSITION_TEXTURE_COLOR, Defines.EMPTY);
-        BLOCK_OUTLINE_SHADER = new ShaderProgramKey(Identifier.of((String)"astolfoclient", (String)"core/block_outline"), VertexFormats.POSITION_TEXTURE_COLOR, Defines.EMPTY);
+        CHAMS_OUTLINE_SHADER = new ShaderProgramKey(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"core/chams_outline"), DefaultVertexFormat.POSITION_TEX, ShaderDefines.EMPTY);
+        LIQUID_GLASS_SHADER = new ShaderProgramKey(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"core/liquid_glass"), DefaultVertexFormat.ENTITY, ShaderDefines.EMPTY);
+        COSMOS_FILL_SHADER = new ShaderProgramKey(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"core/cosmos_fill"), DefaultVertexFormat.POSITION_TEX_COLOR, ShaderDefines.EMPTY);
+        CHINA_HAT_SHADER = new ShaderProgramKey(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"core/china_hat"), DefaultVertexFormat.POSITION_TEX_COLOR, ShaderDefines.EMPTY);
+        BLOCK_OUTLINE_SHADER = new ShaderProgramKey(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"core/block_outline"), DefaultVertexFormat.POSITION_TEX_COLOR, ShaderDefines.EMPTY);
         clickGuiKeyCode = 260;
         hudEditorKeyCode = 79;
     }

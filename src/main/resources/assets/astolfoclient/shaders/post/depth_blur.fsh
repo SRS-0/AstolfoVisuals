@@ -11,7 +11,7 @@ layout(std140) uniform DepthBlurConfig { vec2 BlurDir; float Radius; float Near;
 out vec4 fragColor;
 
 float linearizeDepth(float depth, float near, float far) {
-    float ndc = depth * 2.0 - 1.0;
+    float ndc = (1.0 - depth) * 2.0 - 1.0;
     return (2.0 * near * far) / (far + near - ndc * (far - near));
 }
 
@@ -19,7 +19,7 @@ void main() {
     float rawDepth = texture(DepthSampler, texCoord).r;
     
     // Skip blurring for sky/background pixels to keep the skybox/stars sharp
-    if (rawDepth >= 0.999999) {
+    if (rawDepth <= 0.000001) {
         fragColor = texture(InSampler, texCoord);
         return;
     }

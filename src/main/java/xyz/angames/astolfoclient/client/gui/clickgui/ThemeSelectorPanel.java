@@ -13,7 +13,7 @@ import dev.sxmurxy.mre.renderers.impl.BuiltText;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 
@@ -35,12 +35,12 @@ public class ThemeSelectorPanel {
         this.height = 40.0f;
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         if (this.isDragging) {
             this.x = (float)mouseX - this.dragOffsetX;
             this.y = (float)mouseY - this.dragOffsetY;
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         ((BuiltBlur)Builder.blur().size(new SizeState(this.width, this.height)).radius(new QuadRadiusState(6.0f)).blurRadius(15.0f).color(new QuadColorState(new Color(0, 0, 0, 240))).build()).render(matrix, this.x, this.y);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(this.width, this.height)).radius(new QuadRadiusState(6.0f)).color(new QuadColorState(new Color(16, 16, 16, 240))).build()).render(matrix, this.x, this.y);
         ((BuiltText)Builder.text().font((MsdfFont)FONT.get()).text("Theme").color(Color.WHITE).size(12.0f).build()).render(matrix, this.x + 5.0f, this.y + 5.0f);

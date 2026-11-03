@@ -3,6 +3,7 @@ layout(std140) uniform EffectData {
     mat4 uModelViewMat;
     mat4 uProjMat;
     float alpha;
+    vec4 uDepthRange;
 };
 
 out vec4 fragColor;

@@ -1,9 +1,9 @@
 package dev.sxmurxy.mre.msdf;
 
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.sxmurxy.mre.msdf.FontData;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.render.VertexConsumer;
 import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
@@ -52,10 +52,10 @@ public final class MsdfGlyph {
     public float apply(Matrix4f matrix, VertexConsumer consumer, float size, float x, float y, float z, int color) {
         float width = this.width * size;
         float height = this.height * size;
-        consumer.vertex(matrix, x, y -= this.topPosition * size, z).texture(this.minU, this.minV).color(color);
-        consumer.vertex(matrix, x, y + height, z).texture(this.minU, this.maxV).color(color);
-        consumer.vertex(matrix, x + width, y + height, z).texture(this.maxU, this.maxV).color(color);
-        consumer.vertex(matrix, x + width, y, z).texture(this.maxU, this.minV).color(color);
+        consumer.addVertex(matrix, x, y -= this.topPosition * size, z).setUv(this.minU, this.minV).setColor(color);
+        consumer.addVertex(matrix, x, y + height, z).setUv(this.minU, this.maxV).setColor(color);
+        consumer.addVertex(matrix, x + width, y + height, z).setUv(this.maxU, this.maxV).setColor(color);
+        consumer.addVertex(matrix, x + width, y, z).setUv(this.maxU, this.minV).setColor(color);
         return this.advance * size;
     }
 

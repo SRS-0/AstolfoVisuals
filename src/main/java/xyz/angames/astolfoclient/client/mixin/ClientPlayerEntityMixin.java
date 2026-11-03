@@ -3,12 +3,12 @@ package xyz.angames.astolfoclient.client.mixin;
 import com.mojang.authlib.GameProfile;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -16,27 +16,27 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import xyz.angames.astolfoclient.client.module.modules.render.NoRenderModule;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={ClientPlayerEntity.class})
+@Mixin(value={LocalPlayer.class})
 public abstract class ClientPlayerEntityMixin
-extends AbstractClientPlayerEntity {
-    public ClientPlayerEntityMixin(ClientWorld world, GameProfile profile) {
+extends AbstractClientPlayer {
+    public ClientPlayerEntityMixin(ClientLevel world, GameProfile profile) {
         super(world, profile);
     }
 
-    @Inject(method={"tickMovement"}, at={@At(value="HEAD")})
+    @Inject(method={"aiStep"}, at={@At(value="HEAD")})
     public void onTickMovement(CallbackInfo ci) {
-        ClientPlayerEntity player = (ClientPlayerEntity)(Object)this;
+        LocalPlayer player = (LocalPlayer)(Object)this;
         NoRenderModule noRender = NoRenderModule.getInstance();
         if (noRender != null && noRender.isEnabled() && noRender.blindness.get()) {
             boolean actuallyBlind = false;
-            for (StatusEffectInstance effect : player.getStatusEffects()) {
-                if (!effect.getEffectType().equals((Object)StatusEffects.BLINDNESS)) continue;
+            for (MobEffectInstance effect : player.getActiveEffects()) {
+                if (!effect.getEffect().equals((Object)MobEffects.BLINDNESS)) continue;
                 actuallyBlind = true;
                 break;
             }
             if (actuallyBlind) {
                 player.setSprinting(false);
-                MinecraftClient.getInstance().options.sprintKey.setPressed(false);
+                Minecraft.getInstance().options.keySprint.setDown(false);
             }
         }
     }

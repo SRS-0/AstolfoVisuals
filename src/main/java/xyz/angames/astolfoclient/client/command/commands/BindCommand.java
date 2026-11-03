@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -42,14 +42,14 @@ extends Command {
                 break;
             }
             case "list": {
-                BindCommand.sendMessage(String.valueOf(Formatting.GOLD) + "--- Key Binds ---");
+                BindCommand.sendMessage(String.valueOf(ChatFormatting.GOLD) + "--- Key Binds ---");
                 if (AstolfoclientClient.clickGuiKeyCode != -1) {
-                    BindCommand.sendMessage(String.valueOf(Formatting.GRAY) + "ClickGUI: " + String.valueOf(Formatting.AQUA) + KeyUtils.getKeyName(AstolfoclientClient.clickGuiKeyCode));
+                    BindCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "ClickGUI: " + String.valueOf(ChatFormatting.AQUA) + KeyUtils.getKeyName(AstolfoclientClient.clickGuiKeyCode));
                 }
                 if (AstolfoclientClient.hudEditorKeyCode != -1) {
-                    BindCommand.sendMessage(String.valueOf(Formatting.GRAY) + "HudEditor: " + String.valueOf(Formatting.AQUA) + KeyUtils.getKeyName(AstolfoclientClient.hudEditorKeyCode));
+                    BindCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + "HudEditor: " + String.valueOf(ChatFormatting.AQUA) + KeyUtils.getKeyName(AstolfoclientClient.hudEditorKeyCode));
                 }
-                AstolfoclientClient.moduleManager.getModules().stream().filter(m -> m.getKeyCode() != -1).forEach(m -> BindCommand.sendMessage(String.valueOf(Formatting.GRAY) + m.getName() + ": " + String.valueOf(Formatting.AQUA) + KeyUtils.getKeyName(m.getKeyCode())));
+                AstolfoclientClient.moduleManager.getModules().stream().filter(m -> m.getKeyCode() != -1).forEach(m -> BindCommand.sendMessage(String.valueOf(ChatFormatting.GRAY) + m.getName() + ": " + String.valueOf(ChatFormatting.AQUA) + KeyUtils.getKeyName(m.getKeyCode())));
                 break;
             }
             case "reset": {
@@ -62,7 +62,7 @@ extends Command {
             }
             case "clear": {
                 AstolfoclientClient.moduleManager.getModules().forEach(m -> m.setKeyCode(-1));
-                BindCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Cleared all module keybinds! (ClickGUI and HudEditor were kept safe)");
+                BindCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Cleared all module keybinds! (ClickGUI and HudEditor were kept safe)");
                 break;
             }
             default: {
@@ -75,17 +75,17 @@ extends Command {
         boolean found = false;
         if (name.equalsIgnoreCase("clickgui")) {
             AstolfoclientClient.clickGuiKeyCode = key;
-            BindCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Bound ClickGUI to " + (key == -1 ? "NONE" : keyName));
+            BindCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Bound ClickGUI to " + (key == -1 ? "NONE" : keyName));
             found = true;
         } else if (name.equalsIgnoreCase("hudeditor")) {
             AstolfoclientClient.hudEditorKeyCode = key;
-            BindCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Bound HudEditor to " + (key == -1 ? "NONE" : keyName));
+            BindCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Bound HudEditor to " + (key == -1 ? "NONE" : keyName));
             found = true;
         } else {
             Module module = AstolfoclientClient.moduleManager.getModuleByName(name);
             if (module != null) {
                 module.setKeyCode(key);
-                BindCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Bound " + module.getName() + " to " + (key == -1 ? "NONE" : keyName));
+                BindCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Bound " + module.getName() + " to " + (key == -1 ? "NONE" : keyName));
                 found = true;
             } else {
                 this.sendError("Module not found: " + name);

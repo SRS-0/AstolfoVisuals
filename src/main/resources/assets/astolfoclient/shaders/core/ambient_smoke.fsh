@@ -5,6 +5,7 @@ layout(std140) uniform EffectData {
     float time;
     vec3 themeColor;
     float alpha;
+    vec4 uDepthRange;
 };
 
 in vec3 lookDir;

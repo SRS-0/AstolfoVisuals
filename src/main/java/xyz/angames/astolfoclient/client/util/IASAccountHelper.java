@@ -7,17 +7,17 @@ import java.util.Comparator;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import xyz.angames.astolfoclient.client.util.RandomNameGenerator;
 
 @Environment(value=EnvType.CLIENT)
 public class IASAccountHelper {
-    public static void onScreenInit(Screen screen, Consumer<ButtonWidget> buttonAdder) {
+    public static void onScreenInit(Screen screen, Consumer<Button> buttonAdder) {
         if (screen == null || buttonAdder == null) {
             return;
         }
@@ -27,41 +27,41 @@ public class IASAccountHelper {
         }
     }
 
-    private static void rebalanceAndAddRandomButton(Screen screen, Consumer<ButtonWidget> buttonAdder) {
+    private static void rebalanceAndAddRandomButton(Screen screen, Consumer<Button> buttonAdder) {
         int targetRowY = screen.height - 48;
         int btnHeight = 20;
         int btnWidth = 74;
         int gap = 4;
         int startX = screen.width / 2 - 154;
-        ArrayList<ClickableWidget> topRowWidgets = new ArrayList<ClickableWidget>();
+        ArrayList<AbstractWidget> topRowWidgets = new ArrayList<AbstractWidget>();
         try {
-            for (Element child : screen.children()) {
-                ClickableWidget widget;
-                if (!(child instanceof ClickableWidget) || (widget = (ClickableWidget)child).getY() < screen.height - 60 || widget.getY() > screen.height - 35) continue;
+            for (GuiEventListener child : screen.children()) {
+                AbstractWidget widget;
+                if (!(child instanceof AbstractWidget) || (widget = (AbstractWidget)child).getY() < screen.height - 60 || widget.getY() > screen.height - 35) continue;
                 topRowWidgets.add(widget);
             }
         }
         catch (Throwable throwable) {
             // empty catch block
         }
-        topRowWidgets.sort(Comparator.comparingInt(ClickableWidget::getX));
+        topRowWidgets.sort(Comparator.comparingInt(AbstractWidget::getX));
         if (topRowWidgets.size() >= 3) {
-            ClickableWidget btn0 = (ClickableWidget)topRowWidgets.get(0);
+            AbstractWidget btn0 = (AbstractWidget)topRowWidgets.get(0);
             btn0.setX(startX);
             btn0.setY(targetRowY);
             btn0.setWidth(btnWidth);
-            ClickableWidget btn1 = (ClickableWidget)topRowWidgets.get(1);
+            AbstractWidget btn1 = (AbstractWidget)topRowWidgets.get(1);
             btn1.setX(startX + (btnWidth + gap));
             btn1.setY(targetRowY);
             btn1.setWidth(btnWidth);
-            ClickableWidget btn2 = (ClickableWidget)topRowWidgets.get(2);
+            AbstractWidget btn2 = (AbstractWidget)topRowWidgets.get(2);
             btn2.setX(startX + (btnWidth + gap) * 2);
             btn2.setY(targetRowY);
             btn2.setWidth(btnWidth);
         }
         int randomBtnX = startX + (btnWidth + gap) * 3;
         int randomBtnY = targetRowY;
-        ButtonWidget randomBtn = ButtonWidget.builder((Text)Text.literal((String)"Random"), btn -> IASAccountHelper.addRandomOfflineAccount(screen)).dimensions(randomBtnX, randomBtnY, btnWidth, btnHeight).build();
+        Button randomBtn = Button.builder((Component)Component.literal((String)"Random"), btn -> IASAccountHelper.addRandomOfflineAccount(screen)).bounds(randomBtnX, randomBtnY, btnWidth, btnHeight).build();
         buttonAdder.accept(randomBtn);
     }
 
@@ -81,11 +81,11 @@ public class IASAccountHelper {
                     updateMethod.setAccessible(true);
                     String searchText = "";
                     for (Field sField : screen.getClass().getDeclaredFields()) {
-                        if (!TextFieldWidget.class.isAssignableFrom(sField.getType())) continue;
+                        if (!EditBox.class.isAssignableFrom(sField.getType())) continue;
                         sField.setAccessible(true);
-                        TextFieldWidget tf = (TextFieldWidget)sField.get(screen);
+                        EditBox tf = (EditBox)sField.get(screen);
                         if (tf == null) continue;
-                        searchText = tf.getText();
+                        searchText = tf.getValue();
                         break;
                     }
                     updateMethod.invoke(listObj, searchText);

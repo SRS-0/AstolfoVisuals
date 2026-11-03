@@ -1,23 +1,22 @@
 package xyz.angames.astolfoclient.client.effects;
-import net.minecraft.client.MinecraftClient;
-
 import com.mojang.blaze3d.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.util.ArrayList;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -35,7 +34,7 @@ public class GhostEspRenderer {
         this.manager = manager;
     }
 
-    public void render(WorldRenderContext context) {
+    public void render(LevelRenderContext context) {
         Map<Entity, GhostEspEffect> allEffects;
         Module targetEspModule = AstolfoclientClient.moduleManager.getModuleByName("TargetESP");
         if (targetEspModule == null || !targetEspModule.isEnabled()) {
@@ -65,9 +64,9 @@ public class GhostEspRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc((int)515);
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-        Tessellator tessellator = Tessellator.getInstance();
+        Tesselator tessellator = Tesselator.getInstance();
         double safeTime = currentTime % 1000000L;
         float speed = 0.006f;
         int trailLength = 22;
@@ -92,18 +91,18 @@ public class GhostEspRenderer {
             float cr = 1.0f;
             float cg = 1.0f - hitColorFactor;
             float cb = 1.0f - hitColorFactor;
-            float baseRadius = target.getWidth() * baseDistanceMultiplier;
+            float baseRadius = target.getBbWidth() * baseDistanceMultiplier;
             if (age > 400L) {
                 float endProgress = (float)(age - 400L) / 200.0f;
                 baseRadius *= Math.max(0.0f, 1.0f - endProgress);
             }
-            float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true);
-            double tX = target.lastRenderX + (target.getX() - target.lastRenderX) * (double)tickDelta;
-            double tY = target.lastRenderY + (target.getY() - target.lastRenderY) * (double)tickDelta;
-            double tZ = target.lastRenderZ + (target.getZ() - target.lastRenderZ) * (double)tickDelta;
-            double camX = context.gameRenderer().getCamera().getCameraPos().x;
-            double camY = context.gameRenderer().getCamera().getCameraPos().y;
-            double camZ = context.gameRenderer().getCamera().getCameraPos().z;
+            float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
+            double tX = target.xOld + (target.getX() - target.xOld) * (double)tickDelta;
+            double tY = target.yOld + (target.getY() - target.yOld) * (double)tickDelta;
+            double tZ = target.zOld + (target.getZ() - target.zOld) * (double)tickDelta;
+            double camX = context.gameRenderer().mainCamera().position().x;
+            double camY = context.gameRenderer().mainCamera().position().y;
+            double camZ = context.gameRenderer().mainCamera().position().z;
             for (int j = 0; j < 3; ++j) {
                 float breathing = (float)Math.sin(safeTime * 0.002 + (double)j * 1.5);
                 float currentRadius = baseRadius + breathing * 0.2f;
@@ -121,16 +120,16 @@ public class GhostEspRenderer {
                     float histAnimTime = histSafeTime / 1000.0f;
                     float scanSpeed = 2.0f;
                     float phase = (float)Math.sin(histAnimTime * scanSpeed);
-                    float scanY = (phase + 1.0f) / 2.0f * target.getHeight();
-                    MatrixStack matrices = context.matrices();
-                    matrices.push();
+                    float scanY = (phase + 1.0f) / 2.0f * target.getBbHeight();
+                    PoseStack matrices = context.poseStack();
+                    matrices.pushPose();
                     matrices.translate(tX + (double)localX - camX, tY + (double)scanY + (double)localY - camY, tZ + (double)localZ - camZ);
-                    matrices.multiply(context.gameRenderer().getCamera().getRotation());
+                    matrices.mulPose(context.gameRenderer().mainCamera().rotation());
                     matrices.scale(scale, scale, scale);
-                    BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.TRIANGLE_FAN, VertexFormats.POSITION_COLOR);
-                    this.drawGlowingDot(matrices.peek().getPositionMatrix(), buffer, r, g, b, cr, cg, cb, alpha);
-                    BufferRenderer.drawWithGlobalProgram((BuiltBuffer)buffer.end());
-                    matrices.pop();
+                    BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLE_FAN, DefaultVertexFormat.POSITION_COLOR);
+                    this.drawGlowingDot(matrices.last().pose(), buffer, r, g, b, cr, cg, cb, alpha);
+                    BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
+                    matrices.popPose();
                 }
             }
         }
@@ -142,12 +141,12 @@ public class GhostEspRenderer {
     }
 
     private void drawGlowingDot(Matrix4f matrix, BufferBuilder buffer, float r, float g, float b, float cr, float cg, float cb, float alpha) {
-        buffer.vertex(matrix, 0.0f, 0.0f, 0.0f).color(cr, cg, cb, alpha);
+        buffer.addVertex(matrix, 0.0f, 0.0f, 0.0f).setColor(cr, cg, cb, alpha);
         for (int i = 0; i <= 360; i += 20) {
             double rad = Math.toRadians(i);
             float px = (float)Math.cos(rad);
             float py = (float)Math.sin(rad);
-            buffer.vertex(matrix, px, py, 0.0f).color(r, g, b, 0.0f);
+            buffer.addVertex(matrix, px, py, 0.0f).setColor(r, g, b, 0.0f);
         }
     }
 }

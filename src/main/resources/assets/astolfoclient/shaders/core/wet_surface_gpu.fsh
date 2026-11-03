@@ -20,6 +20,7 @@ layout(std140) uniform EffectData {
     int u_Ripples;
     vec3 u_ThemeColor;
     int u_UseThemeColor;
+    float uDepthZeroToOne;
 };
 
 
@@ -88,7 +89,7 @@ float puddleNoise(vec2 p) {
 }
 
 vec3 reconstructViewPosition(vec2 uv, float depth) {
-    vec4 clip = vec4(uv * 2.0 - 1.0, depth * 2.0 - 1.0, 1.0);
+    vec4 clip = vec4(uv * 2.0 - 1.0, mix(depth * 2.0 - 1.0, depth, uDepthZeroToOne), 1.0);
     vec4 view = u_InverseProjectionMatrix * clip;
     float invW = abs(view.w) > 0.000001 ? 1.0 / view.w : 1.0;
     return view.xyz * invW;
@@ -106,10 +107,10 @@ vec3 reconstructViewNormal(vec2 uv, vec3 centerPosition) {
     float depthD = texture(u_DepthTexture, safeUv(uv - vec2(0.0, texel.y))).r;
     float depthU = texture(u_DepthTexture, safeUv(uv + vec2(0.0, texel.y))).r;
 
-    vec3 posL = reconstructViewPosition(uv - vec2(texel.x, 0.0), min(depthL, 0.999999));
-    vec3 posR = reconstructViewPosition(uv + vec2(texel.x, 0.0), min(depthR, 0.999999));
-    vec3 posD = reconstructViewPosition(uv - vec2(0.0, texel.y), min(depthD, 0.999999));
-    vec3 posU = reconstructViewPosition(uv + vec2(0.0, texel.y), min(depthU, 0.999999));
+    vec3 posL = reconstructViewPosition(uv - vec2(texel.x, 0.0), max(depthL, 0.000001));
+    vec3 posR = reconstructViewPosition(uv + vec2(texel.x, 0.0), max(depthR, 0.000001));
+    vec3 posD = reconstructViewPosition(uv - vec2(0.0, texel.y), max(depthD, 0.000001));
+    vec3 posU = reconstructViewPosition(uv + vec2(0.0, texel.y), max(depthU, 0.000001));
 
     vec3 rightA = posR - centerPosition;
     vec3 rightB = centerPosition - posL;
@@ -201,7 +202,7 @@ vec2 traceReflection(vec3 origin, vec3 rayDirection, vec3 surfaceNormal, out flo
         lastUv = rayUv;
 
         float sceneDepth = texture(u_DepthTexture, rayUv).r;
-        if (sceneDepth < 0.999995) {
+        if (sceneDepth > 0.000005) {
             vec3 scenePosition = reconstructViewPosition(rayUv, sceneDepth);
             float depthDelta = scenePosition.z - rayPosition.z;
             float heightAboveSurface = dot(scenePosition - origin, surfaceNormal);
@@ -294,7 +295,7 @@ vec3 getEnvironmentRadiance(vec3 worldDir, vec3 worldPos, float ambient, float t
 void main() {
     vec4 original = texture(u_SceneTexture, vUv);
     float depth = texture(u_DepthTexture, vUv).r;
-    if (depth >= 0.999995) {
+    if (depth <= 0.000005) {
         fragColor = original;
         return;
     }

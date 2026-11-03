@@ -5,12 +5,12 @@ import java.util.List;
 import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.PlainTextContent;
-import net.minecraft.text.Text;
-import net.minecraft.text.TextContent;
-import net.minecraft.text.TranslatableTextContent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentContents;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.util.FriendManager;
@@ -44,7 +44,7 @@ extends Module {
         }
     }
 
-    public static Text getProtectedText(Text original) {
+    public static Component getProtectedText(Component original) {
         if (original == null) {
             return null;
         }
@@ -63,31 +63,31 @@ extends Module {
         }
     }
 
-    private static Text protectTree(Text text) {
-        TextContent content;
+    private static Component protectTree(Component text) {
+        ComponentContents content;
         if (text == null) {
             return null;
         }
-        TextContent newContent = content = text.getContent();
+        ComponentContents newContent = content = text.getContents();
         boolean contentChanged = false;
-        if (content instanceof PlainTextContent.Literal) {
-            PlainTextContent.Literal literal = (PlainTextContent.Literal)content;
-            String str = literal.string();
+        if (content instanceof PlainTextContents.LiteralContents) {
+            PlainTextContents.LiteralContents literal = (PlainTextContents.LiteralContents)content;
+            String str = literal.text();
             String replaced = NameProtectModule.replaceTargets(str);
             if (!replaced.equals(str)) {
-                newContent = Text.literal((String)replaced).getContent();
+                newContent = Component.literal((String)replaced).getContents();
                 contentChanged = true;
             }
-        } else if (content instanceof TranslatableTextContent) {
-            TranslatableTextContent translatableContent = (TranslatableTextContent)content;
+        } else if (content instanceof TranslatableContents) {
+            TranslatableContents translatableContent = (TranslatableContents)content;
             Object[] args = translatableContent.getArgs();
             Object[] newArgs = new Object[args.length];
             boolean argsChanged = false;
             for (int i = 0; i < args.length; ++i) {
                 Object protectedArg;
                 Object arg = args[i];
-                if (arg instanceof Text) {
-                    Text argText = (Text)arg;
+                if (arg instanceof Component) {
+                    Component argText = (Component)arg;
                     newArgs[i] = protectedArg = NameProtectModule.protectTree(argText);
                     if (protectedArg == argText) continue;
                     argsChanged = true;
@@ -103,15 +103,15 @@ extends Module {
                 newArgs[i] = arg;
             }
             if (argsChanged) {
-                newContent = new TranslatableTextContent(translatableContent.getKey(), translatableContent.getFallback(), newArgs);
+                newContent = new TranslatableContents(translatableContent.getKey(), translatableContent.getFallback(), newArgs);
                 contentChanged = true;
             }
         }
-        List<Text> siblings = text.getSiblings();
-        ArrayList<Text> newSiblings = new ArrayList<Text>(siblings.size());
+        List<Component> siblings = text.getSiblings();
+        ArrayList<Component> newSiblings = new ArrayList<Component>(siblings.size());
         boolean siblingsChanged = false;
-        for (Text sibling : siblings) {
-            Text protectedSibling = NameProtectModule.protectTree(sibling);
+        for (Component sibling : siblings) {
+            Component protectedSibling = NameProtectModule.protectTree(sibling);
             newSiblings.add(protectedSibling);
             if (protectedSibling == sibling) continue;
             siblingsChanged = true;
@@ -119,8 +119,8 @@ extends Module {
         if (!contentChanged && !siblingsChanged) {
             return text;
         }
-        MutableText result = MutableText.of((TextContent)newContent).setStyle(text.getStyle());
-        for (Text sibling : newSiblings) {
+        MutableComponent result = MutableComponent.create((ComponentContents)newContent).setStyle(text.getStyle());
+        for (Component sibling : newSiblings) {
             result.append(sibling);
         }
         return result;
@@ -129,8 +129,8 @@ extends Module {
     private static List<TargetEntry> getActiveTargets() {
         String myName;
         ArrayList<TargetEntry> targets = new ArrayList<TargetEntry>();
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.getSession() != null && client.getSession().getUsername() != null && !(myName = client.getSession().getUsername().trim()).isEmpty() && !myName.equalsIgnoreCase("astolfoclient.top")) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.getUser() != null && client.getUser().getName() != null && !(myName = client.getUser().getName().trim()).isEmpty() && !myName.equalsIgnoreCase("astolfoclient.top")) {
             targets.add(new TargetEntry(myName, "astolfoclient.top"));
         }
         for (String friend : FriendManager.getFriends()) {

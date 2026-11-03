@@ -1,52 +1,40 @@
-# Astolfo Visuals — Fabric 1.21.11 source port
+# Astolfo Visuals — Fabric 26.2 source port
 
-The recovered client compiles and an installable remapped JAR is produced by `build`. This is a reconstructed source port, with ongoing in-game verification; it is not a claim that every visual mode is identical to the original.
+Independent port of the recovered Astolfo Visuals client. The completed 1.21.11 source is preserved on the [1.21.11 branch](https://github.com/SRS-0/AstolfoVisuals/tree/1.21.11).
 
 ## Install
 
-Use Minecraft **1.21.11**, Fabric Loader **0.19.3 or newer**, Fabric API for **1.21.11**, and Java **21 or newer**. Install `build/libs/astolfovisuals-2.0-port.3+1.21.11.jar` in the instance's `mods` folder. Do not also install the original 1.21.4 JAR. The `-sources.jar` is for source inspection, not installation.
+Use Minecraft 26.2, Java 25, Fabric Loader 0.20.1 or newer, and Fabric API for 26.2 (built against 0.161.0+26.2). Build the project and put the installable JAR from build/libs/ in your instance's mods folder. Install only one Astolfo Visuals version. The sources JAR is for developers.
 
-Insert or right Shift opens the mod menu. The local command `$bind add clickgui K` changes the shortcut. This port targets the normal OpenGL renderer. No additional rendering mod is required. VulkanMod compatibility is outside the current scope.
+Insert or right Shift opens the menu. The development profile uses K. Clear screen backgrounds are retained.
 
-## What changed
+## 26.2 port.2 rendering fixes
 
-- Removed the shared screen backdrop blur, darkening texture, and in-game gradient. Menus and the HUD editor keep a clear view behind their controls.
+World post effects now capture the current scene immediately, independently of GUI extraction. Post effects sample scene depth without binding the same texture as a depth attachment. HitGlow runs after opaque terrain is drawn. Sky shaders use reversed depth and the device clip-depth range. GUI effects carry explicit quad-local coordinates, and the watermark scales down to fit small windows.
 
-- Remapped and decompiled the original 1.21.4 classes, repaired decompiler errors, and migrated Minecraft/Fabric APIs, inputs, render events, entity states, models, inventory, skins, and mixins to 1.21.11.
-- Replaced active direct OpenGL effect paths with Minecraft GPU pipelines, explicit vertex/index buffers, texture views, samplers, render targets, and uniform buffers.
-- Migrated rounded panels, borders, textures, MSDF text, blur, and liquid glass to the deferred GUI renderer. Per-element parameters are vertex attributes so Minecraft can batch the elements while preserving order and clipping. The menu fits smaller windows.
-- Corrected block and ragdoll fill centers to use the same coordinate space as the uploaded vertices.
-- Fixed hand bloom blending to respect mask opacity, matched texture-coordinate attributes to the mesh, preserved antialiased hand-mask edges, and restored the previous render target even when capture fails.
-- Migrated the projectile timer text and animated HUD image to native deferred GUI drawing.
-- Migrated world-effect shaders, ambient sky/fog effects, hit/target/jump distortion, wet surfaces, and hand glass/blur/motion/bloom to backend-neutral render passes. Hand command queues are executed before their capture target is composited.
-- Replaced legacy line widths with triangle geometry so wide outlines and trails do not require backend-specific line-width support.
-- Added reusable scene copies for effects that sample the scene, with resize/shutdown cleanup. Converted the depth-blur post-effect resource format to 1.21.11.
-- Preserved original resources, embedded dependencies, GPL-3.0-only metadata, module configuration, and optional integrations. IAS is optional and detected reflectively.
+## Migration
 
-Fragment shading and effects execute on the GPU. Java still prepares geometry, settings, and particle state. This port does not move the whole Minecraft client or particle simulation into GPU compute shaders.
+- Migrated Yarn names to Mojang names and moved to unobfuscated Fabric Loom with separate client/common source sets.
+- Updated GUI extraction, HUD registration, Minecraft GUI ownership, level render events, render states, entity layers, inputs, clocks, item submission and mixin targets for 26.2.
+- Updated GPU pipeline layouts, vertex formats, bind groups, texture formats and indexed drawing to the 26.2 graphics API.
+- Updated effect depth comparisons, near-plane clipping and hand depth clears for reversed depth. Scene-depth shaders account for the device's clip-depth range.
+- Moved direct shader-hat drawing to a registered feature renderer execution phase.
+- Preserved deferred GUI panels, MSDF text, clipping, scene sampling, shader effects and triangle-based wide lines.
+- Hand capture uses an explicit transparent RGBA texture, flushes queued geometry while that target is active, then restores the previous attachments before composition.
 
-## Build and checks
+Effects run through Minecraft's GPU API. Java still prepares geometry, settings and simulation; this is not a GPU compute rewrite of the entire client. OpenGL is the tested backend. Native Vulkan and third-party renderer/shader-pack compatibility are not claimed without separate testing.
 
-Select a JDK 21+ and run from this directory:
+## Build
 
-```powershell
-.\gradlew.bat build verifyShaders
-.\gradlew.bat runClient
-```
+Select JDK 25 and run:
 
-`verifyShaders` performs 90 OpenGL shader-stage compilation checks, including the deferred GUI variants and depth-blur fragment shader. Minecraft includes are expanded from the mapped game resources. OpenGL SPIR-V validation raises GLSL 150 to 330 for the validator; shipped sources retain GLSL 150. The validation runtime is configured for Windows x64.
+    .\gradlew.bat build verifyShaders
+    .\gradlew.bat runClient
 
-`tools/AuditMixins.java` checks configured target classes, shadows, accessors, invokers, injection argument signatures, and invoked method selectors against the mapped game JAR. `mixin-audit.log` records the latest check. This static audit supplements real startup checks.
+verifyShaders compiles 90 shader stages against the 26.2 include resources. Its validator is configured for Windows x64. tools/AuditMixins.java checks configured target classes, selectors, accessors, shadows and injection signatures. See TEST-RESULTS.md and migration/ for verification evidence.
 
+## Provenance and limits
 
-## Recovered source and provenance
+This is reconstructed decompiled source, not the original authoring project. Original authorship and GPL-3.0-only metadata are preserved, along with original resources and embedded dependencies. The original JAR remains at ../astolfovisuals-2.0(1).jar; SHA-256: 97e26ddf6188e50f39db872d40f4d5e4038b5c62ae423d093f7fd4a2e22d6413.
 
-The original `../astolfovisuals-2.0(1).jar`, extracted `../src`, and initial `../recovered` decompilation are preserved. CFR 0.152 recovered 230 top-level Java source files from 402 class files; selected classes were recovered again with Vineflower 1.11.1. Original intermediary names were remapped using Yarn 1.21.4 build 8 before the port to Yarn 1.21.11 build 6. Decompiled source is not the original authoring project.
-
-Original JAR SHA-256: `97e26ddf6188e50f39db872d40f4d5e4038b5c62ae423d093f7fd4a2e22d6413`.
-
-## Verification scope and limitations
-
-The complete build, shader compiler checks, and static mixin audit pass. OpenGL startup, entry into a local creative world, and visible mod menu rendering have been exercised. Further effect testing is recorded in `TEST-RESULTS.md` as it completes.
-
-Not every module, setting combination, custom player model, multiplayer interaction, or third-party shader pack has been visually verified. This does not establish Iris/shader-pack compatibility. Some sound events in the original resource manifest reference audio files absent from the supplied original JAR; those sounds remain unavailable. Development sessions use Fabric's offline test user, so Realms authorization messages are expected.
+Not every module, custom player model, multiplayer interaction or setting combination has been visually verified. Original missing audio assets remain missing. Offline development users produce expected Realms/profile authorization errors. Local OS performance-counter warnings are unrelated to the mod renderer.

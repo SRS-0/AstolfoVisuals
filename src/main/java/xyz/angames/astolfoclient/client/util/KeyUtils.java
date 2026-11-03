@@ -1,11 +1,11 @@
 package xyz.angames.astolfoclient.client.util;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.util.InputUtil;
 
 @Environment(value=EnvType.CLIENT)
 public class KeyUtils {
@@ -35,8 +35,8 @@ public class KeyUtils {
         }
         for (i = 0; i < 350; ++i) {
             try {
-                InputUtil.Key key = InputUtil.Type.KEYSYM.createFromCode(i);
-                String name = key.getTranslationKey();
+                InputConstants.Key key = InputConstants.Type.KEYSYM.getOrCreate(i);
+                String name = key.getName();
                 if (name == null || name.isEmpty() || name.contains("unknown")) continue;
                 String simpleName = name.replace("key.keyboard.", "").toUpperCase();
                 keyNameToCode.put(simpleName, i);

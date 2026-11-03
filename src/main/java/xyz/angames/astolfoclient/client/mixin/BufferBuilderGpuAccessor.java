@@ -1,9 +1,9 @@
 package xyz.angames.astolfoclient.client.mixin;
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
-import net.minecraft.client.render.BufferBuilder;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Invoker;
+import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(BufferBuilder.class)
 public interface BufferBuilderGpuAccessor {
-    @Invoker("beginElement") long astolfo$beginElement(VertexFormatElement element);
+    @Accessor("vertexPointer") long astolfo$vertexPointer();
 }

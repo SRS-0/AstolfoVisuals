@@ -9,26 +9,26 @@ import java.util.Map;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.Heightmap;
+import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -41,7 +41,7 @@ import xyz.angames.astolfoclient.client.render.WetSurfaceRenderer;
 @Environment(value=EnvType.CLIENT)
 public class RainModule
 extends Module {
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
     public final ModeSetting preset = new ModeSetting("Preset", "Rain", "Drizzle", "Rain", "Downpour", "Storm");
     public final NumberSetting density = new NumberSetting("Density", 1.0, 0.1, 3.0, 0.1);
     public final NumberSetting radius = new NumberSetting("Radius", 26.0, 8.0, 64.0, 1.0);
@@ -144,7 +144,7 @@ extends Module {
     private final List<Droplet> dropletList = new ArrayList<Droplet>();
     private final List<Mist> mistList = new ArrayList<Mist>();
     private final Map<Long, Integer> groundCache = new HashMap<Long, Integer>();
-    private final BlockPos.Mutable scratchPos = new BlockPos.Mutable();
+    private final BlockPos.MutableBlockPos scratchPos = new BlockPos.MutableBlockPos();
     private final Random random = new Random();
     private long lastFrameNanos;
     private float clock;
@@ -159,7 +159,7 @@ extends Module {
     public RainModule() {
         super("Rain", "Realistic volumetric rain with wet ground & reflections", Module.Category.RENDER);
         this.addSettings(this.preset, this.density, this.radius, this.altitude, this.dropSize, this.fallSpeed, this.wind, this.opacity, this.splashes, this.droplets, this.groundMist, this.wetGround, this.wetness, this.puddleCoverage, this.reflectionStrength, this.reflectionDistance, this.reflectionQuality, this.puddleRipples, this.rippleStrength, this.lightning, this.skyCheck, this.onlyWhenRaining, this.colorMode, this.customRed, this.customGreen, this.customBlue);
-        WorldRenderEvents.END_MAIN.register(this::onWorldRender);
+        LevelRenderEvents.END_MAIN.register(this::onWorldRender);
     }
 
     @Override
@@ -192,7 +192,7 @@ extends Module {
 
     @Override
     public void onTick() {
-        if (this.mc.player == null || this.mc.world == null) {
+        if (this.mc.player == null || this.mc.level == null) {
             this.clearAll();
             return;
         }
@@ -245,15 +245,15 @@ extends Module {
         float r = (float)this.radius.get();
         float area = r * r * 0.0155f;
         int count = (int)(area * (float)this.density.get() * this.presetDensity() * 26.0f);
-        return MathHelper.clamp((int)count, (int)40, (int)4500);
+        return Mth.clamp((int)count, (int)40, (int)4500);
     }
 
     private float[] resolveColor() {
         int color;
         if (this.colorMode.is("Custom")) {
-            int r = (int)MathHelper.clamp((float)((float)this.customRed.get()), (float)0.0f, (float)255.0f);
-            int g = (int)MathHelper.clamp((float)((float)this.customGreen.get()), (float)0.0f, (float)255.0f);
-            int b = (int)MathHelper.clamp((float)((float)this.customBlue.get()), (float)0.0f, (float)255.0f);
+            int r = (int)Mth.clamp((float)((float)this.customRed.get()), (float)0.0f, (float)255.0f);
+            int g = (int)Mth.clamp((float)((float)this.customGreen.get()), (float)0.0f, (float)255.0f);
+            int b = (int)Mth.clamp((float)((float)this.customBlue.get()), (float)0.0f, (float)255.0f);
             color = r << 16 | g << 8 | b;
         } else {
             color = this.colorMode.is("Theme") ? ThemeManager.getThemedColor(0L) : -3613464;
@@ -276,10 +276,10 @@ extends Module {
             return cached;
         }
         try {
-            top = this.mc.world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z);
+            top = this.mc.level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
         }
         catch (Throwable ignored) {
-            top = this.mc.world.getBottomY();
+            top = this.mc.level.getMinY();
         }
         if (this.groundCache.size() < 20000) {
             this.groundCache.put(key, top);
@@ -288,14 +288,14 @@ extends Module {
     }
 
     private boolean isBlocking(double x, double y, double z) {
-        if (this.mc.world == null) {
+        if (this.mc.level == null) {
             return false;
         }
-        this.scratchPos.set(MathHelper.floor((double)x), MathHelper.floor((double)y), MathHelper.floor((double)z));
-        if (!this.mc.world.getChunkManager().isChunkLoaded(this.scratchPos.getX() >> 4, this.scratchPos.getZ() >> 4)) {
+        this.scratchPos.set(Mth.floor((double)x), Mth.floor((double)y), Mth.floor((double)z));
+        if (!this.mc.level.getChunkSource().hasChunk(this.scratchPos.getX() >> 4, this.scratchPos.getZ() >> 4)) {
             return false;
         }
-        BlockState state = this.mc.world.getBlockState((BlockPos)this.scratchPos);
+        BlockState state = this.mc.level.getBlockState((BlockPos)this.scratchPos);
         if (!state.getFluidState().isEmpty()) {
             return true;
         }
@@ -303,7 +303,7 @@ extends Module {
             return false;
         }
         try {
-            return !state.getCollisionShape((BlockView)this.mc.world, (BlockPos)this.scratchPos).isEmpty();
+            return !state.getCollisionShape((BlockGetter)this.mc.level, (BlockPos)this.scratchPos).isEmpty();
         }
         catch (Throwable ignored) {
             return true;
@@ -311,12 +311,12 @@ extends Module {
     }
 
     private boolean isWater(double x, double y, double z) {
-        if (this.mc.world == null) {
+        if (this.mc.level == null) {
             return false;
         }
-        this.scratchPos.set(MathHelper.floor((double)x), MathHelper.floor((double)y), MathHelper.floor((double)z));
+        this.scratchPos.set(Mth.floor((double)x), Mth.floor((double)y), Mth.floor((double)z));
         try {
-            return !this.mc.world.getBlockState((BlockPos)this.scratchPos).getFluidState().isEmpty();
+            return !this.mc.level.getBlockState((BlockPos)this.scratchPos).getFluidState().isEmpty();
         }
         catch (Throwable ignored) {
             return false;
@@ -324,19 +324,19 @@ extends Module {
     }
 
     private boolean skyVisible(double x, double y, double z) {
-        if (!this.skyCheck.get() || this.mc.world == null) {
+        if (!this.skyCheck.get() || this.mc.level == null) {
             return true;
         }
-        this.scratchPos.set(MathHelper.floor((double)x), MathHelper.floor((double)y), MathHelper.floor((double)z));
+        this.scratchPos.set(Mth.floor((double)x), Mth.floor((double)y), Mth.floor((double)z));
         try {
-            return this.mc.world.isSkyVisible((BlockPos)this.scratchPos);
+            return this.mc.level.canSeeSky((BlockPos)this.scratchPos);
         }
         catch (Throwable ignored) {
             return true;
         }
     }
 
-    private void spawnDrop(Vec3d center, boolean fromTop) {
+    private void spawnDrop(Vec3 center, boolean fromTop) {
         double y;
         float r = (float)this.radius.get();
         double angle = this.random.nextDouble() * Math.PI * 2.0;
@@ -355,11 +355,11 @@ extends Module {
         drop.vy = (double)(-this.random(6.0f, 11.0f)) * drop.mass;
         drop.phase = this.random(0.0f, 62.8f);
         drop.brightness = this.random(0.6f, 1.0f);
-        drop.ground = this.surfaceY(MathHelper.floor((double)x), MathHelper.floor((double)z));
+        drop.ground = this.surfaceY(Mth.floor((double)x), Mth.floor((double)z));
         this.drops.add(drop);
     }
 
-    private void updateDrops(Vec3d center, float dt) {
+    private void updateDrops(Vec3 center, float dt) {
         int target = this.targetDropCount();
         this.drops.removeIf(d -> {
             double dx = d.x - center.x;
@@ -474,12 +474,12 @@ extends Module {
         }
     }
 
-    private void updateMist(Vec3d center, float dt) {
+    private void updateMist(Vec3 center, float dt) {
         if (!this.groundMist.get()) {
             this.mistList.clear();
             return;
         }
-        int target = (int)MathHelper.clamp((float)(22.0f * (float)this.density.get() * this.presetDensity()), (float)6.0f, (float)100.0f);
+        int target = (int)Mth.clamp((float)(22.0f * (float)this.density.get() * this.presetDensity()), (float)6.0f, (float)100.0f);
         this.mistList.removeIf(m -> {
             m.life += dt;
             double dx = m.x - center.x;
@@ -494,7 +494,7 @@ extends Module {
             double dist = Math.sqrt(this.random.nextDouble()) * (double)((float)this.radius.get()) * 0.85;
             double x = center.x + Math.cos(angle) * dist;
             double z = center.z + Math.sin(angle) * dist;
-            int ground = this.surfaceY(MathHelper.floor((double)x), MathHelper.floor((double)z));
+            int ground = this.surfaceY(Mth.floor((double)x), Mth.floor((double)z));
             Mist m2 = new Mist();
             m2.x = x;
             m2.z = z;
@@ -522,10 +522,10 @@ extends Module {
     }
 
     public void renderWetSurfaceFrame(Camera camera, Matrix4f viewMatrix, Matrix4f projectionMatrix, float tickDelta) {
-        if (!this.isEnabled() || !this.wetGround.get() || this.mc.player == null || this.mc.world == null) {
+        if (!this.isEnabled() || !this.wetGround.get() || this.mc.player == null || this.mc.level == null) {
             return;
         }
-        if (this.onlyWhenRaining.get() && !this.mc.world.isRaining()) {
+        if (this.onlyWhenRaining.get() && !this.mc.level.isRaining()) {
             return;
         }
         float[] rgb = this.resolveColor();
@@ -535,14 +535,14 @@ extends Module {
         parameters.reflectionStrength = (float)this.reflectionStrength.get();
         parameters.maxDistance = (float)this.reflectionDistance.get();
         parameters.rippleStrength = (float)this.rippleStrength.get();
-        parameters.rainAmount = MathHelper.clamp((float)(0.55f + (float)this.density.get() * this.presetDensity() * 0.28f), (float)0.55f, (float)1.45f);
+        parameters.rainAmount = Mth.clamp((float)(0.55f + (float)this.density.get() * this.presetDensity() * 0.28f), (float)0.55f, (float)1.45f);
         parameters.ripples = this.puddleRipples.get();
         parameters.reflectionSteps = this.reflectionQuality.is("High") ? 16 : (this.reflectionQuality.is("Performance") ? 6 : 10);
         parameters.themeR = rgb[0];
         parameters.themeG = rgb[1];
         parameters.themeB = rgb[2];
         parameters.useThemeColor = this.colorMode.is("Theme") || this.colorMode.is("Custom");
-        float skyAngle = (float)((this.mc.world.getTimeOfDay()%24000L)/24000.0);
+        float skyAngle = (float)((this.mc.level.getDefaultClockTime()%24000L)/24000.0);
         float radians = skyAngle * ((float)Math.PI * 2);
         parameters.sunDirX = -((float)Math.sin(radians));
         parameters.sunDirY = (float)Math.cos(radians);
@@ -552,24 +552,24 @@ extends Module {
         WetSurfaceRenderer.getInstance().apply(this.mc, camera, viewMatrix, projectionMatrix, parameters);
     }
 
-    public void onWorldRender(WorldRenderContext context) {
-        if (!this.isEnabled() || this.mc.player == null || this.mc.world == null || this.mc.gameRenderer == null) {
+    public void onWorldRender(LevelRenderContext context) {
+        if (!this.isEnabled() || this.mc.player == null || this.mc.level == null || this.mc.gameRenderer == null) {
             return;
         }
-        if (this.onlyWhenRaining.get() && !this.mc.world.isRaining()) {
+        if (this.onlyWhenRaining.get() && !this.mc.level.isRaining()) {
             this.clearAll();
             return;
         }
-        Camera camera = context.gameRenderer().getCamera();
+        Camera camera = context.gameRenderer().mainCamera();
         if (camera == null) {
             return;
         }
-        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false);
+        float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         if (this.wetGround.get()) {
-            MatrixStack viewStack = new MatrixStack();
-            viewStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
-            viewStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw() + 180.0f));
-            Matrix4f viewMatrix = viewStack.peek().getPositionMatrix();
+            PoseStack viewStack = new PoseStack();
+            viewStack.mulPose(Axis.XP.rotationDegrees(camera.xRot()));
+            viewStack.mulPose(Axis.YP.rotationDegrees(camera.yRot() + 180.0f));
+            Matrix4f viewMatrix = viewStack.last().pose();
             Matrix4f projectionMatrix = RenderSystem.getProjectionMatrix();
             this.renderWetSurfaceFrame(camera, viewMatrix, projectionMatrix, tickDelta);
         }
@@ -579,9 +579,9 @@ extends Module {
         }
         float dt = (float)((double)(now - this.lastFrameNanos) / 1.0E9);
         this.lastFrameNanos = now;
-        dt = MathHelper.clamp((float)dt, (float)0.0f, (float)0.05f);
+        dt = Mth.clamp((float)dt, (float)0.0f, (float)0.05f);
         this.clock += dt;
-        Vec3d cam = camera.getCameraPos();
+        Vec3 cam = camera.position();
         this.updateDrops(cam, dt);
         this.updateSplashes(dt);
         this.updateDroplets(dt);
@@ -592,15 +592,15 @@ extends Module {
         }
         float[] rgb = this.resolveColor();
         float ambient = this.ambientLight(camera);
-        float brightnessMul = MathHelper.clamp((float)(ambient + this.flash * 0.95f), (float)0.0f, (float)1.75f);
+        float brightnessMul = Mth.clamp((float)(ambient + this.flash * 0.95f), (float)0.0f, (float)1.75f);
         float alphaMul = (float)this.opacity.get() * brightnessMul;
-        MatrixStack matrices = context.matrices();
+        PoseStack matrices = context.poseStack();
         RenderSystem.enableBlend();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
         RenderSystem.disableCull();
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA);
         if (this.groundMist.get()) {
             this.drawMist(matrices, camera, cam, rgb, alphaMul);
         }
@@ -608,7 +608,7 @@ extends Module {
         if (this.splashes.get()) {
             this.drawRipples(matrices, cam, rgb, alphaMul);
         }
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
         this.drawStreaks(matrices, camera, cam, rgb, alphaMul, true);
         if (this.splashes.get()) {
             this.drawCrowns(matrices, camera, cam, rgb, alphaMul);
@@ -622,11 +622,11 @@ extends Module {
         RenderSystem.disableBlend();
     }
 
-    private void drawStreaks(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul, boolean highlight) {
+    private void drawStreaks(PoseStack ms, Camera camera, Vec3 cam, float[] rgb, float alphaMul, boolean highlight) {
         if (this.drops.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         float sizeMul = (float)this.dropSize.get();
         float r = (float)this.radius.get();
         float fadeStart = r * 0.62f;
@@ -640,27 +640,27 @@ extends Module {
             double distSq = dx * dx + dy * dy + dz * dz;
             double dist = Math.sqrt(distSq);
             if (dist > (double)r + 4.0) continue;
-            float f = distanceFade = dist <= (double)fadeStart ? 1.0f : 1.0f - MathHelper.clamp((float)((float)((dist - (double)fadeStart) / (double)(r - fadeStart + 1.0f))), (float)0.0f, (float)1.0f);
+            float f = distanceFade = dist <= (double)fadeStart ? 1.0f : 1.0f - Mth.clamp((float)((float)((dist - (double)fadeStart) / (double)(r - fadeStart + 1.0f))), (float)0.0f, (float)1.0f);
             if (distanceFade <= 0.02f) continue;
             float nearFade = dist < 0.7 ? (float)(dist / 0.7) : 1.0f;
             double speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
             if (speed < 1.0E-4) continue;
-            float length = (float)MathHelper.clamp((double)(speed * 0.055 * (double)sizeMul), (double)0.16, (double)2.6);
+            float length = (float)Mth.clamp((double)(speed * 0.055 * (double)sizeMul), (double)0.16, (double)2.6);
             float width = (float)(0.014 + 0.019 * d.mass) * sizeMul * (highlight ? 0.45f : 1.0f);
             float alpha = alphaMul * d.brightness * distanceFade * nearFade * (highlight ? 0.35f : 0.45f);
             if (alpha <= 0.006f) continue;
             alpha = Math.min(alpha, 0.95f);
-            float yawRad = (float)Math.toRadians(camera.getYaw());
+            float yawRad = (float)Math.toRadians(camera.yRot());
             double rightX = Math.cos(yawRad);
             double rightZ = Math.sin(yawRad);
             double horizontal = d.vx * rightX + d.vz * rightZ;
             float tilt = (float)Math.toDegrees(Math.atan2(horizontal, Math.abs(d.vy) + 1.0E-4));
-            tilt = MathHelper.clamp((float)tilt, (float)-55.0f, (float)55.0f);
-            ms.push();
+            tilt = Mth.clamp((float)tilt, (float)-55.0f, (float)55.0f);
+            ms.pushPose();
             ms.translate(dx, dy, dz);
-            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
-            ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-tilt));
-            Matrix4f m = ms.peek().getPositionMatrix();
+            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            ms.mulPose(Axis.ZP.rotationDegrees(-tilt));
+            Matrix4f m = ms.last().pose();
             float half = width * 0.5f;
             float top = length * 0.5f;
             float bottom = -length * 0.5f;
@@ -668,42 +668,42 @@ extends Module {
             float tailAlpha = 0.0f;
             float headWidth = half;
             float tailWidth = half * 0.35f;
-            buffer.vertex(m, -tailWidth, top, 0.0f).color(rgb[0], rgb[1], rgb[2], tailAlpha);
-            buffer.vertex(m, tailWidth, top, 0.0f).color(rgb[0], rgb[1], rgb[2], tailAlpha);
-            buffer.vertex(m, headWidth, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], headAlpha);
-            buffer.vertex(m, -headWidth, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], headAlpha);
+            buffer.addVertex(m, -tailWidth, top, 0.0f).setColor(rgb[0], rgb[1], rgb[2], tailAlpha);
+            buffer.addVertex(m, tailWidth, top, 0.0f).setColor(rgb[0], rgb[1], rgb[2], tailAlpha);
+            buffer.addVertex(m, headWidth, bottom, 0.0f).setColor(rgb[0], rgb[1], rgb[2], headAlpha);
+            buffer.addVertex(m, -headWidth, bottom, 0.0f).setColor(rgb[0], rgb[1], rgb[2], headAlpha);
             if (!highlight) {
                 float halo = half * 2.6f;
                 float haloAlpha = alpha * 0.24f;
-                buffer.vertex(m, -halo * 0.5f, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-                buffer.vertex(m, halo * 0.5f, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-                buffer.vertex(m, halo, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], haloAlpha);
-                buffer.vertex(m, -halo, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], haloAlpha);
+                buffer.addVertex(m, -halo * 0.5f, top, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.addVertex(m, halo * 0.5f, top, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.addVertex(m, halo, bottom, 0.0f).setColor(rgb[0], rgb[1], rgb[2], haloAlpha);
+                buffer.addVertex(m, -halo, bottom, 0.0f).setColor(rgb[0], rgb[1], rgb[2], haloAlpha);
             } else {
                 float lensTop = bottom + length * 0.34f;
                 float lensWidth = half * 1.25f;
-                buffer.vertex(m, -lensWidth, lensTop, 0.0f).color(1.0f, 1.0f, 1.0f, 0.0f);
-                buffer.vertex(m, lensWidth, lensTop, 0.0f).color(1.0f, 1.0f, 1.0f, 0.0f);
-                buffer.vertex(m, lensWidth, bottom, 0.0f).color(1.0f, 1.0f, 1.0f, alpha * 0.9f);
-                buffer.vertex(m, -lensWidth, bottom, 0.0f).color(1.0f, 1.0f, 1.0f, alpha * 0.9f);
+                buffer.addVertex(m, -lensWidth, lensTop, 0.0f).setColor(1.0f, 1.0f, 1.0f, 0.0f);
+                buffer.addVertex(m, lensWidth, lensTop, 0.0f).setColor(1.0f, 1.0f, 1.0f, 0.0f);
+                buffer.addVertex(m, lensWidth, bottom, 0.0f).setColor(1.0f, 1.0f, 1.0f, alpha * 0.9f);
+                buffer.addVertex(m, -lensWidth, bottom, 0.0f).setColor(1.0f, 1.0f, 1.0f, alpha * 0.9f);
             }
-            ms.pop();
+            ms.popPose();
         }
-        BuiltBuffer built = buffer.endNullable();
+        MeshData built = buffer.build();
         if (built != null) {
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+            BufferRenderer.drawWithGlobalProgram((MeshData)built);
         }
     }
 
-    private void drawRipples(MatrixStack ms, Vec3d cam, float[] rgb, float alphaMul) {
+    private void drawRipples(PoseStack ms, Vec3 cam, float[] rgb, float alphaMul) {
         if (this.splashList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         int size = this.splashList.size();
         for (int i = 0; i < size; ++i) {
             Splash s = this.splashList.get(i);
-            float progress = MathHelper.clamp((float)(s.life / s.maxLife), (float)0.0f, (float)1.0f);
+            float progress = Mth.clamp((float)(s.life / s.maxLife), (float)0.0f, (float)1.0f);
             float eased = 1.0f - (1.0f - progress) * (1.0f - progress);
             float outer = s.scale * (0.18f + eased * (s.water ? 1.35f : 0.85f));
             float inner = outer * (0.55f + 0.35f * eased);
@@ -712,9 +712,9 @@ extends Module {
             double dx = s.x - cam.x;
             double dy = s.y - cam.y + 0.015;
             double dz = s.z - cam.z;
-            ms.push();
+            ms.pushPose();
             ms.translate(dx, dy, dz);
-            Matrix4f m = ms.peek().getPositionMatrix();
+            Matrix4f m = ms.last().pose();
             for (int seg = 0; seg < 16; ++seg) {
                 double a0 = 0.39269908169872414 * (double)seg;
                 double a1 = 0.39269908169872414 * (double)(seg + 1);
@@ -726,119 +726,119 @@ extends Module {
                 float oz0 = (float)(Math.sin(a0) * (double)outer);
                 float ox1 = (float)(Math.cos(a1) * (double)outer);
                 float oz1 = (float)(Math.sin(a1) * (double)outer);
-                buffer.vertex(m, ix0, 0.0f, iz0).color(rgb[0], rgb[1], rgb[2], alpha);
-                buffer.vertex(m, ix1, 0.0f, iz1).color(rgb[0], rgb[1], rgb[2], alpha);
-                buffer.vertex(m, ox1, 0.0f, oz1).color(rgb[0], rgb[1], rgb[2], 0.0f);
-                buffer.vertex(m, ox0, 0.0f, oz0).color(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.addVertex(m, ix0, 0.0f, iz0).setColor(rgb[0], rgb[1], rgb[2], alpha);
+                buffer.addVertex(m, ix1, 0.0f, iz1).setColor(rgb[0], rgb[1], rgb[2], alpha);
+                buffer.addVertex(m, ox1, 0.0f, oz1).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.addVertex(m, ox0, 0.0f, oz0).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
             }
-            ms.pop();
+            ms.popPose();
         }
-        BuiltBuffer built = buffer.endNullable();
+        MeshData built = buffer.build();
         if (built != null) {
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+            BufferRenderer.drawWithGlobalProgram((MeshData)built);
         }
     }
 
-    private void drawCrowns(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul) {
+    private void drawCrowns(PoseStack ms, Camera camera, Vec3 cam, float[] rgb, float alphaMul) {
         if (this.splashList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         int size = this.splashList.size();
         for (int i = 0; i < size; ++i) {
             Splash s = this.splashList.get(i);
-            float progress = MathHelper.clamp((float)(s.life / s.maxLife), (float)0.0f, (float)1.0f);
+            float progress = Mth.clamp((float)(s.life / s.maxLife), (float)0.0f, (float)1.0f);
             if (progress > 0.55f) continue;
             float local = progress / 0.55f;
             float height = s.scale * (0.55f * (float)Math.sin((double)local * Math.PI));
             float alpha = alphaMul * (1.0f - local) * 0.35f;
             if (alpha <= 0.01f || height <= 0.005f) continue;
-            ms.push();
+            ms.pushPose();
             ms.translate(s.x - cam.x, s.y - cam.y + 0.02, s.z - cam.z);
-            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
-            Matrix4f m = ms.peek().getPositionMatrix();
+            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            Matrix4f m = ms.last().pose();
             float base = s.scale * 0.16f;
-            buffer.vertex(m, -base * 0.25f, height, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-            buffer.vertex(m, base * 0.25f, height, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-            buffer.vertex(m, base, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
-            buffer.vertex(m, -base, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
-            ms.pop();
+            buffer.addVertex(m, -base * 0.25f, height, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.addVertex(m, base * 0.25f, height, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.addVertex(m, base, 0.0f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], alpha);
+            buffer.addVertex(m, -base, 0.0f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], alpha);
+            ms.popPose();
         }
-        BuiltBuffer built = buffer.endNullable();
+        MeshData built = buffer.build();
         if (built != null) {
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+            BufferRenderer.drawWithGlobalProgram((MeshData)built);
         }
     }
 
-    private void drawDroplets(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul) {
+    private void drawDroplets(PoseStack ms, Camera camera, Vec3 cam, float[] rgb, float alphaMul) {
         if (this.dropletList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         float sizeMul = (float)this.dropSize.get();
         int size = this.dropletList.size();
         for (int i = 0; i < size; ++i) {
             Droplet d = this.dropletList.get(i);
-            float progress = MathHelper.clamp((float)(d.life / d.maxLife), (float)0.0f, (float)1.0f);
+            float progress = Mth.clamp((float)(d.life / d.maxLife), (float)0.0f, (float)1.0f);
             float alpha = alphaMul * (1.0f - progress) * 0.55f;
             if (alpha <= 0.01f) continue;
             double speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
-            float length = (float)MathHelper.clamp((double)(speed * 0.03 * (double)sizeMul), (double)0.04, (double)0.4);
+            float length = (float)Mth.clamp((double)(speed * 0.03 * (double)sizeMul), (double)0.04, (double)0.4);
             float width = 0.016f * sizeMul;
-            float yawRad = (float)Math.toRadians(camera.getYaw());
+            float yawRad = (float)Math.toRadians(camera.yRot());
             double horizontal = d.vx * Math.cos(yawRad) + d.vz * Math.sin(yawRad);
             float tilt = (float)Math.toDegrees(Math.atan2(horizontal, -d.vy + 1.0E-4));
-            ms.push();
+            ms.pushPose();
             ms.translate(d.x - cam.x, d.y - cam.y, d.z - cam.z);
-            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
-            ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-tilt));
-            Matrix4f m = ms.peek().getPositionMatrix();
-            buffer.vertex(m, -width * 0.4f, length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-            buffer.vertex(m, width * 0.4f, length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-            buffer.vertex(m, width, -length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
-            buffer.vertex(m, -width, -length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
-            ms.pop();
+            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            ms.mulPose(Axis.ZP.rotationDegrees(-tilt));
+            Matrix4f m = ms.last().pose();
+            buffer.addVertex(m, -width * 0.4f, length * 0.5f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.addVertex(m, width * 0.4f, length * 0.5f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.addVertex(m, width, -length * 0.5f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], alpha);
+            buffer.addVertex(m, -width, -length * 0.5f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], alpha);
+            ms.popPose();
         }
-        BuiltBuffer built = buffer.endNullable();
+        MeshData built = buffer.build();
         if (built != null) {
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+            BufferRenderer.drawWithGlobalProgram((MeshData)built);
         }
     }
 
-    private void drawMist(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul) {
+    private void drawMist(PoseStack ms, Camera camera, Vec3 cam, float[] rgb, float alphaMul) {
         if (this.mistList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         int size = this.mistList.size();
         for (int i = 0; i < size; ++i) {
             Mist mist = this.mistList.get(i);
-            float progress = MathHelper.clamp((float)(mist.life / mist.maxLife), (float)0.0f, (float)1.0f);
+            float progress = Mth.clamp((float)(mist.life / mist.maxLife), (float)0.0f, (float)1.0f);
             float fade = (float)Math.sin((double)progress * Math.PI);
             float alpha = alphaMul * fade * 0.055f;
             if (alpha <= 0.004f) continue;
-            ms.push();
+            ms.pushPose();
             ms.translate(mist.x - cam.x, mist.y - cam.y, mist.z - cam.z);
-            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
-            Matrix4f m = ms.peek().getPositionMatrix();
+            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            Matrix4f m = ms.last().pose();
             float half = mist.size * 0.5f;
             float top = mist.size * 0.42f;
-            buffer.vertex(m, -half, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-            buffer.vertex(m, half, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
-            buffer.vertex(m, half, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
-            buffer.vertex(m, -half, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
-            ms.pop();
+            buffer.addVertex(m, -half, top, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.addVertex(m, half, top, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.addVertex(m, half, 0.0f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], alpha);
+            buffer.addVertex(m, -half, 0.0f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], alpha);
+            ms.popPose();
         }
-        BuiltBuffer built = buffer.endNullable();
+        MeshData built = buffer.build();
         if (built != null) {
-            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+            BufferRenderer.drawWithGlobalProgram((MeshData)built);
         }
     }
 
     private float ambientLight(Camera camera) {
         try {
-            int light = this.mc.world.getLightLevel(camera.getBlockPos());
-            return MathHelper.clamp((float)((float)light / 15.0f), (float)0.3f, (float)1.0f);
+            int light = this.mc.level.getMaxLocalRawBrightness(camera.blockPosition());
+            return Mth.clamp((float)((float)light / 15.0f), (float)0.3f, (float)1.0f);
         }
         catch (Throwable ignored) {
             return 1.0f;

@@ -8,6 +8,10 @@ import static org.lwjgl.util.shaderc.Shaderc.*;
 public class VerifyShaders {
     static Path resources;
     static ZipFile minecraft;
+    static String effectLayout(String source) {
+        var match=Pattern.compile("uniform\\s+EffectData\\s*\\{([^}]+)\\}",Pattern.DOTALL).matcher(source);
+        return match.find()?match.group(1).replaceAll("/\\*.*?\\*/|//[^\\r\\n]*", "").replaceAll("\\s+", ""):"";
+    }
     static String expand(String source) throws Exception {
         var pattern = Pattern.compile("#moj_import <([^>]+)>");
         var matches = pattern.matcher(source);
@@ -42,6 +46,11 @@ public class VerifyShaders {
             for (Path path : paths.sorted().toList()) {
                 String source = expand(Files.readString(path));
                 if(path.toString().endsWith(".vsh")) {
+                    var fragment=path.resolveSibling(path.getFileName().toString().replace(".vsh",".fsh"));
+                    if(Files.exists(fragment)&&!effectLayout(source).isEmpty()&&!effectLayout(expand(Files.readString(fragment))).isEmpty()&&!effectLayout(source).equals(effectLayout(expand(Files.readString(fragment)))))
+                        throw new IllegalStateException(path+": vertex/fragment EffectData layouts disagree");
+                    if(path.getFileName().toString().endsWith("_gui.vsh")&&(!source.contains("in vec2 EffectLocal;")||source.contains("rvertexcoord(gl_VertexID)")))
+                        throw new IllegalStateException(path+": GUI quad coordinates must be supplied per vertex");
                     var descriptor=path.resolveSibling(path.getFileName().toString().replace(".vsh",".json"));
                     if(Files.exists(descriptor)&&Files.readString(descriptor).matches("(?s).*\"screen\"\\s*:\\s*true.*")) {
                         var inputs=Pattern.compile("(?m)^\\s*in\\s+\\w+\\s+(\\w+)\\s*;").matcher(source);

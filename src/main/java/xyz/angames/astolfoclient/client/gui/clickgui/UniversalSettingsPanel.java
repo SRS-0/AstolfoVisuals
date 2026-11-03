@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -92,9 +92,9 @@ public class UniversalSettingsPanel {
       }
    }
 
-   public void render(DrawContext context, float x, float y, float width, float alpha, int mouseX, int mouseY, float deltaTime) {
+   public void render(GuiGraphicsExtractor context, float x, float y, float width, float alpha, int mouseX, int mouseY, float deltaTime) {
       if (!(alpha <= 0.05F) && !this.rows.isEmpty()) {
-         Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+         Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
          Color themeColor = new Color(ThemeManager.getThemedColor(0L));
 
          for (Object row : this.rows) {
@@ -151,7 +151,7 @@ public class UniversalSettingsPanel {
       float sx = x + 10.0F;
       float sw = w - 20.0F;
       float val = (float)ns.get();
-      float targetRatio = MathHelper.clamp((val - (float)ns.getMin()) / ((float)ns.getMax() - (float)ns.getMin()), 0.0F, 1.0F);
+      float targetRatio = Mth.clamp((val - (float)ns.getMin()) / ((float)ns.getMax() - (float)ns.getMin()), 0.0F, 1.0F);
       float animRatio = this.sliderRatioAnimMap.getOrDefault(ns, targetRatio);
       animRatio = GuiUtils.animate(animRatio, targetRatio, 20.0F, deltaTime);
       this.sliderRatioAnimMap.put(ns, animRatio);
@@ -521,7 +521,7 @@ public class UniversalSettingsPanel {
 
    private void applySlider(double mx, float startX, float w, NumberSetting ns) {
       float sw = w - 20.0F;
-      float ratio = (float)MathHelper.clamp((mx - (startX + 10.0F)) / sw, 0.0, 1.0);
+      float ratio = (float)Mth.clamp((mx - (startX + 10.0F)) / sw, 0.0, 1.0);
       double range = ns.getMax() - ns.getMin();
       double rawVal = ns.getMin() + ratio * range;
       double inc = ns.getIncrement();
@@ -530,7 +530,7 @@ public class UniversalSettingsPanel {
       }
 
       double oldVal = ns.get();
-      double newVal = MathHelper.clamp(rawVal, ns.getMin(), ns.getMax());
+      double newVal = Mth.clamp(rawVal, ns.getMin(), ns.getMax());
       if (Double.compare(oldVal, newVal) != 0) {
          ns.set(newVal);
          ModSounds.playSliderMove();

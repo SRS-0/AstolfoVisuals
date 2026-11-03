@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Position;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.BlockView;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Position;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -18,9 +18,9 @@ import xyz.angames.astolfoclient.client.module.modules.HitEspModule;
 @Environment(value=EnvType.CLIENT)
 public class HitEspManager {
     private final List<HitEspEffect> effects = new CopyOnWriteArrayList<HitEspEffect>();
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
 
-    public void addEffect(Vec3d position, float rotationDirection, Quaternionf orientation) {
+    public void addEffect(Vec3 position, float rotationDirection, Quaternionf orientation) {
         this.effects.add(new HitEspEffect(position, rotationDirection, orientation));
     }
 
@@ -58,14 +58,14 @@ public class HitEspManager {
                         shard.vy -= gravityVal;
                         shard.vx *= frictionVal;
                         shard.vz *= frictionVal;
-                        if (this.mc.world != null) {
+                        if (this.mc.level != null) {
                             boolean collideZ;
                             double nextX = shard.pos.x + shard.vx;
                             double nextY = shard.pos.y + shard.vy;
                             double nextZ = shard.pos.z + shard.vz;
-                            boolean collideX = !this.mc.world.getBlockState(BlockPos.ofFloored((Position)new Vec3d(nextX, shard.pos.y, shard.pos.z))).getCollisionShape((BlockView)this.mc.world, BlockPos.ofFloored((Position)new Vec3d(nextX, shard.pos.y, shard.pos.z))).isEmpty();
-                            boolean collideY = !this.mc.world.getBlockState(BlockPos.ofFloored((Position)new Vec3d(shard.pos.x, nextY, shard.pos.z))).getCollisionShape((BlockView)this.mc.world, BlockPos.ofFloored((Position)new Vec3d(shard.pos.x, nextY, shard.pos.z))).isEmpty();
-                            boolean bl = collideZ = !this.mc.world.getBlockState(BlockPos.ofFloored((Position)new Vec3d(shard.pos.x, shard.pos.y, nextZ))).getCollisionShape((BlockView)this.mc.world, BlockPos.ofFloored((Position)new Vec3d(shard.pos.x, shard.pos.y, nextZ))).isEmpty();
+                            boolean collideX = !this.mc.level.getBlockState(BlockPos.containing((Position)new Vec3(nextX, shard.pos.y, shard.pos.z))).getCollisionShape((BlockGetter)this.mc.level, BlockPos.containing((Position)new Vec3(nextX, shard.pos.y, shard.pos.z))).isEmpty();
+                            boolean collideY = !this.mc.level.getBlockState(BlockPos.containing((Position)new Vec3(shard.pos.x, nextY, shard.pos.z))).getCollisionShape((BlockGetter)this.mc.level, BlockPos.containing((Position)new Vec3(shard.pos.x, nextY, shard.pos.z))).isEmpty();
+                            boolean bl = collideZ = !this.mc.level.getBlockState(BlockPos.containing((Position)new Vec3(shard.pos.x, shard.pos.y, nextZ))).getCollisionShape((BlockGetter)this.mc.level, BlockPos.containing((Position)new Vec3(shard.pos.x, shard.pos.y, nextZ))).isEmpty();
                             if (bounceVal) {
                                 if (collideX) {
                                     shard.vx = -shard.vx * bounceFactorVal;
@@ -131,7 +131,7 @@ public class HitEspManager {
                 float localY = ((float)y + 0.5f) * step - 0.5f;
                 Vector3f localOffset = new Vector3f(localX, localY, 0.0f);
                 effect.orientation.transform(localOffset);
-                Vec3d startPos = effect.position.add((double)localOffset.x * explosionRadius, (double)localOffset.y * explosionRadius, (double)localOffset.z * explosionRadius);
+                Vec3 startPos = effect.position.add((double)localOffset.x * explosionRadius, (double)localOffset.y * explosionRadius, (double)localOffset.z * explosionRadius);
                 double vx = ((double)localOffset.x * 0.5 + (Math.random() - 0.5) * 0.3) * explosionStrength;
                 double vy = ((double)localOffset.y * 0.5 + Math.random() * 0.4 + 0.2) * explosionStrength;
                 double vz = ((double)localOffset.z * 0.5 + (Math.random() - 0.5) * 0.3) * explosionStrength;

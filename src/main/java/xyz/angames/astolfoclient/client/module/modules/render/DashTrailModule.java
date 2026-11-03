@@ -9,24 +9,24 @@ import java.util.List;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
-import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -40,7 +40,7 @@ extends Module {
     public static DashTrailModule INSTANCE;
     private static final Identifier DASH_BLOOM;
     private static final int MAX_CUBICS = 1000;
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
     public final BooleanSetting firstPerson = new BooleanSetting("First Person", false);
     public final ModeSetting colorMode = new ModeSetting("Color", "Client", "Client", "Rainbow");
     public final BooleanSetting motionsSmoothing = new BooleanSetting("Motion Smoothing", false);
@@ -51,25 +51,25 @@ extends Module {
     private final List<List<Identifier>> dashCubicAnimatedTextures = new ArrayList<List<Identifier>>();
     private final List<DashCubic> dashCubics = new ArrayList<DashCubic>();
     private final Random random = new Random(1234567891L);
-    private Vec3d prevPlayerPos = null;
+    private Vec3 prevPlayerPos = null;
 
     public DashTrailModule() {
         super("DashTrail", "Dash trail behind player", Module.Category.RENDER);
         INSTANCE = this;
         this.addSettings(this.firstPerson, this.colorMode, this.motionsSmoothing, this.dashDots, this.lighting, this.dashLength);
         this.loadTextures();
-        WorldRenderEvents.END_MAIN.register(this::onRender3D);
+        LevelRenderEvents.END_MAIN.register(this::onRender3D);
     }
 
     private void loadTextures() {
         for (int i = 1; i <= 21; ++i) {
-            this.dashCubicTextures.add(Identifier.of((String)"astolfoclient", (String)("textures/effects/dashtrail/dashcubics/dashcubic" + i + ".png")));
+            this.dashCubicTextures.add(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)("textures/effects/dashtrail/dashcubics/dashcubic" + i + ".png")));
         }
         int[] groupCounts = new int[]{11, 23, 32, 16, 32};
         for (int g = 0; g < groupCounts.length; ++g) {
             ArrayList<Identifier> group = new ArrayList<Identifier>();
             for (int f = 1; f <= groupCounts[g]; ++f) {
-                group.add(Identifier.of((String)"astolfoclient", (String)("textures/effects/dashtrail/dashcubics/group_dashs/group" + (g + 1) + "/dashcubic" + f + ".png")));
+                group.add(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)("textures/effects/dashtrail/dashcubics/group_dashs/group" + (g + 1) + "/dashcubic" + f + ".png")));
             }
             this.dashCubicAnimatedTextures.add(group);
         }
@@ -84,7 +84,7 @@ extends Module {
     }
 
     private static int swapAlpha(int color, float alpha) {
-        return color & 0xFFFFFF | MathHelper.clamp((int)((int)alpha), (int)0, (int)255) << 24;
+        return color & 0xFFFFFF | Mth.clamp((int)((int)alpha), (int)0, (int)255) << 24;
     }
 
     private static int toDark(int color, float factor) {
@@ -93,7 +93,7 @@ extends Module {
     }
 
     private static int getOverallColorFrom(int c1, int c2, float f) {
-        f = MathHelper.clamp((float)f, (float)0.0f, (float)1.0f);
+        f = Mth.clamp((float)f, (float)0.0f, (float)1.0f);
         int r = (int)((float)(c1 >> 16 & 0xFF) + (float)((c2 >> 16 & 0xFF) - (c1 >> 16 & 0xFF)) * f);
         int g = (int)((float)(c1 >> 8 & 0xFF) + (float)((c2 >> 8 & 0xFF) - (c1 >> 8 & 0xFF)) * f);
         int b = (int)((float)(c1 & 0xFF) + (float)((c2 & 0xFF) - (c1 & 0xFF)) * f);
@@ -106,16 +106,16 @@ extends Module {
     }
 
     private static void addVertex(BufferBuilder bb, Matrix4f matrix, float x, float y, float z, float u, float v, int color) {
-        bb.vertex(matrix, x, y, z).texture(u, v).color(color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >> 24 & 0xFF);
+        bb.addVertex(matrix, x, y, z).setUv(u, v).setColor(color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF, color >> 24 & 0xFF);
     }
 
     private static void bufferEnd(BufferBuilder bb) {
-        BufferRenderer.drawWithGlobalProgram((BuiltBuffer)bb.end());
+        BufferRenderer.drawWithGlobalProgram((MeshData)bb.buildOrThrow());
     }
 
     @Override
     public void onTick() {
-        if (!this.isEnabled() || this.mc.world == null || this.mc.player == null) {
+        if (!this.isEnabled() || this.mc.level == null || this.mc.player == null) {
             return;
         }
         for (int i = this.dashCubics.size() - 1; i >= 0; --i) {
@@ -132,8 +132,8 @@ extends Module {
             DashCubic next = this.motionsSmoothing.get() && i + 1 < size ? this.dashCubics.get(i + 1) : null;
             current.motionCubicProcess(next);
         }
-        ClientPlayerEntity player = this.mc.player;
-        Vec3d currentPos = player.getEntityPos();
+        LocalPlayer player = this.mc.player;
+        Vec3 currentPos = player.position();
         if (this.prevPlayerPos != null) {
             double dx = currentPos.x - this.prevPlayerPos.x;
             double dy = currentPos.y - this.prevPlayerPos.y;
@@ -165,26 +165,26 @@ extends Module {
         return this.random.nextInt(100) > 40;
     }
 
-    public void onRender3D(WorldRenderContext event) {
+    public void onRender3D(LevelRenderContext event) {
         double dz;
         double dy;
         double dx;
         if (!this.isEnabled() || this.dashCubics.isEmpty()) {
             return;
         }
-        if (!this.firstPerson.get() && this.mc.options.getPerspective().isFirstPerson()) {
+        if (!this.firstPerson.get() && this.mc.options.getCameraType().isFirstPerson()) {
             return;
         }
-        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true);
+        float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
         float lightingPC = this.lighting.get() ? 1.0f : 0.0f;
-        Camera camera = event.gameRenderer().getCamera();
-        Vec3d cam = camera.getCameraPos();
+        Camera camera = event.gameRenderer().mainCamera();
+        Vec3 cam = camera.position();
         double camX = cam.x;
         double camY = cam.y;
         double camZ = cam.z;
-        MatrixStack matrices = event.matrices();
+        PoseStack matrices = event.poseStack();
         RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE, (com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.ONE, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ZERO);
+        RenderSystem.blendFuncSeparate((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ZERO);
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
         RenderSystem.disableCull();
@@ -199,30 +199,30 @@ extends Module {
         }
         if (this.dashDots.get()) {
             RenderSystem.setShaderTexture((int)0, (Identifier)DASH_BLOOM);
-            BufferBuilder bb = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+            BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             boolean drew = false;
             for (DashCubic cubic : this.dashCubics) {
                 if (cubic.alphaValue <= 0.05f || cubic.sparks.isEmpty()) continue;
                 float aPC = cubic.alphaValue;
                 for (DashSpark spark : cubic.sparks) {
-                    float sparkAPC = DashTrailModule.easeInOutQuadWave(MathHelper.clamp((float)((float)spark.alphaPC() * aPC), (float)0.0f, (float)1.0f));
+                    float sparkAPC = DashTrailModule.easeInOutQuadWave(Mth.clamp((float)((float)spark.alphaPC() * aPC), (float)0.0f, (float)1.0f));
                     if (sparkAPC <= 0.01f) continue;
                     int c = DashTrailModule.getOverallColorFrom(cubic.color, DashTrailModule.swapAlpha(-1, cubic.color >> 24 & 0xFF), 1.0f - sparkAPC);
                     c = DashTrailModule.swapAlpha(c, (float)(c >> 24 & 0xFF) * sparkAPC / 3.0f);
                     double rx = spark.getRenderPosX(tickDelta) + cubic.getRenderPosX(tickDelta) - camX;
                     double ry = spark.getRenderPosY(tickDelta) + cubic.getRenderPosY(tickDelta) - camY;
                     double rz = spark.getRenderPosZ(tickDelta) + cubic.getRenderPosZ(tickDelta) - camZ;
-                    matrices.push();
+                    matrices.pushPose();
                     matrices.translate(rx, ry, rz);
-                    matrices.multiply(camera.getRotation());
+                    matrices.mulPose(camera.rotation());
                     float sz = 0.06f * sparkAPC;
-                    Matrix4f matrix = matrices.peek().getPositionMatrix();
+                    Matrix4f matrix = matrices.last().pose();
                     DashTrailModule.addVertex(bb, matrix, -sz, -sz, 0.0f, 0.0f, 1.0f, c);
                     DashTrailModule.addVertex(bb, matrix, sz, -sz, 0.0f, 1.0f, 1.0f, c);
                     DashTrailModule.addVertex(bb, matrix, sz, sz, 0.0f, 1.0f, 0.0f, c);
                     DashTrailModule.addVertex(bb, matrix, -sz, sz, 0.0f, 0.0f, 0.0f, c);
                     drew = true;
-                    matrices.pop();
+                    matrices.popPose();
                 }
             }
             if (drew) {
@@ -243,7 +243,7 @@ extends Module {
     }
 
     static {
-        DASH_BLOOM = Identifier.of((String)"astolfoclient", (String)"textures/effects/dashtrail/dashbloom.png");
+        DASH_BLOOM = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"textures/effects/dashtrail/dashbloom.png");
     }
 
     @Environment(value=EnvType.CLIENT)
@@ -262,7 +262,7 @@ extends Module {
         }
 
         private float getTimePC() {
-            return MathHelper.clamp((float)((float)(System.currentTimeMillis() - this.startTime) / (float)this.base.rMTime), (float)0.0f, (float)1.0f);
+            return Mth.clamp((float)((float)(System.currentTimeMillis() - this.startTime) / (float)this.base.rMTime), (float)0.0f, (float)1.0f);
         }
 
         private double getRenderPosX(float tickDelta) {
@@ -301,7 +301,7 @@ extends Module {
             this.sparks.removeIf(DashSpark::toRemove);
         }
 
-        private void drawDash(MatrixStack stack, float tickDelta, boolean isBloom, float alphaPC, float lightingPC, double camX, double camY, double camZ, Camera camera) {
+        private void drawDash(PoseStack stack, float tickDelta, boolean isBloom, float alphaPC, float lightingPC, double camX, double camY, double camZ, Camera camera) {
             Identifier texId;
             Identifier identifier = texId = isBloom ? DASH_BLOOM : this.base.dashTexture.getResource();
             if (texId == null) {
@@ -318,14 +318,14 @@ extends Module {
                 float scale = 0.033f * aPC;
                 float extXY = 64.0f * scale;
                 float timePcOf = Math.max(0.0f, 1.0f - this.getTimePC());
-                stack.push();
+                stack.pushPose();
                 stack.translate(rx, ry, rz);
-                stack.multiply(camera.getRotation());
+                stack.mulPose(camera.rotation());
                 int color1 = DashTrailModule.getOverallColorFrom(this.color, -1, 0.15f);
                 int bloomColor = DashTrailModule.swapAlpha(color1, 55.0f * aPC);
                 RenderSystem.setShaderTexture((int)0, (Identifier)DASH_BLOOM);
-                BufferBuilder bb = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-                Matrix4f matrix = stack.peek().getPositionMatrix();
+                BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                Matrix4f matrix = stack.last().pose();
                 float s = extXY / 1.75f * 0.1f;
                 DashTrailModule.addVertex(bb, matrix, -s, -s, 0.0f, 0.0f, 1.0f, bloomColor);
                 DashTrailModule.addVertex(bb, matrix, s, -s, 0.0f, 1.0f, 1.0f, bloomColor);
@@ -336,33 +336,33 @@ extends Module {
                     float aMul = aPC * lightingPC;
                     float s2 = (extXY *= 1.0f + 6.0f * timePcOf * aMul) / 2.0f * 0.1f;
                     int glowColor = DashTrailModule.swapAlpha(DashTrailModule.toDark(color1, aMul / 4.0f), 90.0f * aMul);
-                    bb = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+                    bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                     DashTrailModule.addVertex(bb, matrix, -s2, -s2, 0.0f, 0.0f, 1.0f, glowColor);
                     DashTrailModule.addVertex(bb, matrix, s2, -s2, 0.0f, 1.0f, 1.0f, glowColor);
                     DashTrailModule.addVertex(bb, matrix, s2, s2, 0.0f, 1.0f, 0.0f, glowColor);
                     DashTrailModule.addVertex(bb, matrix, -s2, s2, 0.0f, 0.0f, 0.0f, glowColor);
                     DashTrailModule.bufferEnd(bb);
                 }
-                stack.pop();
+                stack.popPose();
             } else {
                 float scale = 0.033f * aPC;
                 float extX = 64.0f * scale * 0.1f;
                 float extY = 64.0f * scale * 0.1f;
                 float halfX = extX / 2.0f;
                 float halfY = extY / 2.0f;
-                stack.push();
+                stack.pushPose();
                 stack.translate(rx, ry, rz);
-                stack.multiply(camera.getRotation());
+                stack.mulPose(camera.rotation());
                 int mainColor = DashTrailModule.toDark(DashTrailModule.getOverallColorFrom(this.color, -1, 0.4f), aPC);
                 RenderSystem.setShaderTexture((int)0, (Identifier)texId);
-                BufferBuilder bb = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
-                Matrix4f matrix = stack.peek().getPositionMatrix();
+                BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                Matrix4f matrix = stack.last().pose();
                 DashTrailModule.addVertex(bb, matrix, -halfX, -halfY, 0.0f, 0.0f, 1.0f, mainColor);
                 DashTrailModule.addVertex(bb, matrix, halfX, -halfY, 0.0f, 1.0f, 1.0f, mainColor);
                 DashTrailModule.addVertex(bb, matrix, halfX, halfY, 0.0f, 1.0f, 0.0f, mainColor);
                 DashTrailModule.addVertex(bb, matrix, -halfX, halfY, 0.0f, 0.0f, 0.0f, mainColor);
                 DashTrailModule.bufferEnd(bb);
-                stack.pop();
+                stack.popPose();
             }
         }
     }
@@ -385,12 +385,12 @@ extends Module {
         private DashBase(DashTrailModule dashTrailModule, LivingEntity entity, float speedDash, DashTexture dashTexture, float offsetTickPC, int rmTime) {
             this.rMTime = rmTime;
             this.entity = entity;
-            this.motionX = entity.getX() - entity.lastX;
-            this.motionY = entity.getY() - entity.lastY;
-            this.motionZ = entity.getZ() - entity.lastZ;
-            this.posX = entity.lastX - this.motionX * (double)offsetTickPC + -0.0875 + 0.175 * Math.random();
-            this.posY = entity.lastY - this.motionY * (double)offsetTickPC + (double)(entity.getHeight() / 3.0f) + (double)(entity.getHeight() / 4.0f) * Math.random() * 0.7;
-            this.posZ = entity.lastZ - this.motionZ * (double)offsetTickPC + -0.0875 + 0.175 * Math.random();
+            this.motionX = entity.getX() - entity.xo;
+            this.motionY = entity.getY() - entity.yo;
+            this.motionZ = entity.getZ() - entity.zo;
+            this.posX = entity.xo - this.motionX * (double)offsetTickPC + -0.0875 + 0.175 * Math.random();
+            this.posY = entity.yo - this.motionY * (double)offsetTickPC + (double)(entity.getBbHeight() / 3.0f) + (double)(entity.getBbHeight() / 4.0f) * Math.random() * 0.7;
+            this.posZ = entity.zo - this.motionZ * (double)offsetTickPC + -0.0875 + 0.175 * Math.random();
             this.prevPosX = this.posX;
             this.prevPosY = this.posY;
             this.prevPosZ = this.posZ;
@@ -426,7 +426,7 @@ extends Module {
         private Identifier getResource() {
             if (this.animated && !this.textures.isEmpty()) {
                 float timePC = (float)((System.currentTimeMillis() - this.timeAfterSpawn) % this.animationPerTime) / (float)this.animationPerTime;
-                int fragNumber = MathHelper.clamp((int)((int)(timePC * (float)this.textures.size())), (int)0, (int)(this.textures.size() - 1));
+                int fragNumber = Mth.clamp((int)((int)(timePC * (float)this.textures.size())), (int)0, (int)(this.textures.size() - 1));
                 return this.textures.get(fragNumber);
             }
             return this.textures.isEmpty() ? null : this.textures.get(0);
@@ -450,7 +450,7 @@ extends Module {
         }
 
         double timePC() {
-            return MathHelper.clamp((float)((float)(System.currentTimeMillis() - this.startTime) / 1000.0f), (float)0.0f, (float)1.0f);
+            return Mth.clamp((float)((float)(System.currentTimeMillis() - this.startTime) / 1000.0f), (float)0.0f, (float)1.0f);
         }
 
         double alphaPC() {

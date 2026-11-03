@@ -4,19 +4,19 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 
 @Environment(value=EnvType.CLIENT)
 public class HitEspEffect {
     public final long creationTime;
-    public final Vec3d position;
+    public final Vec3 position;
     public final float rotationDirection;
     public final Quaternionf orientation;
     public boolean isShattered = false;
     public final List<Shard> shards = new ArrayList<Shard>();
 
-    public HitEspEffect(Vec3d position, float rotationDirection, Quaternionf orientation) {
+    public HitEspEffect(Vec3 position, float rotationDirection, Quaternionf orientation) {
         this.creationTime = System.currentTimeMillis();
         this.position = position;
         this.rotationDirection = rotationDirection;
@@ -25,8 +25,8 @@ public class HitEspEffect {
 
     @Environment(value=EnvType.CLIENT)
     public static class Shard {
-        public Vec3d pos;
-        public Vec3d prevPos;
+        public Vec3 pos;
+        public Vec3 prevPos;
         public double vx;
         public double vy;
         public double vz;
@@ -46,7 +46,7 @@ public class HitEspEffect {
         public boolean onGround = false;
         public long groundHitTime = 0L;
 
-        public Shard(Vec3d startPos, double vx, double vy, double vz, float u1, float v1, float u2, float v2) {
+        public Shard(Vec3 startPos, double vx, double vy, double vz, float u1, float v1, float u2, float v2) {
             this.pos = startPos;
             this.prevPos = startPos;
             this.vx = vx;

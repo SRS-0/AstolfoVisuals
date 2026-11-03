@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.config;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 @Environment(value=EnvType.CLIENT)
 public class SoundSettings {
@@ -29,7 +29,7 @@ public class SoundSettings {
     }
 
     public static void setMasterVolume(float volume) {
-        masterVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        masterVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getGuiOpenVolume() {
@@ -37,7 +37,7 @@ public class SoundSettings {
     }
 
     public static void setGuiOpenVolume(float volume) {
-        guiOpenVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        guiOpenVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getCategoryVolume() {
@@ -45,7 +45,7 @@ public class SoundSettings {
     }
 
     public static void setCategoryVolume(float volume) {
-        categoryVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        categoryVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getModuleSelectVolume() {
@@ -53,7 +53,7 @@ public class SoundSettings {
     }
 
     public static void setModuleSelectVolume(float volume) {
-        moduleSelectVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        moduleSelectVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getSliderVolume() {
@@ -61,7 +61,7 @@ public class SoundSettings {
     }
 
     public static void setSliderVolume(float volume) {
-        sliderVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        sliderVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getSearchVolume() {
@@ -69,7 +69,7 @@ public class SoundSettings {
     }
 
     public static void setSearchVolume(float volume) {
-        searchVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        searchVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getModeOpenVolume() {
@@ -77,7 +77,7 @@ public class SoundSettings {
     }
 
     public static void setModeOpenVolume(float volume) {
-        modeOpenVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        modeOpenVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 
     public static float getModuleToggleVolume() {
@@ -85,7 +85,7 @@ public class SoundSettings {
     }
 
     public static void setModuleToggleVolume(float volume) {
-        moduleToggleVolume = MathHelper.clamp((float)volume, (float)0.0f, (float)100.0f);
+        moduleToggleVolume = Mth.clamp((float)volume, (float)0.0f, (float)100.0f);
     }
 }
 

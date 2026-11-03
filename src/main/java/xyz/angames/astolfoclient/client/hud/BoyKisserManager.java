@@ -4,18 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class BoyKisserManager {
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private final List<Identifier> frames = new ArrayList<Identifier>();
     private int currentFrame = 0;
     private long lastFrameTime = 0L;
@@ -31,29 +27,29 @@ public class BoyKisserManager {
     public BoyKisserManager() {
         int frameCount = 52;
         for (int i = 0; i < frameCount; ++i) {
-            this.frames.add(Identifier.of((String)"astolfoclient", (String)("textures/gui/boikiser/boykisser_" + i + ".png")));
+            this.frames.add(Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)("textures/gui/boikiser/boykisser_" + i + ".png")));
         }
     }
 
-    public void render(DrawContext context, float delta) {
+    public void render(GuiGraphicsExtractor context, float delta) {
         long now = (long)((double)System.nanoTime() / 1000000.0);
         if (now - this.lastFrameTime > 100L) {
             this.currentFrame = (this.currentFrame + 1) % this.frames.size();
             this.lastFrameTime = now;
         }
         Identifier currentTexture = this.frames.get(this.currentFrame);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         float scaleModifier = this.getScaleModifier();
-        context.getMatrices().translate((float)this.x, (float)this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate((float)(-this.x), (float)(-this.y));
-        context.drawTexture(net.minecraft.client.gl.RenderPipelines.GUI_TEXTURED, currentTexture, (int)this.x, (int)this.y, 0, 0, 64, 64, 64, 64);
-        context.getMatrices().popMatrix();
+        context.pose().translate((float)this.x, (float)this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate((float)(-this.x), (float)(-this.y));
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, currentTexture, (int)this.x, (int)this.y, 0, 0, 64, 64, 64, 64);
+        context.pose().popMatrix();
     }
 
     public float getScaleModifier() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        double currentGuiScale = mc.getWindow().getScaleFactor();
+        Minecraft mc = Minecraft.getInstance();
+        double currentGuiScale = mc.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
@@ -76,8 +72,8 @@ public class BoyKisserManager {
     public void onMouseDragged(double mouseX, double mouseY, int button) {
         if (button == 0 && this.isDragging) {
             float scaleModifier = this.getScaleModifier();
-            float screenW = this.client.getWindow().getScaledWidth();
-            float screenH = this.client.getWindow().getScaledHeight();
+            float screenW = this.client.getWindow().getGuiScaledWidth();
+            float screenH = this.client.getWindow().getGuiScaledHeight();
             float effectiveW = (float)(64.0 * (double)scaleModifier);
             float effectiveH = (float)(64.0 * (double)scaleModifier);
             this.x = Math.max(0.0, Math.min((double)Math.max(0.0f, screenW - effectiveW), mouseX - this.dragX));

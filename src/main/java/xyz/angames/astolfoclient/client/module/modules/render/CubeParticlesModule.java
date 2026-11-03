@@ -8,21 +8,21 @@ import java.util.Iterator;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -34,7 +34,7 @@ import xyz.angames.astolfoclient.client.module.setting.NumberSetting;
 @Environment(value=EnvType.CLIENT)
 public class CubeParticlesModule
 extends Module {
-    private static final Identifier BLOOM_TEXTURE = Identifier.of((String)"astolfoclient", (String)"textures/effects/bloom.png");
+    private static final Identifier BLOOM_TEXTURE = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"textures/effects/bloom.png");
     public final NumberSetting maxAmount = new NumberSetting("Amount", 60.0, 10.0, 200.0, 5.0);
     public final NumberSetting baseSize = new NumberSetting("Size", 0.25, 0.05, 1.0, 0.01);
     public final NumberSetting speedMultiplier = new NumberSetting("Speed", 1.0, 0.1, 3.0, 0.1);
@@ -72,8 +72,8 @@ extends Module {
 
     @Override
     public void onTick() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
             this.particles.clear();
             return;
         }
@@ -89,7 +89,7 @@ extends Module {
         }
         int targetCount = (int)this.maxAmount.get();
         double radius = this.spawnRadius.get();
-        Vec3d playerPos = mc.player.getEntityPos();
+        Vec3 playerPos = mc.player.position();
         int spawnPerTick = Math.min(2, Math.max(1, (targetCount - this.particles.size()) / 12 + 1));
         for (int i = 0; i < spawnPerTick && this.particles.size() < targetCount; ++i) {
             double angle = Math.random() * Math.PI * 2.0;
@@ -98,17 +98,17 @@ extends Module {
             double spawnX = playerPos.x + Math.cos(angle) * dist;
             double spawnY = playerPos.y + height;
             double spawnZ = playerPos.z + Math.sin(angle) * dist;
-            Vec3d spawnPos = new Vec3d(spawnX, spawnY, spawnZ);
-            Vec3d initialMotion = new Vec3d((Math.random() - 0.5) * 0.015, 0.003 + Math.random() * 0.01, (Math.random() - 0.5) * 0.015);
-            Vec3d initialRot = new Vec3d(Math.random() * Math.PI * 2.0, Math.random() * Math.PI * 2.0, Math.random() * Math.PI * 2.0);
-            Vec3d rotSpeed = new Vec3d(this.randomInRange(-0.03, 0.03), this.randomInRange(-0.03, 0.03), this.randomInRange(-0.03, 0.03));
+            Vec3 spawnPos = new Vec3(spawnX, spawnY, spawnZ);
+            Vec3 initialMotion = new Vec3((Math.random() - 0.5) * 0.015, 0.003 + Math.random() * 0.01, (Math.random() - 0.5) * 0.015);
+            Vec3 initialRot = new Vec3(Math.random() * Math.PI * 2.0, Math.random() * Math.PI * 2.0, Math.random() * Math.PI * 2.0);
+            Vec3 rotSpeed = new Vec3(this.randomInRange(-0.03, 0.03), this.randomInRange(-0.03, 0.03), this.randomInRange(-0.03, 0.03));
             long lifespan = (long)this.randomInRange(4000.0, 7500.0);
             float scaleVar = (float)this.randomInRange(0.85, 1.15);
             this.particles.add(new CubeParticle(spawnPos, initialMotion, initialRot, rotSpeed, lifespan, scaleVar));
         }
     }
 
-    public void onRender3D(WorldRenderContext context) {
+    public void onRender3D(LevelRenderContext context) {
         Color particleColor;
         float particleSize;
         double rotZ;
@@ -120,14 +120,14 @@ extends Module {
         if (this.particles.isEmpty()) {
             return;
         }
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.level == null) {
             return;
         }
-        Camera camera = context.gameRenderer().getCamera();
-        Vec3d cameraPos = camera.getCameraPos();
-        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(true);
-        MatrixStack ms = context.matrices();
+        Camera camera = context.gameRenderer().mainCamera();
+        Vec3 cameraPos = camera.position();
+        float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
+        PoseStack ms = context.poseStack();
         long now = System.currentTimeMillis();
         float baseSizeVal = this.baseSize.getFloat();
         boolean renderBloom = this.bloomGlow.get();
@@ -138,93 +138,93 @@ extends Module {
         boolean renderCore = this.internalCore.get();
         if (renderBloom) {
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask((boolean)false);
             RenderSystem.disableCull();
             var bloomTexture = mc.getTextureManager().getTexture(BLOOM_TEXTURE);
-            RenderSystem.setShaderTexture(0, bloomTexture.getGlTextureView(), com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().get(com.mojang.blaze3d.textures.FilterMode.LINEAR));
+            RenderSystem.setShaderTexture(0, bloomTexture.getTextureView(), com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR));
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-            BufferBuilder bloomBuffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+            BufferBuilder bloomBuffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             for (CubeParticle p : this.particles) {
                 alpha = p.getAlpha(now);
                 scaleFactor = p.getScaleFactor(now);
                 if (alpha <= 0.005f || scaleFactor <= 0.005f) continue;
-                x = MathHelper.lerp((double)tickDelta, (double)p.prevPos.x, (double)p.pos.x);
-                y = MathHelper.lerp((double)tickDelta, (double)p.prevPos.y, (double)p.pos.y);
-                z = MathHelper.lerp((double)tickDelta, (double)p.prevPos.z, (double)p.pos.z);
+                x = Mth.lerp((double)tickDelta, (double)p.prevPos.x, (double)p.pos.x);
+                y = Mth.lerp((double)tickDelta, (double)p.prevPos.y, (double)p.pos.y);
+                z = Mth.lerp((double)tickDelta, (double)p.prevPos.z, (double)p.pos.z);
                 float particleSize2 = baseSizeVal * p.scaleMultiplier * scaleFactor;
                 float quadSize = particleSize2 * bloomScaleVal;
                 Color particleColor2 = this.getColor(p.creationTime);
                 int color = this.withAlpha(particleColor2, alpha * 0.45f);
-                ms.push();
+                ms.pushPose();
                 ms.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
-                ms.multiply(camera.getRotation());
+                ms.mulPose(camera.rotation());
                 this.drawBillboardQuad(ms, bloomBuffer, -quadSize * 0.5f, -quadSize * 0.5f, quadSize, quadSize, color);
-                ms.pop();
+                ms.popPose();
             }
-            BuiltBuffer builtBloom = bloomBuffer.endNullable();
+            MeshData builtBloom = bloomBuffer.build();
             if (builtBloom != null) {
-                BufferRenderer.drawWithGlobalProgram((BuiltBuffer)builtBloom);
+                BufferRenderer.drawWithGlobalProgram((MeshData)builtBloom);
             }
         }
         if (renderFaces) {
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_SRC_ALPHA);
+            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask((boolean)false);
             RenderSystem.disableCull();
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder faceBuffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+            BufferBuilder faceBuffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
             for (CubeParticle p : this.particles) {
                 alpha = p.getAlpha(now);
                 scaleFactor = p.getScaleFactor(now);
                 if (alpha <= 0.005f || scaleFactor <= 0.005f) continue;
-                x = MathHelper.lerp((double)tickDelta, (double)p.prevPos.x, (double)p.pos.x);
-                y = MathHelper.lerp((double)tickDelta, (double)p.prevPos.y, (double)p.pos.y);
-                z = MathHelper.lerp((double)tickDelta, (double)p.prevPos.z, (double)p.pos.z);
-                double rotX = MathHelper.lerp((double)tickDelta, (double)p.prevRot.x, (double)p.rot.x);
-                double rotY = MathHelper.lerp((double)tickDelta, (double)p.prevRot.y, (double)p.rot.y);
-                rotZ = MathHelper.lerp((double)tickDelta, (double)p.prevRot.z, (double)p.rot.z);
+                x = Mth.lerp((double)tickDelta, (double)p.prevPos.x, (double)p.pos.x);
+                y = Mth.lerp((double)tickDelta, (double)p.prevPos.y, (double)p.pos.y);
+                z = Mth.lerp((double)tickDelta, (double)p.prevPos.z, (double)p.pos.z);
+                double rotX = Mth.lerp((double)tickDelta, (double)p.prevRot.x, (double)p.rot.x);
+                double rotY = Mth.lerp((double)tickDelta, (double)p.prevRot.y, (double)p.rot.y);
+                rotZ = Mth.lerp((double)tickDelta, (double)p.prevRot.z, (double)p.rot.z);
                 particleSize = baseSizeVal * p.scaleMultiplier * scaleFactor;
                 particleColor = this.getColor(p.creationTime);
                 float effectiveAlpha = alpha * faceAlphaVal;
-                ms.push();
+                ms.pushPose();
                 ms.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
-                ms.multiply(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
+                ms.mulPose(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
                 ms.scale(particleSize, particleSize, particleSize);
                 this.renderUnitCubeFaces(ms, faceBuffer, particleColor, effectiveAlpha);
-                ms.pop();
+                ms.popPose();
             }
-            BuiltBuffer builtFaces = faceBuffer.endNullable();
+            MeshData builtFaces = faceBuffer.build();
             if (builtFaces != null) {
-                BufferRenderer.drawWithGlobalProgram((BuiltBuffer)builtFaces);
+                BufferRenderer.drawWithGlobalProgram((MeshData)builtFaces);
             }
         }
         if (renderWire || renderCore) {
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask((boolean)false);
             RenderSystem.disableCull();
             RenderSystem.lineWidth((float)2.0f);
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder lineBuffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
+            BufferBuilder lineBuffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
             for (CubeParticle p : this.particles) {
                 alpha = p.getAlpha(now);
                 scaleFactor = p.getScaleFactor(now);
                 if (alpha <= 0.005f || scaleFactor <= 0.005f) continue;
-                x = MathHelper.lerp((double)tickDelta, (double)p.prevPos.x, (double)p.pos.x);
-                y = MathHelper.lerp((double)tickDelta, (double)p.prevPos.y, (double)p.pos.y);
-                z = MathHelper.lerp((double)tickDelta, (double)p.prevPos.z, (double)p.pos.z);
-                double rotX = MathHelper.lerp((double)tickDelta, (double)p.prevRot.x, (double)p.rot.x);
-                double rotY = MathHelper.lerp((double)tickDelta, (double)p.prevRot.y, (double)p.rot.y);
-                rotZ = MathHelper.lerp((double)tickDelta, (double)p.prevRot.z, (double)p.rot.z);
+                x = Mth.lerp((double)tickDelta, (double)p.prevPos.x, (double)p.pos.x);
+                y = Mth.lerp((double)tickDelta, (double)p.prevPos.y, (double)p.pos.y);
+                z = Mth.lerp((double)tickDelta, (double)p.prevPos.z, (double)p.pos.z);
+                double rotX = Mth.lerp((double)tickDelta, (double)p.prevRot.x, (double)p.rot.x);
+                double rotY = Mth.lerp((double)tickDelta, (double)p.prevRot.y, (double)p.rot.y);
+                rotZ = Mth.lerp((double)tickDelta, (double)p.prevRot.z, (double)p.rot.z);
                 particleSize = baseSizeVal * p.scaleMultiplier * scaleFactor;
                 particleColor = this.getColor(p.creationTime);
-                ms.push();
+                ms.pushPose();
                 ms.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
-                ms.multiply(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
+                ms.mulPose(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
                 ms.scale(particleSize, particleSize, particleSize);
                 if (renderCore) {
                     int diagColor = this.withAlpha(particleColor, alpha * 0.35f);
@@ -234,11 +234,11 @@ extends Module {
                     int wireColor = this.withAlpha(particleColor, alpha * 0.85f);
                     this.renderUnitOutlinedBox(ms, lineBuffer, wireColor);
                 }
-                ms.pop();
+                ms.popPose();
             }
-            BuiltBuffer builtLines = lineBuffer.endNullable();
+            MeshData builtLines = lineBuffer.build();
             if (builtLines != null) {
-                BufferRenderer.drawWithGlobalProgram((BuiltBuffer)builtLines);
+                BufferRenderer.drawWithGlobalProgram((MeshData)builtLines);
             }
             RenderSystem.lineWidth((float)1.0f);
         }
@@ -261,20 +261,20 @@ extends Module {
         return new Color(ThemeManager.getThemedColor(timeOffset));
     }
 
-    private void drawBillboardQuad(MatrixStack ms, BufferBuilder builder, float x, float y, float w, float h, int color) {
+    private void drawBillboardQuad(PoseStack ms, BufferBuilder builder, float x, float y, float w, float h, int color) {
         float r = (float)(color >> 16 & 0xFF) / 255.0f;
         float g = (float)(color >> 8 & 0xFF) / 255.0f;
         float b = (float)(color & 0xFF) / 255.0f;
         float a = (float)(color >> 24 & 0xFF) / 255.0f;
-        Matrix4f m = ms.peek().getPositionMatrix();
-        builder.vertex(m, x, y + h, 0.0f).texture(0.0f, 1.0f).color(r, g, b, a);
-        builder.vertex(m, x + w, y + h, 0.0f).texture(1.0f, 1.0f).color(r, g, b, a);
-        builder.vertex(m, x + w, y, 0.0f).texture(1.0f, 0.0f).color(r, g, b, a);
-        builder.vertex(m, x, y, 0.0f).texture(0.0f, 0.0f).color(r, g, b, a);
+        Matrix4f m = ms.last().pose();
+        builder.addVertex(m, x, y + h, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        builder.addVertex(m, x + w, y + h, 0.0f).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        builder.addVertex(m, x + w, y, 0.0f).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        builder.addVertex(m, x, y, 0.0f).setUv(0.0f, 0.0f).setColor(r, g, b, a);
     }
 
-    private void renderUnitCubeFaces(MatrixStack ms, BufferBuilder builder, Color baseColor, float alpha) {
-        Matrix4f m = ms.peek().getPositionMatrix();
+    private void renderUnitCubeFaces(PoseStack ms, BufferBuilder builder, Color baseColor, float alpha) {
+        Matrix4f m = ms.last().pose();
         int topColor = this.withAlpha(this.shadeColor(baseColor, 1.0f), alpha);
         int botColor = this.withAlpha(this.shadeColor(baseColor, 0.55f), alpha);
         int frontColor = this.withAlpha(this.shadeColor(baseColor, 0.88f), alpha);
@@ -294,62 +294,62 @@ extends Module {
         float g = (float)(color >> 8 & 0xFF) / 255.0f;
         float b = (float)(color & 0xFF) / 255.0f;
         float a = (float)(color >> 24 & 0xFF) / 255.0f;
-        builder.vertex(m, x1, y1, z1).color(r, g, b, a);
-        builder.vertex(m, x2, y2, z2).color(r, g, b, a);
-        builder.vertex(m, x3, y3, z3).color(r, g, b, a);
-        builder.vertex(m, x4, y4, z4).color(r, g, b, a);
+        builder.addVertex(m, x1, y1, z1).setColor(r, g, b, a);
+        builder.addVertex(m, x2, y2, z2).setColor(r, g, b, a);
+        builder.addVertex(m, x3, y3, z3).setColor(r, g, b, a);
+        builder.addVertex(m, x4, y4, z4).setColor(r, g, b, a);
     }
 
     private Color shadeColor(Color c, float factor) {
         return new Color(Math.min(255, (int)((float)c.getRed() * factor)), Math.min(255, (int)((float)c.getGreen() * factor)), Math.min(255, (int)((float)c.getBlue() * factor)));
     }
 
-    private void renderUnitInternalDiagonals(MatrixStack ms, BufferBuilder builder, int color) {
+    private void renderUnitInternalDiagonals(PoseStack ms, BufferBuilder builder, int color) {
         float r = (float)(color >> 16 & 0xFF) / 255.0f;
         float g = (float)(color >> 8 & 0xFF) / 255.0f;
         float b = (float)(color & 0xFF) / 255.0f;
         float a = (float)(color >> 24 & 0xFF) / 255.0f;
-        Matrix4f m = ms.peek().getPositionMatrix();
-        builder.vertex(m, -0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, -0.5f).color(r, g, b, a);
+        Matrix4f m = ms.last().pose();
+        builder.addVertex(m, -0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
     }
 
-    private void renderUnitOutlinedBox(MatrixStack ms, BufferBuilder builder, int color) {
+    private void renderUnitOutlinedBox(PoseStack ms, BufferBuilder builder, int color) {
         float r = (float)(color >> 16 & 0xFF) / 255.0f;
         float g = (float)(color >> 8 & 0xFF) / 255.0f;
         float b = (float)(color & 0xFF) / 255.0f;
         float a = (float)(color >> 24 & 0xFF) / 255.0f;
-        Matrix4f m = ms.peek().getPositionMatrix();
-        builder.vertex(m, -0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, -0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, 0.5f, 0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, -0.5f, 0.5f).color(r, g, b, a);
-        builder.vertex(m, -0.5f, 0.5f, 0.5f).color(r, g, b, a);
+        Matrix4f m = ms.last().pose();
+        builder.addVertex(m, -0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, -0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, 0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, -0.5f, 0.5f).setColor(r, g, b, a);
+        builder.addVertex(m, -0.5f, 0.5f, 0.5f).setColor(r, g, b, a);
     }
 
     private int withAlpha(Color baseColor, float alpha) {
@@ -363,19 +363,19 @@ extends Module {
 
     @Environment(value=EnvType.CLIENT)
     private static class CubeParticle {
-        Vec3d prevPos;
-        Vec3d pos;
-        Vec3d motion;
-        Vec3d prevRot;
-        Vec3d rot;
-        Vec3d rotSpeed;
+        Vec3 prevPos;
+        Vec3 pos;
+        Vec3 motion;
+        Vec3 prevRot;
+        Vec3 rot;
+        Vec3 rotSpeed;
         final long creationTime;
         final long lifespan;
         final long fadeIn = 750L;
         final long fadeOut = 950L;
         final float scaleMultiplier;
 
-        CubeParticle(Vec3d pos, Vec3d motion, Vec3d rot, Vec3d rotSpeed, long lifespan, float scaleMultiplier) {
+        CubeParticle(Vec3 pos, Vec3 motion, Vec3 rot, Vec3 rotSpeed, long lifespan, float scaleMultiplier) {
             this.pos = pos;
             this.prevPos = pos;
             this.motion = motion;
@@ -390,13 +390,13 @@ extends Module {
         void tick(float speedMul, boolean usePhysics) {
             this.prevPos = this.pos;
             this.prevRot = this.rot;
-            this.pos = this.pos.add(this.motion.multiply((double)speedMul));
-            this.rot = this.rot.add(this.rotSpeed.multiply((double)speedMul));
+            this.pos = this.pos.add(this.motion.scale((double)speedMul));
+            this.rot = this.rot.add(this.rotSpeed.scale((double)speedMul));
             if (usePhysics) {
                 double swayX = Math.sin((double)(System.currentTimeMillis() + this.creationTime) * 0.002) * 6.0E-4;
                 double swayZ = Math.cos((double)(System.currentTimeMillis() + this.creationTime) * 0.002) * 6.0E-4;
-                this.motion = new Vec3d(this.motion.x * 0.98 + swayX, this.motion.y * 0.98 + 3.0E-4, this.motion.z * 0.98 + swayZ);
-                this.rotSpeed = this.rotSpeed.multiply(0.995);
+                this.motion = new Vec3(this.motion.x * 0.98 + swayX, this.motion.y * 0.98 + 3.0E-4, this.motion.z * 0.98 + swayZ);
+                this.rotSpeed = this.rotSpeed.scale(0.995);
             }
         }
 

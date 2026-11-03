@@ -1,6 +1,7 @@
 package xyz.angames.astolfoclient.client.gui;
 
 import com.google.common.base.Supplier;
+import com.mojang.blaze3d.vertex.PoseStack;
 import dev.sxmurxy.mre.builders.Builder;
 import dev.sxmurxy.mre.builders.states.QuadColorState;
 import dev.sxmurxy.mre.builders.states.QuadRadiusState;
@@ -19,16 +20,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.GameRenderer;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.GameRenderer;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.DiscordRpcManager;
@@ -123,7 +123,7 @@ extends Screen {
 
     public float getColorPickerY(float winY) {
         float popY = this.getSettingsModalY(winY);
-        return MathHelper.clamp((float)(popY - 10.0f), (float)(winY + 38.0f), (float)(winY + 380.0f - 94.0f - 8.0f));
+        return Mth.clamp((float)(popY - 10.0f), (float)(winY + 38.0f), (float)(winY + 380.0f - 94.0f - 8.0f));
     }
 
     public float getSoundSettingsX(float winX) {
@@ -132,7 +132,7 @@ extends Screen {
 
     public float getSoundSettingsY(float winY) {
         float popY = this.getSettingsModalY(winY);
-        return MathHelper.clamp((float)(popY - 16.0f), (float)(winY + 38.0f), (float)(winY + 380.0f - 190.0f - 8.0f));
+        return Mth.clamp((float)(popY - 16.0f), (float)(winY + 38.0f), (float)(winY + 380.0f - 190.0f - 8.0f));
     }
 
     public float getScaleSettingsX(float winX) {
@@ -141,7 +141,7 @@ extends Screen {
 
     public float getScaleSettingsY(float winY) {
         float popY = this.getSettingsModalY(winY);
-        return MathHelper.clamp((float)(popY - 10.0f), (float)(winY + 38.0f), (float)(winY + 380.0f - 162.0f - 8.0f));
+        return Mth.clamp((float)(popY - 10.0f), (float)(winY + 38.0f), (float)(winY + 380.0f - 162.0f - 8.0f));
     }
 
     public boolean isAnyModalOpen() {
@@ -153,7 +153,7 @@ extends Screen {
     }
 
     public ClickGuiScreen() {
-        super((Text)Text.literal((String)"AstolfoClient"));
+        super((Component)Component.literal((String)"AstolfoClient"));
         this.allModuleButtons = AstolfoclientClient.moduleManager.getModules().stream().map(m -> new ModuleButton((Module)m, 205.0f)).collect(Collectors.toList());
         for (NavTab tab : NavTab.values()) {
             this.scrollOffsets.put(tab, Float.valueOf(0.0f));
@@ -170,7 +170,7 @@ extends Screen {
     }
 
     private float effectiveScale() {
-        float requested = GuiUtils.getScaleModifier(this.client) * GuiScaleSettings.getScale();
+        float requested = GuiUtils.getScaleModifier(this.minecraft) * GuiScaleSettings.getScale();
         return Math.min(requested, Math.min(this.width / 600.0f, this.height / 400.0f));
     }
 
@@ -265,7 +265,7 @@ extends Screen {
         }
     }
 
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
@@ -273,7 +273,7 @@ extends Screen {
         return false;
     }
 
-    public void close() {
+    public void onClose() {
         this.settingsModalOpen = false;
         this.colorPickerOpen = false;
         this.soundSettingsOpen = false;
@@ -281,10 +281,10 @@ extends Screen {
         ModePopupState.close();
         SubSettingsPopupState.close();
         MultiSelectPopupState.close();
-        super.close();
+        super.onClose();
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         this.renderHandLogic(context, delta);
         long now = System.currentTimeMillis();
         if (this.lastFrameTime == 0L) {
@@ -292,16 +292,16 @@ extends Screen {
         }
         float deltaTime = (float)(now - this.lastFrameTime) / 1000.0f;
         this.lastFrameTime = now;
-        deltaTime = MathHelper.clamp((float)deltaTime, (float)5.0E-4f, (float)0.1f);
+        deltaTime = Mth.clamp((float)deltaTime, (float)5.0E-4f, (float)0.1f);
         for (ModuleButton mb : this.allModuleButtons) {
             mb.isVisible = false;
         }
         float sm = this.effectiveScale();
         int adjMouseX = (int)((float)mouseX / sm);
         int adjMouseY = (int)((float)mouseY / sm);
-        context.getMatrices().pushMatrix();
-        context.getMatrices().scale(sm, sm);
-        Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        context.pose().pushMatrix();
+        context.pose().scale(sm, sm);
+        Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         float scaledWidth = (float)this.width / sm;
         float scaledHeight = (float)this.height / sm;
         float alpha = this.openAnimProgress = GuiUtils.animate(this.openAnimProgress, 1.0f, 14.0f, deltaTime);
@@ -311,10 +311,10 @@ extends Screen {
             float cx = winX + 290.0f;
             float cy = winY + 190.0f;
             float scale = 0.92f + 0.08f * this.openAnimProgress;
-            context.getMatrices().translate(cx, cy);
-            context.getMatrices().scale(scale, scale);
-            context.getMatrices().translate(-cx, -cy);
-            mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+            context.pose().translate(cx, cy);
+            context.pose().scale(scale, scale);
+            context.pose().translate(-cx, -cy);
+            mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         }
         Color themeColor = new Color(ThemeManager.getThemedColor(System.currentTimeMillis() / 10L));
         this.renderShadow(mx, winX, winY, 580.0f, 380.0f, 10.0f, alpha);
@@ -341,10 +341,10 @@ extends Screen {
         ModePopupState.renderActive(context, winX, winY, 580.0f, 380.0f, adjMouseX, adjMouseY, deltaTime, alpha, themeColor);
         SubSettingsPopupState.renderActive(context, winX, winY, 580.0f, 380.0f, adjMouseX, adjMouseY, deltaTime, alpha, themeColor);
         MultiSelectPopupState.renderActive(context, winX, winY, 580.0f, 380.0f, adjMouseX, adjMouseY, deltaTime, alpha, themeColor);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
-    private void drawSidebar(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawSidebar(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(1.0f, 380.0f)).radius(new QuadRadiusState(0.0f)).color(new QuadColorState(new Color(16, 16, 22, 255))).build()).render(mx, winX + 138.0f, winY);
         float logoSize = 33.0f;
         float logoX = winX + (138.0f - logoSize) / 2.0f;
@@ -467,7 +467,7 @@ extends Screen {
         Identifier avTex = DiscordAvatarManager.getAvatarTexture();
         if (avTex != null) {
             try {
-                AbstractTexture tex = MinecraftClient.getInstance().getTextureManager().getTexture(avTex);
+                AbstractTexture tex = Minecraft.getInstance().getTextureManager().getTexture(avTex);
                 if (tex != null) {
                     ((BuiltTexture)Builder.texture().size(new SizeState(avSize, avSize)).radius(new QuadRadiusState(avRadius)).texture(0.0f, 0.0f, 1.0f, 1.0f, tex).color(new QuadColorState(GuiUtils.withAlpha(Color.WHITE, alpha))).build()).render(mx, avX, avY);
                     drawnAvatar = true;
@@ -477,11 +477,11 @@ extends Screen {
                 // empty catch block
             }
         }
-        if (!drawnAvatar && this.client.player != null) {
+        if (!drawnAvatar && this.minecraft.player != null) {
             try {
                 AbstractTexture tex;
-                Identifier skinTex = this.client.player.getSkin().body().texturePath();
-                if (skinTex != null && (tex = this.client.getTextureManager().getTexture(skinTex)) != null) {
+                Identifier skinTex = this.minecraft.player.getSkin().body().texturePath();
+                if (skinTex != null && (tex = this.minecraft.getTextureManager().getTexture(skinTex)) != null) {
                     ((BuiltTexture)Builder.texture().size(new SizeState(avSize, avSize)).radius(new QuadRadiusState(avRadius)).texture(0.125f, 0.125f, 0.125f, 0.125f, tex).color(new QuadColorState(GuiUtils.withAlpha(Color.WHITE, alpha))).build()).render(mx, avX, avY);
                     ((BuiltTexture)Builder.texture().size(new SizeState(avSize, avSize)).radius(new QuadRadiusState(avRadius)).texture(0.625f, 0.125f, 0.125f, 0.125f, tex).color(new QuadColorState(GuiUtils.withAlpha(Color.WHITE, alpha))).build()).render(mx, avX, avY);
                     drawnAvatar = true;
@@ -494,7 +494,7 @@ extends Screen {
         if (!drawnAvatar) {
             ((BuiltRectangle)Builder.rectangle().size(new SizeState(avSize, avSize)).radius(new QuadRadiusState(avRadius)).color(new QuadColorState(GuiUtils.withAlpha(new Color(28, 28, 36), alpha))).build()).render(mx, avX, avY);
         }
-        String name = discordUsername != null && !discordUsername.isEmpty() ? discordUsername : (this.client.player != null ? this.client.player.getName().getString() : "User");
+        String name = discordUsername != null && !discordUsername.isEmpty() ? discordUsername : (this.minecraft.player != null ? this.minecraft.player.getName().getString() : "User");
         float userTextX = avX + avSize + 7.0f;
         GuiUtils.renderTextSafely(mx, "User: " + name, userTextX, profCenterY - 4.0f, GuiUtils.withAlpha(Color.WHITE, alpha), 8.5f);
         float gearX = winX + 138.0f - 22.0f;
@@ -543,7 +543,7 @@ extends Screen {
         GuiUtils.renderTextSafely(mx, tab.title, textX, textY, GuiUtils.withAlpha(Color.WHITE, alpha), 8.8f);
     }
 
-    private void drawTopBar(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawTopBar(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float topBarX = winX + 138.0f;
         float topBarW = 442.0f;
         float topBarH = 36.0f;
@@ -590,7 +590,7 @@ extends Screen {
         }
     }
 
-    private void drawMainContent(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawMainContent(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float contentX = winX + 138.0f;
         float contentY = winY + 36.0f;
         float contentW = 442.0f;
@@ -604,7 +604,7 @@ extends Screen {
         context.disableScissor();
     }
 
-    private void drawModulesView(DrawContext context, Matrix4f mx, float contentX, float contentY, float contentW, float contentH, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawModulesView(GuiGraphicsExtractor context, Matrix4f mx, float contentX, float contentY, float contentW, float contentH, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float scroll = this.scrollOffsets.get((Object)this.activeTab).floatValue();
         float targetScroll = this.targetScrollOffsets.get((Object)this.activeTab).floatValue();
         scroll = GuiUtils.animate(scroll, targetScroll, 15.0f, deltaTime);
@@ -679,7 +679,7 @@ extends Screen {
         float maxColumnY = Math.max(col1Y, col2Y) - scroll;
         float totalContentH = maxColumnY - (contentY + 10.0f);
         float maxScroll = Math.max(0.0f, totalContentH - (contentH - 20.0f));
-        this.targetScrollOffsets.put(this.activeTab, Float.valueOf(MathHelper.clamp((float)targetScroll, (float)(-maxScroll), (float)0.0f)));
+        this.targetScrollOffsets.put(this.activeTab, Float.valueOf(Mth.clamp((float)targetScroll, (float)(-maxScroll), (float)0.0f)));
         if (totalContentH > contentH - 20.0f) {
             float scrollbarW = 3.0f;
             float scrollbarX = contentX + contentW - 5.0f;
@@ -688,12 +688,12 @@ extends Screen {
             float thumbRatio = (contentH - 20.0f) / totalContentH;
             float thumbH = Math.max(20.0f, scrollbarTrackH * thumbRatio);
             float scrollProgress = -scroll / maxScroll;
-            float thumbY = scrollbarTrackY + (scrollbarTrackH - thumbH) * MathHelper.clamp((float)scrollProgress, (float)0.0f, (float)1.0f);
+            float thumbY = scrollbarTrackY + (scrollbarTrackH - thumbH) * Mth.clamp((float)scrollProgress, (float)0.0f, (float)1.0f);
             ((BuiltRectangle)Builder.rectangle().size(new SizeState(scrollbarW, thumbH)).radius(new QuadRadiusState(1.5f)).color(new QuadColorState(GuiUtils.withAlpha(new Color(50, 50, 65), alpha * 0.6f))).build()).render(mx, scrollbarX, thumbY);
         }
     }
 
-    private void drawConfigsView(DrawContext context, Matrix4f mx, float contentX, float contentY, float contentW, float contentH, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawConfigsView(GuiGraphicsExtractor context, Matrix4f mx, float contentX, float contentY, float contentW, float contentH, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         String dispConfigName;
         float margin = 11.0f;
         float colGap = 10.0f;
@@ -780,7 +780,7 @@ extends Screen {
         }
     }
 
-    private void drawSettingsModal(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawSettingsModal(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float sm = this.settingsModalAnim;
         float ease = 1.0f - (float)Math.pow(1.0f - sm, 3.0);
         float scale = 0.9f + 0.1f * ease;
@@ -789,15 +789,15 @@ extends Screen {
         float popH = 106.0f;
         float popX = this.getSettingsModalX(winX);
         float popY = this.getSettingsModalY(winY);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (scale < 0.999f) {
             float scx = popX + popW / 2.0f;
             float scy = popY + popH / 2.0f;
-            context.getMatrices().translate(scx, scy);
-            context.getMatrices().scale(scale, scale);
-            context.getMatrices().translate(-scx, -scy);
+            context.pose().translate(scx, scy);
+            context.pose().scale(scale, scale);
+            context.pose().translate(-scx, -scy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         for (int i = 6; i >= 0; --i) {
             float progress = (float)i / 6.0f;
             float spread = progress * 4.0f;
@@ -851,10 +851,10 @@ extends Screen {
         float hudTw = medFont != null ? medFont.getWidth("Hud editor", 7.5f) : 38.0f;
         float hudTx = rX + (contentW - hudTw) / 2.0f;
         GuiUtils.renderTextSafely(matrix, "Hud editor", hudTx, r4Y + 6.0f, GuiUtils.withAlpha(Color.WHITE, modalAlpha), 7.5f);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
-    private void drawSoundsModal(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawSoundsModal(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float sndEase = 1.0f - (float)Math.pow(1.0f - this.soundSettingsAnim, 3.0);
         float sndScale = 0.9f + 0.1f * sndEase;
         float sndAlpha = alpha * sndEase;
@@ -862,15 +862,15 @@ extends Screen {
         float sndH = 190.0f;
         float sndX = this.getSoundSettingsX(winX);
         float sndY = this.getSoundSettingsY(winY);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (sndScale < 0.999f) {
             float scx = sndX + sndW / 2.0f;
             float scy = sndY + sndH / 2.0f;
-            context.getMatrices().translate(scx, scy);
-            context.getMatrices().scale(sndScale, sndScale);
-            context.getMatrices().translate(-scx, -scy);
+            context.pose().translate(scx, scy);
+            context.pose().scale(sndScale, sndScale);
+            context.pose().translate(-scx, -scy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         for (int i = 6; i >= 0; --i) {
             float progress = (float)i / 6.0f;
             float spread = progress * 4.0f;
@@ -880,10 +880,10 @@ extends Screen {
         }
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(sndW, sndH)).radius(new QuadRadiusState(8.0f)).color(new QuadColorState(new Color(0, 0, 0, (int)(255.0f * sndAlpha)))).build()).render(matrix, sndX, sndY);
         SoundSettingsPopup.render(context, sndX, sndY, sndW, sndH, mouseX, mouseY, deltaTime, sndAlpha, themeColor);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
-    private void drawScaleModal(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawScaleModal(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float scaleEase = 1.0f - (float)Math.pow(1.0f - this.scaleModalAnim, 3.0);
         float scaleScale = 0.9f + 0.1f * scaleEase;
         float scaleAlpha = alpha * scaleEase;
@@ -891,15 +891,15 @@ extends Screen {
         float scH = 162.0f;
         float scX = this.getScaleSettingsX(winX);
         float scY = this.getScaleSettingsY(winY);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (scaleScale < 0.999f) {
             float scx = scX + scW / 2.0f;
             float scy = scY + scH / 2.0f;
-            context.getMatrices().translate(scx, scy);
-            context.getMatrices().scale(scaleScale, scaleScale);
-            context.getMatrices().translate(-scx, -scy);
+            context.pose().translate(scx, scy);
+            context.pose().scale(scaleScale, scaleScale);
+            context.pose().translate(-scx, -scy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         for (int i = 6; i >= 0; --i) {
             float progress = (float)i / 6.0f;
             float spread = progress * 4.0f;
@@ -909,10 +909,10 @@ extends Screen {
         }
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(scW, scH)).radius(new QuadRadiusState(8.0f)).color(new QuadColorState(new Color(0, 0, 0, (int)(255.0f * scaleAlpha)))).build()).render(matrix, scX, scY);
         ScaleSettingsPopup.render(context, scX, scY, scW, scH, mouseX, mouseY, deltaTime, scaleAlpha, themeColor);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
-    private void drawColorPickerModal(DrawContext context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
+    private void drawColorPickerModal(GuiGraphicsExtractor context, Matrix4f mx, float winX, float winY, int mouseX, int mouseY, float deltaTime, float alpha, Color themeColor) {
         float cpEase = 1.0f - (float)Math.pow(1.0f - this.colorPickerAnim, 3.0);
         float cpScale = 0.9f + 0.1f * cpEase;
         float cpAlpha = alpha * cpEase;
@@ -920,15 +920,15 @@ extends Screen {
         float cpH = 94.0f;
         float cpX = this.getColorPickerX(winX);
         float cpY = this.getColorPickerY(winY);
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         if (cpScale < 0.999f) {
             float scx = cpX + cpW / 2.0f;
             float scy = cpY + cpH / 2.0f;
-            context.getMatrices().translate(scx, scy);
-            context.getMatrices().scale(cpScale, cpScale);
-            context.getMatrices().translate(-scx, -scy);
+            context.pose().translate(scx, scy);
+            context.pose().scale(cpScale, cpScale);
+            context.pose().translate(-scx, -scy);
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         for (int i = 6; i >= 0; --i) {
             float progress = (float)i / 6.0f;
             float spread = progress * 4.0f;
@@ -943,7 +943,7 @@ extends Screen {
         this.themePicker.height = cpH;
         this.themePicker.animate(deltaTime);
         this.themePicker.render(matrix, mouseX, mouseY, cpAlpha);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
@@ -1062,7 +1062,7 @@ extends Screen {
             }
             if (GuiUtils.isMouseOver(adjMouseX, adjMouseY, rX, r4Y, contentW, rowH)) {
                 ModSounds.playModeOpen();
-                this.client.setScreen((Screen)new HudEditorScreen());
+                this.minecraft.gui.setScreen((Screen)new HudEditorScreen());
                 return true;
             }
             if (GuiUtils.isMouseOver(adjMouseX, adjMouseY, popX, popY, popW, popH)) {
@@ -1261,7 +1261,7 @@ extends Screen {
                 return true;
             }
         }
-        return super.mouseClicked(new net.minecraft.client.gui.Click(mouseX, mouseY, new net.minecraft.client.input.MouseInput(button, 0)), false);
+        return super.mouseClicked(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, new net.minecraft.client.input.MouseButtonInfo(button, 0)), false);
     }
 
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
@@ -1289,7 +1289,7 @@ extends Screen {
                 return true;
             }
         }
-        return super.mouseDragged(new net.minecraft.client.gui.Click(mouseX, mouseY, new net.minecraft.client.input.MouseInput(button, 0)), deltaX, deltaY);
+        return super.mouseDragged(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, new net.minecraft.client.input.MouseButtonInfo(button, 0)), deltaX, deltaY);
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
@@ -1302,7 +1302,7 @@ extends Screen {
         for (ModuleButton mb : this.allModuleButtons) {
             mb.mouseReleased();
         }
-        return super.mouseReleased(new net.minecraft.client.gui.Click(mouseX, mouseY, new net.minecraft.client.input.MouseInput(button, 0)));
+        return super.mouseReleased(new net.minecraft.client.input.MouseButtonEvent(mouseX, mouseY, new net.minecraft.client.input.MouseButtonInfo(button, 0)));
     }
 
     public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
@@ -1345,7 +1345,7 @@ extends Screen {
             }
             return true;
         }
-        return super.charTyped(new net.minecraft.client.input.CharInput(chr, modifiers));
+        return super.charTyped(new net.minecraft.client.input.CharacterEvent(chr));
     }
 
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
@@ -1434,24 +1434,24 @@ extends Screen {
                 }
             }
             if (System.currentTimeMillis() - this.initTime >= 150L) {
-                this.close();
+                this.onClose();
             }
             return true;
         }
-        return super.keyPressed(new net.minecraft.client.input.KeyInput(keyCode, scanCode, modifiers));
+        return super.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
     }
 
-    private void renderHandLogic(DrawContext ctx, float delta) {
+    private void renderHandLogic(GuiGraphicsExtractor ctx, float delta) {
         boolean renderingHand = this.allModuleButtons.stream().anyMatch(mb -> mb.isVisible && mb.module instanceof HandPositionModule);
-        if (!renderingHand || this.client.gameRenderer == null) {
+        if (!renderingHand || this.minecraft.gameRenderer == null) {
             return;
         }
         try {
             if (renderHandMethod == null) {
-                renderHandMethod = GameRenderer.class.getDeclaredMethod("renderHand", MatrixStack.class, Camera.class, Float.TYPE);
+                renderHandMethod = GameRenderer.class.getDeclaredMethod("renderHand", PoseStack.class, Camera.class, Float.TYPE);
                 renderHandMethod.setAccessible(true);
             }
-            renderHandMethod.invoke((Object)this.client.gameRenderer, ctx.getMatrices(), this.client.gameRenderer.getCamera(), Float.valueOf(delta));
+            renderHandMethod.invoke((Object)this.minecraft.gameRenderer, ctx.pose(), this.minecraft.gameRenderer.mainCamera(), Float.valueOf(delta));
         }
         catch (Exception exception) {
             // empty catch block
@@ -1491,10 +1491,10 @@ extends Screen {
             this.title = title;
         }
     }
-    @Override public boolean mouseClicked(net.minecraft.client.gui.Click click, boolean doubled) { return mouseClicked(click.x(), click.y(), click.button()); }
-    @Override public boolean mouseDragged(net.minecraft.client.gui.Click click, double dx, double dy) { return mouseDragged(click.x(), click.y(), click.button(), dx, dy); }
-    @Override public boolean mouseReleased(net.minecraft.client.gui.Click click) { return mouseReleased(click.x(), click.y(), click.button()); }
-    @Override public boolean keyPressed(net.minecraft.client.input.KeyInput input) { return keyPressed(input.key(), input.scancode(), input.modifiers()); }
-    @Override public boolean charTyped(net.minecraft.client.input.CharInput input) { return charTyped((char)input.codepoint(), input.modifiers()); }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) { return mouseClicked(click.x(), click.y(), click.button()); }
+    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) { return mouseDragged(click.x(), click.y(), click.button(), dx, dy); }
+    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) { return mouseReleased(click.x(), click.y(), click.button()); }
+    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent input) { return keyPressed(input.key(), input.scancode(), input.modifiers()); }
+    @Override public boolean charTyped(net.minecraft.client.input.CharacterEvent input) { return charTyped((char)input.codepoint(), 0); }
 
 }

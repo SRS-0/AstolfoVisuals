@@ -1,21 +1,21 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.platform.DestFactor;
-import com.mojang.blaze3d.platform.SourceFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
+import com.mojang.blaze3d.PrimitiveTopology;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.Tessellator;
-import net.minecraft.client.render.VertexFormats;
-import com.mojang.blaze3d.vertex.VertexFormat.DrawMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -25,13 +25,13 @@ import xyz.angames.astolfoclient.client.module.Module;
 @Environment(EnvType.CLIENT)
 public class KillEffectRenderer {
    private final KillEffectManager manager;
-   private static final Identifier BLOOM_TEXTURE = Identifier.of("astolfoclient", "textures/effects/bloom.png");
+   private static final Identifier BLOOM_TEXTURE = Identifier.fromNamespaceAndPath("astolfoclient", "textures/effects/bloom.png");
 
    public KillEffectRenderer(KillEffectManager manager) {
       this.manager = manager;
    }
 
-   public void render(WorldRenderContext context) {
+   public void render(LevelRenderContext context) {
       Module module = AstolfoclientClient.moduleManager.getModuleByName("KillEffect");
       if (module != null && module.isEnabled()) {
          if (!this.manager.getEffects().isEmpty()) {
@@ -40,11 +40,11 @@ public class KillEffectRenderer {
             RenderSystem.disableCull();
             RenderSystem.disableDepthTest();
             RenderSystem.depthMask(false);
-            RenderSystem.blendFunc(SourceFactor.SRC_ALPHA, DestFactor.ONE);
-            Tessellator tessellator = Tessellator.getInstance();
-            double camX = context.gameRenderer().getCamera().getCameraPos().x;
-            double camY = context.gameRenderer().getCamera().getCameraPos().y;
-            double camZ = context.gameRenderer().getCamera().getCameraPos().z;
+            RenderSystem.blendFunc(BlendFactor.SRC_ALPHA, BlendFactor.ONE);
+            Tesselator tessellator = Tesselator.getInstance();
+            double camX = context.gameRenderer().mainCamera().position().x;
+            double camY = context.gameRenderer().mainCamera().position().y;
+            double camZ = context.gameRenderer().mainCamera().position().z;
             int rgb = ThemeManager.getThemedColor(0L);
             Color c = new Color(rgb);
             float r = c.getRed() / 255.0F;
@@ -56,18 +56,18 @@ public class KillEffectRenderer {
                if (age <= 3000L) {
                   float progress = (float)age / 3000.0F;
                   float globalAlpha = 1.0F - progress;
-                  MatrixStack matrices = context.matrices();
-                  matrices.push();
+                  PoseStack matrices = context.poseStack();
+                  matrices.pushPose();
                   matrices.translate(effect.pos.x - camX, effect.pos.y - camY, effect.pos.z - camZ);
                   if (effect.mode.equals("Zap")) {
                      RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
                      float zapAlpha = 1.0F - (float)age / 800.0F;
                      if (zapAlpha > 0.0F) {
-                        BufferBuilder buffer = tessellator.begin(DrawMode.TRIANGLES, VertexFormats.POSITION_COLOR);
+                        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
 
                         for (int i = 0; i < effect.zapPoints.size() - 1; i++) {
-                           Vec3d p1 = effect.zapPoints.get(i);
-                           Vec3d p2 = effect.zapPoints.get(i + 1);
+                           Vec3 p1 = effect.zapPoints.get(i);
+                           Vec3 p2 = effect.zapPoints.get(i + 1);
                            double distance = p1.distanceTo(p2);
                            int bubbles = (int)(distance / 0.25);
 
@@ -76,22 +76,22 @@ public class KillEffectRenderer {
                               float bx = (float)(p1.x + (p2.x - p1.x) * lerp);
                               float by = (float)(p1.y + (p2.y - p1.y) * lerp);
                               float bz = (float)(p1.z + (p2.z - p1.z) * lerp);
-                              matrices.push();
+                              matrices.pushPose();
                               matrices.translate(bx, by, bz);
-                              matrices.multiply(context.gameRenderer().getCamera().getRotation());
+                              matrices.mulPose(context.gameRenderer().mainCamera().rotation());
                               float scale = 0.6F;
                               matrices.scale(scale, scale, scale);
-                              this.drawBatchedGlowingDot(matrices.peek().getPositionMatrix(), buffer, r, g, b, zapAlpha);
-                              matrices.pop();
+                              this.drawBatchedGlowingDot(matrices.last().pose(), buffer, r, g, b, zapAlpha);
+                              matrices.popPose();
                            }
                         }
 
-                        BufferRenderer.drawWithGlobalProgram(buffer.end());
+                        BufferRenderer.drawWithGlobalProgram(buffer.buildOrThrow());
                      }
                   } else if (effect.mode.equals("Thanos")) {
                      RenderSystem.setShader(ShaderProgramKeys.POSITION_TEX_COLOR);
                      RenderSystem.setShaderTexture(0, BLOOM_TEXTURE);
-                     Quaternionf cameraRot = context.gameRenderer().getCamera().getRotation();
+                     Quaternionf cameraRot = context.gameRenderer().mainCamera().rotation();
                      BufferBuilder buffer = null;
 
                      for (KillEffectManager.ThanosParticle p : effect.thanosParticles) {
@@ -108,29 +108,29 @@ public class KillEffectRenderer {
 
                         if (!(pAlpha <= 0.05F)) {
                            if (buffer == null) {
-                              buffer = tessellator.begin(DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+                              buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                            }
 
-                           matrices.push();
+                           matrices.pushPose();
                            matrices.translate(p.startX, currentY, p.startZ);
-                           matrices.multiply(cameraRot);
+                           matrices.mulPose(cameraRot);
                            float pScale = 0.18F;
                            matrices.scale(pScale, pScale, pScale);
-                           Matrix4f pMatrix = matrices.peek().getPositionMatrix();
-                           buffer.vertex(pMatrix, -0.5F, -0.5F, 0.0F).texture(0.0F, 1.0F).color(1.0F, 1.0F, 1.0F, pAlpha);
-                           buffer.vertex(pMatrix, 0.5F, -0.5F, 0.0F).texture(1.0F, 1.0F).color(1.0F, 1.0F, 1.0F, pAlpha);
-                           buffer.vertex(pMatrix, 0.5F, 0.5F, 0.0F).texture(1.0F, 0.0F).color(1.0F, 1.0F, 1.0F, pAlpha);
-                           buffer.vertex(pMatrix, -0.5F, 0.5F, 0.0F).texture(0.0F, 0.0F).color(1.0F, 1.0F, 1.0F, pAlpha);
-                           matrices.pop();
+                           Matrix4f pMatrix = matrices.last().pose();
+                           buffer.addVertex(pMatrix, -0.5F, -0.5F, 0.0F).setUv(0.0F, 1.0F).setColor(1.0F, 1.0F, 1.0F, pAlpha);
+                           buffer.addVertex(pMatrix, 0.5F, -0.5F, 0.0F).setUv(1.0F, 1.0F).setColor(1.0F, 1.0F, 1.0F, pAlpha);
+                           buffer.addVertex(pMatrix, 0.5F, 0.5F, 0.0F).setUv(1.0F, 0.0F).setColor(1.0F, 1.0F, 1.0F, pAlpha);
+                           buffer.addVertex(pMatrix, -0.5F, 0.5F, 0.0F).setUv(0.0F, 0.0F).setColor(1.0F, 1.0F, 1.0F, pAlpha);
+                           matrices.popPose();
                         }
                      }
 
                      if (buffer != null) {
-                        BufferRenderer.drawWithGlobalProgram(buffer.end());
+                        BufferRenderer.drawWithGlobalProgram(buffer.buildOrThrow());
                      }
                   }
 
-                  matrices.pop();
+                  matrices.popPose();
                }
             }
 
@@ -151,9 +151,9 @@ public class KillEffectRenderer {
          float py1 = (float)Math.sin(rad1);
          float px2 = (float)Math.cos(rad2);
          float py2 = (float)Math.sin(rad2);
-         buffer.vertex(matrix, 0.0F, 0.0F, 0.0F).color(1.0F, 1.0F, 1.0F, alpha);
-         buffer.vertex(matrix, px1, py1, 0.0F).color(r, g, b, 0.0F);
-         buffer.vertex(matrix, px2, py2, 0.0F).color(r, g, b, 0.0F);
+         buffer.addVertex(matrix, 0.0F, 0.0F, 0.0F).setColor(1.0F, 1.0F, 1.0F, alpha);
+         buffer.addVertex(matrix, px1, py1, 0.0F).setColor(r, g, b, 0.0F);
+         buffer.addVertex(matrix, px2, py2, 0.0F).setColor(r, g, b, 0.0F);
       }
    }
 }

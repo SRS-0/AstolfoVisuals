@@ -3,8 +3,8 @@ package xyz.angames.astolfoclient.client.module.modules.misc;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.DeathScreen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.DeathScreen;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.NumberSetting;
 
@@ -24,22 +24,22 @@ extends Module {
         });
     }
 
-    private void onTick(MinecraftClient mc) {
+    private void onTick(Minecraft mc) {
         boolean isDead;
         if (mc.player == null) {
             this.deathTime = 0L;
             return;
         }
-        boolean bl = isDead = mc.currentScreen instanceof DeathScreen || mc.player.isDead() || mc.player.getHealth() <= 0.0f;
+        boolean bl = isDead = mc.gui.screen() instanceof DeathScreen || mc.player.isDeadOrDying() || mc.player.getHealth() <= 0.0f;
         if (isDead) {
             long now = System.currentTimeMillis();
             if (this.deathTime == 0L) {
                 this.deathTime = now;
             }
             if (now - this.deathTime >= (long)this.delay.get()) {
-                mc.player.requestRespawn();
-                if (mc.currentScreen instanceof DeathScreen) {
-                    mc.setScreen(null);
+                mc.player.respawn();
+                if (mc.gui.screen() instanceof DeathScreen) {
+                    mc.gui.setScreen(null);
                 }
                 this.deathTime = 0L;
             }

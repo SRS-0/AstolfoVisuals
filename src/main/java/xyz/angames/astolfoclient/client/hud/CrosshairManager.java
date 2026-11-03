@@ -7,38 +7,38 @@ import dev.sxmurxy.mre.renderers.impl.BuiltRectangle;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.option.Perspective;
-import net.minecraft.util.hit.HitResult;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.phys.HitResult;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.modules.render.CrosshairModule;
 
 @Environment(value=EnvType.CLIENT)
 public class CrosshairManager {
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private final Color entityColor = new Color(255, 50, 50);
 
-    public void render(DrawContext context) {
-        if (this.client.player == null || this.client.options.getPerspective() != Perspective.FIRST_PERSON) {
+    public void render(GuiGraphicsExtractor context) {
+        if (this.client.player == null || this.client.options.getCameraType() != CameraType.FIRST_PERSON) {
             return;
         }
         CrosshairModule module = (CrosshairModule)AstolfoclientClient.moduleManager.getModuleByName("Crosshair");
         if (module == null || !module.isEnabled()) {
             return;
         }
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
-        float x = (float)this.client.getWindow().getScaledWidth() / 2.0f;
-        float y = (float)this.client.getWindow().getScaledHeight() / 2.0f;
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
+        float x = (float)this.client.getWindow().getGuiScaledWidth() / 2.0f;
+        float y = (float)this.client.getWindow().getGuiScaledHeight() / 2.0f;
         float gap = module.getGap();
         if (module.hasDynamicGap()) {
-            float cooldown = 1.0f - this.client.player.getAttackCooldownProgress(0.0f);
+            float cooldown = 1.0f - this.client.player.getAttackStrengthScale(0.0f);
             gap += 8.0f * cooldown * cooldown;
         }
         float thickness = module.getThickness();
         float length = module.getLength();
-        Color color = module.usesEntityColor() && this.client.crosshairTarget != null && this.client.crosshairTarget.getType() == HitResult.Type.ENTITY ? this.entityColor : Color.WHITE;
+        Color color = module.usesEntityColor() && this.client.hitResult != null && this.client.hitResult.getType() == HitResult.Type.ENTITY ? this.entityColor : Color.WHITE;
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(thickness, length)).color(new QuadColorState(color)).build()).render(matrix, x - thickness / 2.0f, y - gap - length);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(thickness, length)).color(new QuadColorState(color)).build()).render(matrix, x - thickness / 2.0f, y + gap);
         ((BuiltRectangle)Builder.rectangle().size(new SizeState(length, thickness)).color(new QuadColorState(color)).build()).render(matrix, x - gap - length, y - thickness / 2.0f);

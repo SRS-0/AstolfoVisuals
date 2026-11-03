@@ -14,15 +14,15 @@ import dev.sxmurxy.mre.renderers.impl.BuiltText;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 
 @Environment(value=EnvType.CLIENT)
 public class TestHudManager {
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
     private static final Supplier<MsdfFont> BIKO_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("biko").data("biko").build());
     public double x = 100.0;
     public double y = 100.0;
@@ -32,10 +32,10 @@ public class TestHudManager {
     private double dragX;
     private double dragY;
 
-    public void render(DrawContext context, float delta) {
+    public void render(GuiGraphicsExtractor context, float delta) {
         boolean isModuleOn;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.world == null) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) {
             return;
         }
         Module testModule = AstolfoclientClient.moduleManager.getModuleByName("Test");
@@ -49,12 +49,12 @@ public class TestHudManager {
         float fresnelPowerVal = 2.0f;
         float baseAlphaVal = 0.2f;
         float roundingVal = 7.0f;
-        context.getMatrices().pushMatrix();
+        context.pose().pushMatrix();
         float scaleModifier = this.getScaleModifier();
-        context.getMatrices().translate((float)this.x, (float)this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate((float)(-this.x), (float)(-this.y));
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        context.pose().translate((float)this.x, (float)this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate((float)(-this.x), (float)(-this.y));
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         float x1 = (float)this.x;
         float y1 = (float)this.y;
         float w = (float)this.width;
@@ -66,12 +66,12 @@ public class TestHudManager {
         String text = "67";
         float textWidth = ((MsdfFont)BIKO_FONT.get()).getWidth(text, 12.0f);
         ((BuiltText)Builder.text().font((MsdfFont)BIKO_FONT.get()).text(text).color(Color.WHITE).size(12.0f).build()).render(matrix, x1 + (w - textWidth) / 2.0f, y1 + (h - 12.0f) / 2.0f);
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     public float getScaleModifier() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        double currentGuiScale = mc.getWindow().getScaleFactor();
+        Minecraft mc = Minecraft.getInstance();
+        double currentGuiScale = mc.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
@@ -80,7 +80,7 @@ public class TestHudManager {
 
     public boolean onMouseClicked(double mouseX, double mouseY, int button) {
         boolean isModuleOn;
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         Module testModule = AstolfoclientClient.moduleManager.getModuleByName("Test");
         boolean bl = isModuleOn = testModule != null && testModule.isEnabled();
         if (!isModuleOn) {
@@ -100,10 +100,10 @@ public class TestHudManager {
 
     public void onMouseDragged(double mouseX, double mouseY, int button) {
         if (button == 0 && this.isDragging) {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             float scaleModifier = this.getScaleModifier();
-            float screenW = mc.getWindow().getScaledWidth();
-            float screenH = mc.getWindow().getScaledHeight();
+            float screenW = mc.getWindow().getGuiScaledWidth();
+            float screenH = mc.getWindow().getGuiScaledHeight();
             float effectiveW = (float)(this.width * (double)scaleModifier);
             float effectiveH = (float)(this.height * (double)scaleModifier);
             this.x = Math.max(0.0, Math.min((double)Math.max(0.0f, screenW - effectiveW), mouseX - this.dragX));

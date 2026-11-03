@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.util;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.Mth;
 
 @Environment(value=EnvType.CLIENT)
 public class ColorUtil {
@@ -23,7 +23,7 @@ public class ColorUtil {
     }
 
     public static int makeColor(int red, int green, int blue, int alpha) {
-        return MathHelper.clamp((int)alpha, (int)0, (int)255) << 24 | MathHelper.clamp((int)red, (int)0, (int)255) << 16 | MathHelper.clamp((int)green, (int)0, (int)255) << 8 | MathHelper.clamp((int)blue, (int)0, (int)255);
+        return Mth.clamp((int)alpha, (int)0, (int)255) << 24 | Mth.clamp((int)red, (int)0, (int)255) << 16 | Mth.clamp((int)green, (int)0, (int)255) << 8 | Mth.clamp((int)blue, (int)0, (int)255);
     }
 
     public static int multAlpha(int color, float alphaPercent) {

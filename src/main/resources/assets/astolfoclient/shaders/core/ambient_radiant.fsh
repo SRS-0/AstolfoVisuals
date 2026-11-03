@@ -5,6 +5,7 @@ layout(std140) uniform EffectData {
     float Time;
     vec3 Accent;
     vec4 ColorModulator;
+    vec4 uDepthRange;
 };
 
 // Полярное сияние / Aurora Borealis. Тёмное звёздное небо + плывущие занавески сияния.

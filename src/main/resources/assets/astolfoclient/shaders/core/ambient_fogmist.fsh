@@ -8,6 +8,7 @@ layout(std140) uniform EffectData {
     float speed;
     float density;
     float horizon;
+    vec4 uDepthRange;
 };
 
 in vec3 lookDir;

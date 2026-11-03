@@ -3,7 +3,7 @@ package xyz.angames.astolfoclient.client.command.commands;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 
@@ -24,7 +24,7 @@ extends Command {
         switch (action = args[0].toLowerCase()) {
             case "get": 
             case "color": {
-                ThemeCommand.sendMessage(String.valueOf(Formatting.GOLD) + "Current Theme Color: " + String.valueOf(Formatting.WHITE) + ThemeManager.getCustomColor1Hex());
+                ThemeCommand.sendMessage(String.valueOf(ChatFormatting.GOLD) + "Current Theme Color: " + String.valueOf(ChatFormatting.WHITE) + ThemeManager.getCustomColor1Hex());
                 break;
             }
             case "set": {
@@ -34,7 +34,7 @@ extends Command {
                 }
                 try {
                     ThemeManager.setCustomColor(args[1]);
-                    ThemeCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Theme color set to " + args[1]);
+                    ThemeCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Theme color set to " + args[1]);
                 }
                 catch (Exception e) {
                     this.sendError("Invalid hex color: " + args[1]);
@@ -45,7 +45,7 @@ extends Command {
                 if (args[0].startsWith("#")) {
                     try {
                         ThemeManager.setCustomColor(args[0]);
-                        ThemeCommand.sendMessage(String.valueOf(Formatting.GREEN) + "Theme color set to " + args[0]);
+                        ThemeCommand.sendMessage(String.valueOf(ChatFormatting.GREEN) + "Theme color set to " + args[0]);
                     }
                     catch (Exception e) {
                         this.sendError("Invalid hex color: " + args[0]);

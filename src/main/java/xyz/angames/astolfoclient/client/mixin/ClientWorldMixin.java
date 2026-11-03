@@ -3,12 +3,11 @@ package xyz.angames.astolfoclient.client.mixin;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.client.render.SkyRendering;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.state.SkyRenderState;
+import net.minecraft.client.Camera;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.SkyRenderer;
+import net.minecraft.client.renderer.state.level.SkyRenderState;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,10 +17,10 @@ import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.modules.render.AmbientsModule;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={SkyRendering.class})
+@Mixin(value={SkyRenderer.class})
 public class ClientWorldMixin {
-    @Inject(method="updateRenderState", at=@At("RETURN"))
-    private void onGetSkyColor(ClientWorld world, float tickDelta, Camera camera, SkyRenderState state, CallbackInfo ci) {
+    @Inject(method="extractRenderState", at=@At("RETURN"))
+    private void onGetSkyColor(ClientLevel world, float tickDelta, Camera camera, SkyRenderState state, CallbackInfo ci) {
         float strength;
         if (AstolfoclientClient.moduleManager == null) {
             return;

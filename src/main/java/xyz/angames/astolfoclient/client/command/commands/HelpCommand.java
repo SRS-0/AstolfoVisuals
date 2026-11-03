@@ -2,7 +2,7 @@ package xyz.angames.astolfoclient.client.command.commands;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.command.Command;
 
@@ -15,10 +15,10 @@ extends Command {
 
     @Override
     public void execute(String[] args) {
-        HelpCommand.sendMessage(String.valueOf(Formatting.BOLD) + "--- Available Commands ---");
+        HelpCommand.sendMessage(String.valueOf(ChatFormatting.BOLD) + "--- Available Commands ---");
         for (Command c : AstolfoclientClient.commandManager.getCommands()) {
-            HelpCommand.sendMessage(String.valueOf(Formatting.AQUA) + c.getName() + String.valueOf(Formatting.GRAY) + ": " + c.getDescription());
-            HelpCommand.sendMessage(String.valueOf(Formatting.DARK_GRAY) + "  " + c.getSyntax());
+            HelpCommand.sendMessage(String.valueOf(ChatFormatting.AQUA) + c.getName() + String.valueOf(ChatFormatting.GRAY) + ": " + c.getDescription());
+            HelpCommand.sendMessage(String.valueOf(ChatFormatting.DARK_GRAY) + "  " + c.getSyntax());
         }
     }
 }

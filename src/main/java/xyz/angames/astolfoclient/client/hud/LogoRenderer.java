@@ -21,11 +21,11 @@ import java.util.Map;
 import java.util.Set;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.texture.AbstractTexture;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -39,15 +39,15 @@ import xyz.angames.astolfoclient.client.util.DiscordAvatarManager;
 
 @Environment(EnvType.CLIENT)
 public class LogoRenderer {
-   private final MinecraftClient client = MinecraftClient.getInstance();
+   private final Minecraft client = Minecraft.getInstance();
    public static final Supplier<MsdfFont> ASTOLFO_FONT = Suppliers.memoize(
-      () -> MsdfFont.builder().name("astolfo_logo").data(Identifier.of("mre", "fonts/astolfo.json")).atlas(Identifier.of("mre", "fonts/astolfo.png")).build()
+      () -> MsdfFont.builder().name("astolfo_logo").data(Identifier.fromNamespaceAndPath("mre", "fonts/astolfo.json")).atlas(Identifier.fromNamespaceAndPath("mre", "fonts/astolfo.png")).build()
    );
    public static final Supplier<MsdfFont> WATERMARK_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("watermark_icons")
-         .data(Identifier.of("mre", "icons/watermark/watermark.json"))
-         .atlas(Identifier.of("mre", "icons/watermark/watermark.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/watermark/watermark.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/watermark/watermark.png"))
          .glyphMapper(g -> {
             int idx = g.index();
             if (idx == 4) {
@@ -79,8 +79,8 @@ public class LogoRenderer {
    public static final Supplier<MsdfFont> SP_FONT = Suppliers.memoize(
       () -> MsdfFont.builder()
          .name("watermark_sp_icons")
-         .data(Identifier.of("mre", "icons/watermark/seting-panel/watermark-sp.json"))
-         .atlas(Identifier.of("mre", "icons/watermark/seting-panel/watermark-sp.png"))
+         .data(Identifier.fromNamespaceAndPath("mre", "icons/watermark/seting-panel/watermark-sp.json"))
+         .atlas(Identifier.fromNamespaceAndPath("mre", "icons/watermark/seting-panel/watermark-sp.png"))
          .glyphMapper(g -> {
             int idx = g.index();
             if (idx == 4) {
@@ -229,10 +229,10 @@ public class LogoRenderer {
       return AstolfoclientClient.moduleManager == null ? null : (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
    }
 
-   public void render(DrawContext context) {
-      if (this.client.world != null && this.client.player != null) {
+   public void render(GuiGraphicsExtractor context) {
+      if (this.client.level != null && this.client.player != null) {
          InterfaceModule interfaceMod = this.getInterfaceModule();
-         if (interfaceMod == null || interfaceMod.logo.get() || this.client.currentScreen instanceof HudEditorScreen) {
+         if (interfaceMod == null || interfaceMod.logo.get() || this.client.gui.screen() instanceof HudEditorScreen) {
             long now = System.currentTimeMillis();
             float deltaTime = (float)(now - this.lastFrameTime) / 1000.0F;
             this.lastFrameTime = now;
@@ -250,14 +250,14 @@ public class LogoRenderer {
             MsdfFont boldFont = (MsdfFont)BOLD_FONT.get();
             MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
             MsdfFont spFont = (MsdfFont)SP_FONT.get();
-            double currentGuiScale = this.client.getWindow().getScaleFactor();
+            double currentGuiScale = this.client.getWindow().getGuiScale();
             if (currentGuiScale <= 0.0) {
                currentGuiScale = 2.0;
             }
 
             float scaleFactor = (float)(2.0 / currentGuiScale);
-            float guiWidth = this.client.getWindow().getScaledWidth();
-            float guiHeight = this.client.getWindow().getScaledHeight();
+            float guiWidth = this.client.getWindow().getGuiScaledWidth();
+            float guiHeight = this.client.getWindow().getGuiScaledHeight();
 
             try {
                float fontSize = 8.5F;
@@ -289,7 +289,7 @@ public class LogoRenderer {
                this.gpuAnim.update(gpuStr);
                this.ramAnim.update(ramStr);
                this.userAnim.update(userStr);
-               Object activeScreen = this.client.currentScreen;
+               Object activeScreen = this.client.gui.screen();
                if (activeScreen != this.lastScreen) {
                   this.draggedSection = null;
                   this.wasMouseDown = false;
@@ -302,13 +302,13 @@ public class LogoRenderer {
                double mouseScaledY = -9999.0;
                boolean isMouseDown = false;
                boolean isRightMouseDown = false;
-               long win = this.client.getWindow().getHandle();
+               long win = this.client.getWindow().handle();
                if (win != 0L) {
                   double[] mx = new double[1];
                   double[] my = new double[1];
                   GLFW.glfwGetCursorPos(win, mx, my);
-                  double screenWidth = this.client.getWindow().getFramebufferWidth();
-                  double screenHeight = this.client.getWindow().getFramebufferHeight();
+                  double screenWidth = this.client.getWindow().getWidth();
+                  double screenHeight = this.client.getWindow().getHeight();
                   if (screenWidth > 0.0 && screenHeight > 0.0) {
                      mouseScaledX = mx[0] / screenWidth * guiWidth;
                      mouseScaledY = my[0] / screenHeight * guiHeight;
@@ -354,6 +354,7 @@ public class LogoRenderer {
                boolean hasAvatar = showAvatar;
                float currX_Avatar = lastSectionTargetX + lastSectionWidth + sectionGap + 1.0F;
                float totalW = hasAvatar ? currX_Avatar + avatarSize + paddingRight : lastSectionTargetX + lastSectionWidth + paddingRight;
+               scaleFactor = Math.min(scaleFactor, Math.max(1.0F, guiWidth - 20.0F * scaleFactor) / Math.max(1.0F, totalW));
                float totalH = 22.0F;
                float pillRadius = 6.5F;
                float margin = 10.0F * scaleFactor;
@@ -511,11 +512,11 @@ public class LogoRenderer {
                }
 
                Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
-               context.getMatrices().pushMatrix();
-               context.getMatrices().translate(x, y);
-               context.getMatrices().scale(scaleFactor, scaleFactor);
-               context.getMatrices().translate(-x, -y);
-               Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+               context.pose().pushMatrix();
+               context.pose().translate(x, y);
+               context.pose().scale(scaleFactor, scaleFactor);
+               context.pose().translate(-x, -y);
+               Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
                int shadowSteps = 12;
                float maxSpread = 8.0F;
 
@@ -656,7 +657,7 @@ public class LogoRenderer {
                   }
                }
 
-               context.getMatrices().popMatrix();
+               context.pose().popMatrix();
                this.drawCrashAlerts(context, x, y, totalW, totalH, scaleFactor, guiWidth, guiHeight, themeColor, deltaTime);
                if (inChat) {
                   this.drawAnimatedContextPanel(
@@ -691,7 +692,7 @@ public class LogoRenderer {
    }
 
    private void drawCrashAlerts(
-      DrawContext context,
+      GuiGraphicsExtractor context,
       float wX,
       float wY,
       float wTotalW,
@@ -746,17 +747,17 @@ public class LogoRenderer {
                   }
 
                   float cardY = isBottom ? currY - cardH : currY;
-                  context.getMatrices().pushMatrix();
+                  context.pose().pushMatrix();
                   float scale = 0.9F + 0.1F * ease;
                   if (scale < 0.999F) {
                      float cx = cardX + cardW / 2.0F;
                      float cy = cardY + cardH / 2.0F;
-                     context.getMatrices().translate(cx, cy);
-                     context.getMatrices().scale(scale, scale);
-                     context.getMatrices().translate(-cx, -cy);
+                     context.pose().translate(cx, cy);
+                     context.pose().scale(scale, scale);
+                     context.pose().translate(-cx, -cy);
                   }
 
-                  Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+                  Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
 
                   for (int s = 6; s >= 0; s--) {
                      float progress = s / 6.0F;
@@ -815,7 +816,7 @@ public class LogoRenderer {
                         .render(matrix, cardX + 7.0F, cardY + cardH - 2.5F);
                   }
 
-                  context.getMatrices().popMatrix();
+                  context.pose().popMatrix();
                   if (isBottom) {
                      currY -= cardH + 4.0F;
                   } else {
@@ -828,7 +829,7 @@ public class LogoRenderer {
    }
 
    private void drawAnimatedContextPanel(
-      DrawContext context,
+      GuiGraphicsExtractor context,
       float wX,
       float wY,
       float wTotalW,
@@ -892,16 +893,16 @@ public class LogoRenderer {
          MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
          float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
          float mainScale = 0.88F + 0.12F * mainEase;
-         context.getMatrices().pushMatrix();
+         context.pose().pushMatrix();
          if (mainScale < 0.999F) {
             float cx = mX + mainW / 2.0F;
             float cy = mY + mainH / 2.0F;
-            context.getMatrices().translate(cx, cy);
-            context.getMatrices().scale(mainScale, mainScale);
-            context.getMatrices().translate(-cx, -cy);
+            context.pose().translate(cx, cy);
+            context.pose().scale(mainScale, mainScale);
+            context.pose().translate(-cx, -cy);
          }
 
-         Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+         Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
 
          for (int i = 6; i >= 0; i--) {
             float progress = i / 6.0F;
@@ -945,7 +946,7 @@ public class LogoRenderer {
          if (closeHover && isMouseDown && !wasMouseDown) {
             this.panelOpen = false;
             this.activeSubmenu = LogoRenderer.SubmenuType.NONE;
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
          } else {
             float c1X = mX + 4.0F;
             float c1Y = mY + 20.0F;
@@ -1123,22 +1124,22 @@ public class LogoRenderer {
                showAvatar = !showAvatar;
             }
 
-            context.getMatrices().popMatrix();
+            context.pose().popMatrix();
             if (this.subPanelAnim > 0.005F) {
                float subEase = 1.0F - (float)Math.pow(1.0F - this.subPanelAnim, 3.0);
                float subScale = 0.88F + 0.12F * subEase;
                float sX = mX + mainW + 5.0F;
                float sY = mY;
-               context.getMatrices().pushMatrix();
+               context.pose().pushMatrix();
                if (subScale < 0.999F) {
                   float scx = sX + subW / 2.0F;
                   float scy = mY + subH / 2.0F;
-                  context.getMatrices().translate(scx, scy);
-                  context.getMatrices().scale(subScale, subScale);
-                  context.getMatrices().translate(-scx, -scy);
+                  context.pose().translate(scx, scy);
+                  context.pose().scale(subScale, subScale);
+                  context.pose().translate(-scx, -scy);
                }
 
-               matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+               matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
 
                for (int ix = 6; ix >= 0; ix--) {
                   float progress = ix / 6.0F;
@@ -1253,7 +1254,7 @@ public class LogoRenderer {
                   }
                }
 
-               context.getMatrices().popMatrix();
+               context.pose().popMatrix();
             }
          }
       }
@@ -1359,10 +1360,10 @@ public class LogoRenderer {
    }
 
    private String getServerStr() {
-      return this.client.getCurrentServerEntry() != null
-            && this.client.getCurrentServerEntry().address != null
-            && !this.client.getCurrentServerEntry().address.trim().isEmpty()
-         ? this.client.getCurrentServerEntry().address
+      return this.client.getCurrentServer() != null
+            && this.client.getCurrentServer().ip != null
+            && !this.client.getCurrentServer().ip.trim().isEmpty()
+         ? this.client.getCurrentServer().ip
          : "Local";
    }
 
@@ -1381,8 +1382,8 @@ public class LogoRenderer {
    }
 
    private int getGpuUsage() {
-      if (this.client.getCurrentFps() > 0) {
-         int fps = this.client.getCurrentFps();
+      if (this.client.getFps() > 0) {
+         int fps = this.client.getFps();
          return Math.min(99, Math.max(10, 100 - fps / 12));
       } else {
          return 24;
@@ -1398,8 +1399,8 @@ public class LogoRenderer {
    }
 
    private int getPing() {
-      if (this.client.getNetworkHandler() != null && this.client.player != null) {
-         PlayerListEntry info = this.client.getNetworkHandler().getPlayerListEntry(this.client.player.getUuid());
+      if (this.client.getConnection() != null && this.client.player != null) {
+         PlayerInfo info = this.client.getConnection().getPlayerInfo(this.client.player.getUUID());
          if (info != null) {
             return info.getLatency();
          }
@@ -1409,15 +1410,15 @@ public class LogoRenderer {
    }
 
    private int getFps() {
-      return this.client.getCurrentFps();
+      return this.client.getFps();
    }
 
    private String getUserName() {
-      return this.client.getSession() != null && this.client.getSession().getUsername() != null ? this.client.getSession().getUsername() : "User";
+      return this.client.getUser() != null && this.client.getUser().getName() != null ? this.client.getUser().getName() : "User";
    }
 
    private boolean isAnyScreenOpen() {
-      return this.client.currentScreen != null;
+      return this.client.gui.screen() != null;
    }
 
    @Environment(EnvType.CLIENT)

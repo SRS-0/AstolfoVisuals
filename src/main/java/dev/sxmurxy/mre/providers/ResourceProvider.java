@@ -9,15 +9,15 @@ import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.resources.Identifier;
 
 @Environment(value=EnvType.CLIENT)
 public final class ResourceProvider {
     private static final Gson GSON = new Gson();
 
     public static Identifier getShaderIdentifier(String name) {
-        return Identifier.of((String)"mre", (String)("core/" + name));
+        return Identifier.fromNamespaceAndPath((String)"mre", (String)("core/" + name));
     }
 
     public static JsonObject toJson(Identifier identifier) {
@@ -37,7 +37,7 @@ public final class ResourceProvider {
      */
     public static String toString(Identifier identifier, String delimiter) {
         block27: {
-            MinecraftClient client = MinecraftClient.getInstance();
+            Minecraft client = Minecraft.getInstance();
             if (client != null && client.getResourceManager() != null) {
                 try (InputStream inputStream2 = client.getResourceManager().open(identifier);){
                     String string;

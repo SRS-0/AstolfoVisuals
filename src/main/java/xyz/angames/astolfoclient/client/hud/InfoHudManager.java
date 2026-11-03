@@ -12,9 +12,9 @@ import dev.sxmurxy.mre.renderers.impl.BuiltText;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.util.Identifier;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -27,7 +27,7 @@ import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 public class InfoHudManager {
     private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
     private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
-    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().name("interface_icons_infohud").data(Identifier.of((String)"mre", (String)"icons/interface/interface.json")).atlas(Identifier.of((String)"mre", (String)"icons/interface/interface.png")).glyphMapper(g -> {
+    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().name("interface_icons_infohud").data(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/interface/interface.json")).atlas(Identifier.fromNamespaceAndPath((String)"mre", (String)"icons/interface/interface.png")).glyphMapper(g -> {
         int idx = g.index();
         if (idx == 3) {
             return 75;
@@ -64,12 +64,12 @@ public class InfoHudManager {
     private final AnimatedString coordZAnim = new AnimatedString();
     private final AnimatedString bpsAnim = new AnimatedString();
 
-    public void render(DrawContext context, float tickDelta) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null || client.player == null || AstolfoclientClient.moduleManager == null) {
+    public void render(GuiGraphicsExtractor context, float tickDelta) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null || client.player == null || AstolfoclientClient.moduleManager == null) {
             return;
         }
-        boolean isEditing = client.currentScreen instanceof HudEditorScreen;
+        boolean isEditing = client.gui.screen() instanceof HudEditorScreen;
         InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
         boolean isSettingEnabled = interfaceMod != null && interfaceMod.infoHud.get();
         boolean shouldShow = interfaceMod != null && interfaceMod.isEnabled() && isSettingEnabled || isEditing;
@@ -94,8 +94,8 @@ public class InfoHudManager {
         int ix = (int)px;
         int iy = (int)py;
         int iz = (int)pz;
-        double deltaX = client.player.getX() - client.player.lastX;
-        double deltaZ = client.player.getZ() - client.player.lastZ;
+        double deltaX = client.player.getX() - client.player.xo;
+        double deltaZ = client.player.getZ() - client.player.zo;
         double targetBps = Math.sqrt(deltaX * deltaX + deltaZ * deltaZ) * 20.0;
         this.animatedBps += (targetBps - this.animatedBps) * (1.0 - Math.exp(-8.0 * deltaSeconds));
         if (this.animatedBps < 0.01) {
@@ -123,11 +123,11 @@ public class InfoHudManager {
         float targetWidth = paddingX + coordsIconW + iconGap + coordsTextW + elementGap + dotSize + elementGap + bpsIconW + iconGap + bpsTextW + paddingX;
         this.currentWidth += (targetWidth - this.currentWidth) * (float)(1.0 - Math.exp(-15.0 * deltaSeconds));
         float scaleModifier = this.getScaleModifier();
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(this.x, this.y);
-        context.getMatrices().scale(scaleModifier, scaleModifier);
-        context.getMatrices().translate(-this.x, -this.y);
-        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        context.pose().pushMatrix();
+        context.pose().translate(this.x, this.y);
+        context.pose().scale(scaleModifier, scaleModifier);
+        context.pose().translate(-this.x, -this.y);
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.pose());
         long themeTime = (long)((double)nowNs / 1000000.0);
         Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
         Color whiteText = GuiUtils.withAlpha(Color.WHITE, this.animationProgress);
@@ -163,7 +163,7 @@ public class InfoHudManager {
             float wBps = this.bpsAnim.render(matrix, currentX, centerY - 2.5f, whiteText, semibold, infoSize);
             ((BuiltText)Builder.text().font(semibold).text(" BPS").color(whiteText).size(infoSize).build()).render(matrix, currentX += wBps, centerY - 2.5f);
         }
-        context.getMatrices().popMatrix();
+        context.pose().popMatrix();
     }
 
     private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
@@ -200,8 +200,8 @@ public class InfoHudManager {
     }
 
     private float getScaleModifier() {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        double currentGuiScale = mc.getWindow().getScaleFactor();
+        Minecraft mc = Minecraft.getInstance();
+        double currentGuiScale = mc.getWindow().getGuiScale();
         if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
         }
@@ -210,8 +210,8 @@ public class InfoHudManager {
 
     public boolean onMouseClicked(double mouseX, double mouseY, int button) {
         boolean isSettingEnabled;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        boolean isEditing = mc.currentScreen instanceof HudEditorScreen;
+        Minecraft mc = Minecraft.getInstance();
+        boolean isEditing = mc.gui.screen() instanceof HudEditorScreen;
         InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
         boolean bl = isSettingEnabled = interfaceMod != null && interfaceMod.infoHud.get();
         if (!(isEditing || interfaceMod != null && isSettingEnabled && interfaceMod.isEnabled())) {
@@ -231,10 +231,10 @@ public class InfoHudManager {
 
     public boolean onMouseDragged(double mouseX, double mouseY, int button) {
         if (this.dragging && button == 0) {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             float scaleModifier = this.getScaleModifier();
-            float screenW = mc.getWindow().getScaledWidth();
-            float screenH = mc.getWindow().getScaledHeight();
+            float screenW = mc.getWindow().getGuiScaledWidth();
+            float screenH = mc.getWindow().getGuiScaledHeight();
             float effectiveW = this.currentWidth * scaleModifier;
             float effectiveH = height * scaleModifier;
             float targetX = (float)(mouseX - (double)this.dragOffsetX);

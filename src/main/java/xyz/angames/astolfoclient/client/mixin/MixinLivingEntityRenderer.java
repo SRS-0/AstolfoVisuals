@@ -1,18 +1,18 @@
 package xyz.angames.astolfoclient.client.mixin;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.command.OrderedRenderCommandQueue;
-import net.minecraft.client.render.state.CameraRenderState;
-import net.minecraft.client.render.entity.LivingEntityRenderer;
-import net.minecraft.client.render.entity.PlayerEntityRenderer;
-import net.minecraft.client.render.entity.model.EntityModel;
-import net.minecraft.client.render.entity.model.PlayerEntityModel;
-import net.minecraft.client.render.entity.state.LivingEntityRenderState;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.LivingEntityRenderer;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import org.joml.Quaternionf;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -42,25 +42,25 @@ public abstract class MixinLivingEntityRenderer {
         return this.customModelRenderer;
     }
 
-    @Inject(method={"render(Lnet/minecraft/client/render/entity/state/LivingEntityRenderState;Lnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/command/OrderedRenderCommandQueue;Lnet/minecraft/client/render/state/CameraRenderState;)V"}, at={@At(value="HEAD")}, cancellable=true)
-    private void renderCustomModel(LivingEntityRenderState state, MatrixStack matrices, OrderedRenderCommandQueue vertexConsumers, CameraRenderState cameraState, CallbackInfo ci) {
-        if (!(state instanceof PlayerEntityRenderState)) {
+    @Inject(method={"submit(Lnet/minecraft/client/renderer/entity/state/LivingEntityRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/renderer/state/level/CameraRenderState;)V"}, at={@At(value="HEAD")}, cancellable=true)
+    private void renderCustomModel(LivingEntityRenderState state, PoseStack matrices, SubmitNodeCollector vertexConsumers, CameraRenderState cameraState, CallbackInfo ci) {
+        if (!(state instanceof AvatarRenderState)) {
             return;
         }
-        PlayerEntityRenderState playerState = (PlayerEntityRenderState)state;
-        if (!((Object)this instanceof PlayerEntityRenderer)) {
+        AvatarRenderState playerState = (AvatarRenderState)state;
+        if (!((Object)this instanceof AvatarRenderer)) {
             return;
         }
         ModelsModule modelsModule = (ModelsModule)AstolfoclientClient.moduleManager.getModuleByName("Models");
         if (modelsModule == null || !modelsModule.isEnabled()) {
             return;
         }
-        MinecraftClient mc = MinecraftClient.getInstance();
-        String renderedName = playerState.playerName != null ? playerState.playerName.getString() : "";
+        Minecraft mc = Minecraft.getInstance();
+        String renderedName = playerState.scoreText != null ? playerState.scoreText.getString() : "";
         boolean isSelf = false;
         boolean isFriend = false;
         if (mc.player != null) {
-            String myUsername = mc.getSession().getUsername();
+            String myUsername = mc.getUser().getName();
             if (renderedName.toLowerCase().contains(myUsername.toLowerCase())) {
                 isSelf = true;
             }
@@ -80,21 +80,21 @@ public abstract class MixinLivingEntityRenderer {
             return;
         }
         EntityModel<?> model = this.getModel();
-        if (model instanceof PlayerEntityModel) {
-            PlayerEntityModel playerModel = (PlayerEntityModel)model;
-            playerModel.setAngles(playerState);
+        if (model instanceof PlayerModel) {
+            PlayerModel playerModel = (PlayerModel)model;
+            playerModel.setupAnim(playerState);
         }
-        matrices.push();
-        matrices.translate(0.0, (double)playerState.height / 2.0, 0.0);
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - playerState.bodyYaw));
+        matrices.pushPose();
+        matrices.translate(0.0, (double)playerState.boundingBoxHeight / 2.0, 0.0);
+        matrices.mulPose(Axis.YP.rotationDegrees(180.0f - playerState.bodyRot));
         String mode = modelsModule.mode.get();
         if (mode.equals("Amogus") || mode.equals("Rabbit") || mode.equals("Cow")) {
-            matrices.multiply(new Quaternionf().rotationX((float)Math.PI));
+            matrices.mulPose(new Quaternionf().rotationX((float)Math.PI));
             if (modelsModule.changeZ.get()) {
-                matrices.multiply(new Quaternionf().rotationY((float)Math.PI));
+                matrices.mulPose(new Quaternionf().rotationY((float)Math.PI));
             }
         }
-        matrices.translate(0.0, (double)(-playerState.height) / 2.0, 0.0);
+        matrices.translate(0.0, (double)(-playerState.boundingBoxHeight) / 2.0, 0.0);
         if (mode.equals("Rabbit")) {
             matrices.translate(0.0, -0.05, 0.0);
         } else if (mode.equals("Amogus")) {
@@ -111,11 +111,11 @@ public abstract class MixinLivingEntityRenderer {
             scale = 1.0f;
         }
         matrices.scale(scale, scale, scale);
-        if (model instanceof PlayerEntityModel) {
-            PlayerEntityModel playerModel = (PlayerEntityModel)model;
-            this.getCustomModelRenderer().render(playerState, matrices, vertexConsumers, state.light, mode, playerModel);
+        if (model instanceof PlayerModel) {
+            PlayerModel playerModel = (PlayerModel)model;
+            this.getCustomModelRenderer().render(playerState, matrices, vertexConsumers, state.lightCoords, mode, playerModel);
         }
-        matrices.pop();
+        matrices.popPose();
         ci.cancel();
     }
 }

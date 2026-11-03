@@ -1,10 +1,10 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Mth;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.setting.BooleanSetting;
@@ -60,9 +60,9 @@ extends Module {
     private void resetSmoothCamera() {
         if (this.zoomActive) {
             this.zoomActive = false;
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.options != null) {
-                mc.options.smoothCameraEnabled = this.originalSmoothCamera;
+                mc.options.smoothCamera = this.originalSmoothCamera;
             }
         }
     }
@@ -75,18 +75,18 @@ extends Module {
             this.zoomProgress = 0.0f;
             return baseFov;
         }
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         boolean isKeyDown = false;
-        if (mc != null && mc.currentScreen == null && this.zoomKey.getKey() != -1 && this.zoomKey.getKey() != 0) {
-            isKeyDown = InputUtil.isKeyPressed(mc.getWindow(), (int)this.zoomKey.getKey());
+        if (mc != null && mc.gui.screen() == null && this.zoomKey.getKey() != -1 && this.zoomKey.getKey() != 0) {
+            isKeyDown = InputConstants.isKeyDown(mc.getWindow(), (int)this.zoomKey.getKey());
         }
         if (this.smoothMouse.get() && mc != null && mc.options != null) {
             if (isKeyDown && !this.zoomActive) {
-                this.originalSmoothCamera = mc.options.smoothCameraEnabled;
-                mc.options.smoothCameraEnabled = true;
+                this.originalSmoothCamera = mc.options.smoothCamera;
+                mc.options.smoothCamera = true;
                 this.zoomActive = true;
             } else if (!isKeyDown && this.zoomActive) {
-                mc.options.smoothCameraEnabled = this.originalSmoothCamera;
+                mc.options.smoothCamera = this.originalSmoothCamera;
                 this.zoomActive = false;
             }
         } else if (this.zoomActive) {
@@ -112,7 +112,7 @@ extends Module {
             this.zoomProgress = 1.0f;
         }
         double targetFov = this.zoomFov.get();
-        return MathHelper.lerp((double)this.zoomProgress, (double)baseFov, (double)targetFov);
+        return Mth.lerp((double)this.zoomProgress, (double)baseFov, (double)targetFov);
     }
 
     public float getZoomProgress() {

@@ -4,27 +4,27 @@ import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderContext;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgram;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
 import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
-import net.minecraft.client.render.BufferBuilder;
 import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
-import net.minecraft.client.render.BuiltBuffer;
-import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
+import com.mojang.blaze3d.vertex.PoseStack;
+import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3i;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.world.BlockView;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -37,7 +37,7 @@ public class BlockOutlineRenderer {
     private long lastRenderTime = System.currentTimeMillis();
     private float fadeAlpha = 0.0f;
 
-    public void render(WorldRenderContext context) {
+    public void render(LevelRenderContext context) {
         BlockHitResult blockHit;
         BlockPos pos;
         BlockState state;
@@ -51,8 +51,8 @@ public class BlockOutlineRenderer {
             this.lastPos = null;
             return;
         }
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.world == null || mc.player == null) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || mc.player == null) {
             return;
         }
         long now = System.currentTimeMillis();
@@ -64,7 +64,7 @@ public class BlockOutlineRenderer {
         if (deltaTime < 0.001f) {
             deltaTime = 0.001f;
         }
-        boolean bl = hasBlockTarget = (hit = mc.crosshairTarget) != null && hit.getType() == HitResult.Type.BLOCK;
+        boolean bl = hasBlockTarget = (hit = mc.hitResult) != null && hit.getType() == HitResult.Type.BLOCK;
         if (module.fadeEffect.get()) {
             float fadeRate = (float)module.fadeSpeed.get();
             this.fadeAlpha = hasBlockTarget ? Math.min(1.0f, this.fadeAlpha + deltaTime * fadeRate) : Math.max(0.0f, this.fadeAlpha - deltaTime * fadeRate);
@@ -76,21 +76,21 @@ public class BlockOutlineRenderer {
             this.lastPos = null;
             return;
         }
-        if (hasBlockTarget && !(shape = (state = mc.world.getBlockState(pos = (blockHit = (BlockHitResult)hit).getBlockPos())).getOutlineShape((BlockView)mc.world, pos)).isEmpty()) {
-            Box targetBox = shape.getBoundingBox().offset(pos).expand(0.002);
+        if (hasBlockTarget && !(shape = (state = mc.level.getBlockState(pos = (blockHit = (BlockHitResult)hit).getBlockPos())).getShape((BlockGetter)mc.level, pos)).isEmpty()) {
+            AABB targetBox = shape.bounds().move(pos).inflate(0.002);
             RenderBox targetRenderBox = new RenderBox(targetBox.minX, targetBox.minY, targetBox.minZ, targetBox.maxX, targetBox.maxY, targetBox.maxZ);
             float morphSpeed = (float)module.animSpeed.get();
             float lerpAmount = Math.min(1.0f, deltaTime * morphSpeed);
-            this.currentBox = this.currentBox == null || !module.smoothAnim.get() || this.lastPos != null && pos.getSquaredDistance((Vec3i)this.lastPos) > 64.0 ? targetRenderBox : this.currentBox.lerp(targetRenderBox, lerpAmount);
+            this.currentBox = this.currentBox == null || !module.smoothAnim.get() || this.lastPos != null && pos.distSqr((Vec3i)this.lastPos) > 64.0 ? targetRenderBox : this.currentBox.lerp(targetRenderBox, lerpAmount);
             this.lastPos = pos;
         }
         if (this.currentBox == null) {
             return;
         }
-        Camera camera = context.gameRenderer().getCamera();
-        MatrixStack matrices = context.matrices();
-        matrices.push();
-        matrices.translate(-camera.getCameraPos().x, -camera.getCameraPos().y, -camera.getCameraPos().z);
+        Camera camera = context.gameRenderer().mainCamera();
+        PoseStack matrices = context.poseStack();
+        matrices.pushPose();
+        matrices.translate(-camera.position().x, -camera.position().y, -camera.position().z);
         Color themeColor = new Color(ThemeManager.getThemedColor(0L));
         float r = (float)themeColor.getRed() / 255.0f;
         float g = (float)themeColor.getGreen() / 255.0f;
@@ -103,7 +103,7 @@ public class BlockOutlineRenderer {
         } else {
             RenderSystem.disableDepthTest();
         }
-        Tessellator tessellator = Tessellator.getInstance();
+        Tesselator tessellator = Tesselator.getInstance();
         if (module.shaderFill.get()) {
             ShaderProgram shader = RenderSystem.setShader((ShaderProgramKey)AstolfoclientClient.BLOCK_OUTLINE_SHADER);
             if (shader != null) {
@@ -129,7 +129,7 @@ public class BlockOutlineRenderer {
                     double centerX = (this.currentBox.minX + this.currentBox.maxX) / 2.0;
                     double centerY = (this.currentBox.minY + this.currentBox.maxY) / 2.0;
                     double centerZ = (this.currentBox.minZ + this.currentBox.maxZ) / 2.0;
-                    var center = matrices.peek().getPositionMatrix().transformPosition(new org.joml.Vector3f((float)centerX, (float)centerY, (float)centerZ));
+                    var center = matrices.last().pose().transformPosition(new org.joml.Vector3f((float)centerX, (float)centerY, (float)centerZ));
                     shader.getUniform("uBlockCenter").set(center.x, center.y, center.z);
                 }
                 if (shader.getUniform("uGlowIntensity") != null) {
@@ -159,11 +159,11 @@ public class BlockOutlineRenderer {
                     shader.getUniform("uMode").set(modeIdx);
                 }
             }
-            BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_TEXTURE_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             this.drawBoxFaces(matrices, buffer, this.currentBox, r, g, b, 1.0f);
-            BuiltBuffer builtBuffer = buffer.endNullable();
+            MeshData builtBuffer = buffer.build();
             if (builtBuffer != null) {
-                BufferRenderer.drawWithGlobalProgram((BuiltBuffer)builtBuffer);
+                BufferRenderer.drawWithGlobalProgram((MeshData)builtBuffer);
             }
         }
         if (module.outline.get()) {
@@ -171,11 +171,11 @@ public class BlockOutlineRenderer {
             RenderSystem.lineWidth((float)((float)module.lineWidth.get()));
             float finalOutlineAlpha = (float)module.outlineAlpha.get() * this.fadeAlpha;
             if (finalOutlineAlpha > 0.01f) {
-                BufferBuilder lineBuffer = tessellator.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
+                BufferBuilder lineBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
                 this.drawBoxOutline(matrices, lineBuffer, this.currentBox, r, g, b, finalOutlineAlpha);
-                BuiltBuffer builtLines = lineBuffer.endNullable();
+                MeshData builtLines = lineBuffer.build();
                 if (builtLines != null) {
-                    BufferRenderer.drawWithGlobalProgram((BuiltBuffer)builtLines);
+                    BufferRenderer.drawWithGlobalProgram((MeshData)builtLines);
                 }
             }
             RenderSystem.lineWidth((float)1.0f);
@@ -183,75 +183,75 @@ public class BlockOutlineRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.enableCull();
         RenderSystem.disableBlend();
-        matrices.pop();
+        matrices.popPose();
     }
 
-    private void drawBoxFaces(MatrixStack matrices, BufferBuilder buffer, RenderBox box, float r, float g, float b, float a) {
+    private void drawBoxFaces(PoseStack matrices, BufferBuilder buffer, RenderBox box, float r, float g, float b, float a) {
         float minX = (float)box.minX;
         float minY = (float)box.minY;
         float minZ = (float)box.minZ;
         float maxX = (float)box.maxX;
         float maxY = (float)box.maxY;
         float maxZ = (float)box.maxZ;
-        Matrix4f m = matrices.peek().getPositionMatrix();
-        buffer.vertex(m, minX, minY, maxZ).texture(0.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, maxZ).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, minZ).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, minZ).texture(0.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, minZ).texture(0.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, minZ).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, maxZ).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, maxZ).texture(0.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, minZ).texture(0.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, minZ).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, minZ).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, minZ).texture(0.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, maxZ).texture(0.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, maxZ).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, maxZ).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, maxZ).texture(0.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, minZ).texture(0.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, maxZ).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, maxZ).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, minZ).texture(0.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, maxZ).texture(0.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, minZ).texture(1.0f, 0.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, minZ).texture(1.0f, 1.0f).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, maxZ).texture(0.0f, 1.0f).color(r, g, b, a);
+        Matrix4f m = matrices.last().pose();
+        buffer.addVertex(m, minX, minY, maxZ).setUv(0.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, maxZ).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, minZ).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, minZ).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, minZ).setUv(0.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, minZ).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, maxZ).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, maxZ).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, minZ).setUv(0.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, minZ).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, minZ).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, minZ).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, maxZ).setUv(0.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, maxZ).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, maxZ).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, maxZ).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, minZ).setUv(0.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, maxZ).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, maxZ).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, minZ).setUv(0.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, maxZ).setUv(0.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, minZ).setUv(1.0f, 0.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, minZ).setUv(1.0f, 1.0f).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, maxZ).setUv(0.0f, 1.0f).setColor(r, g, b, a);
     }
 
-    private void drawBoxOutline(MatrixStack matrices, BufferBuilder buffer, RenderBox box, float r, float g, float b, float a) {
+    private void drawBoxOutline(PoseStack matrices, BufferBuilder buffer, RenderBox box, float r, float g, float b, float a) {
         float minX = (float)box.minX;
         float minY = (float)box.minY;
         float minZ = (float)box.minZ;
         float maxX = (float)box.maxX;
         float maxY = (float)box.maxY;
         float maxZ = (float)box.maxZ;
-        Matrix4f m = matrices.peek().getPositionMatrix();
-        buffer.vertex(m, minX, minY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, minZ).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, minZ).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, minZ).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, minZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, minY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, maxX, maxY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, minY, maxZ).color(r, g, b, a);
-        buffer.vertex(m, minX, maxY, maxZ).color(r, g, b, a);
+        Matrix4f m = matrices.last().pose();
+        buffer.addVertex(m, minX, minY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, minZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, minY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, maxX, maxY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, minY, maxZ).setColor(r, g, b, a);
+        buffer.addVertex(m, minX, maxY, maxZ).setColor(r, g, b, a);
     }
 
     @Environment(value=EnvType.CLIENT)

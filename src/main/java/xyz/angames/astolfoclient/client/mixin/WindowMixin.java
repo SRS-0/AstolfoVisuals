@@ -1,15 +1,15 @@
 package xyz.angames.astolfoclient.client.mixin;
 
+import com.mojang.blaze3d.platform.IconSet;
+import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.platform.Window;
 import java.io.InputStream;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.util.Icons;
-import net.minecraft.client.util.Window;
-import net.minecraft.resource.ResourcePack;
+import net.minecraft.server.packs.PackResources;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWImage;
 import org.lwjgl.system.MemoryUtil;
@@ -29,7 +29,7 @@ public class WindowMixin {
     }
 
     @Inject(method={"setIcon"}, at={@At(value="HEAD")}, cancellable=true)
-    private void onSetIcon(ResourcePack resourcePack, Icons icons, CallbackInfo ci) {
+    private void onSetIcon(PackResources resourcePack, IconSet icons, CallbackInfo ci) {
         ci.cancel();
         if (!this.iconsSet) {
             this.setCustomIcons();
@@ -43,7 +43,7 @@ public class WindowMixin {
     private void setCustomIcons() {
         block19: {
             Window window = (Window)(Object)this;
-            long handle = window.getHandle();
+            long handle = window.handle();
             String[] paths = new String[]{"/assets/astolfoclient/textures/gui/logo_black_32.png", "/assets/astolfoclient/textures/gui/logo_black_64.png", "/assets/astolfoclient/textures/gui/logo_black_big.png"};
             ArrayList<ByteBuffer> buffers = new ArrayList<ByteBuffer>();
             GLFWImage.Buffer iconBuffer = null;
@@ -57,7 +57,7 @@ public class WindowMixin {
                         ByteBuffer buf = MemoryUtil.memAlloc((int)(w * h * 4));
                         for (int y = 0; y < h; ++y) {
                             for (int x = 0; x < w; ++x) {
-                                int argb = image.getColorArgb(x, y);
+                                int argb = image.getPixel(x, y);
                                 buf.put((byte)(argb >> 16 & 0xFF));
                                 buf.put((byte)(argb >> 8 & 0xFF));
                                 buf.put((byte)(argb & 0xFF));

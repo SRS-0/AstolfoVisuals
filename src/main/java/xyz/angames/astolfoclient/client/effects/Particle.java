@@ -3,14 +3,14 @@ package xyz.angames.astolfoclient.client.effects;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.module.modules.render.ParticlesModule;
 
 @Environment(value=EnvType.CLIENT)
 public class Particle {
-    public Vec3d position;
-    public Vec3d prevPosition;
-    public Vec3d velocity;
+    public Vec3 position;
+    public Vec3 prevPosition;
+    public Vec3 velocity;
     public final long creationTime = System.currentTimeMillis();
     public final float rotation;
     public final float scale;
@@ -19,19 +19,19 @@ public class Particle {
     public final long lifespan;
     public final Color color;
     public final ParticleAnimation animation;
-    public final Vec3d origin;
+    public final Vec3 origin;
     public double extraData1;
     public double extraData2;
 
-    public Particle(Vec3d position, Vec3d velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan) {
+    public Particle(Vec3 position, Vec3 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan) {
         this(position, velocity, type, hasPhysics, lifespan, null, hasPhysics ? ParticleAnimation.EXPLOSION : ParticleAnimation.NONE, position, 0.0, 0.0);
     }
 
-    public Particle(Vec3d position, Vec3d velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan, Color color) {
+    public Particle(Vec3 position, Vec3 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan, Color color) {
         this(position, velocity, type, hasPhysics, lifespan, color, hasPhysics ? ParticleAnimation.EXPLOSION : ParticleAnimation.NONE, position, 0.0, 0.0);
     }
 
-    public Particle(Vec3d position, Vec3d velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan, Color color, ParticleAnimation animation, Vec3d origin, double extraData1, double extraData2) {
+    public Particle(Vec3 position, Vec3 velocity, ParticlesModule.ParticleType type, boolean hasPhysics, long lifespan, Color color, ParticleAnimation animation, Vec3 origin, double extraData1, double extraData2) {
         this.position = position;
         this.prevPosition = position;
         this.velocity = velocity;

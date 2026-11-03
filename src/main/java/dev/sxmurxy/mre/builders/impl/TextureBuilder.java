@@ -7,7 +7,7 @@ import dev.sxmurxy.mre.builders.states.SizeState;
 import dev.sxmurxy.mre.renderers.impl.BuiltTexture;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.AbstractTexture;
 
 @Environment(value=EnvType.CLIENT)
 public final class TextureBuilder

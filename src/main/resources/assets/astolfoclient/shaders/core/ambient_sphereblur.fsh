@@ -10,6 +10,7 @@ layout(std140) uniform EffectData {
     int uBlurSky;
     vec3 uThemeColor;
     float uThemeTint;
+    float uDepthZeroToOne;
 };
 
 in vec2 vTexCoord;
@@ -37,7 +38,7 @@ void main() {
     float dist = 0.0;
     float weight = 0.0;
 
-    if (rawDepth >= 0.999999) {
+    if (rawDepth <= 0.000001) {
         // Far plane / Sky
         if (uBlurSky == 0) {
             fragColor = centerColor;
@@ -46,7 +47,7 @@ void main() {
         weight = 1.0;
     } else {
         // Reconstruct camera-relative world position from depth buffer
-        vec4 clipPos = vec4(vTexCoord * 2.0 - 1.0, rawDepth * 2.0 - 1.0, 1.0);
+        vec4 clipPos = vec4(vTexCoord * 2.0 - 1.0, mix(rawDepth * 2.0 - 1.0, rawDepth, uDepthZeroToOne), 1.0);
         vec4 camRelPosH = uInvViewProjMat * clipPos;
         vec3 camRelPos = camRelPosH.xyz / camRelPosH.w;
 

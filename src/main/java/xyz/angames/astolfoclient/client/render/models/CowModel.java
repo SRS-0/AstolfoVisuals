@@ -3,6 +3,9 @@ package xyz.angames.astolfoclient.client.render.models;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -11,22 +14,18 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderLayers;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.state.PlayerEntityRenderState;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.RotationAxis;
+import net.minecraft.client.Minecraft;
+import xyz.angames.astolfoclient.client.render.compat.MultiBufferSource;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
 
 @Environment(value=EnvType.CLIENT)
 public class CowModel {
-    private static final Identifier MODEL_LOCATION = Identifier.of((String)"astolfoclient", (String)"models/cow_mesh.json");
-    private static final Identifier TEXTURE_LOCATION = Identifier.of((String)"astolfoclient", (String)"textures/models/cow.png");
+    private static final Identifier MODEL_LOCATION = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"models/cow_mesh.json");
+    private static final Identifier TEXTURE_LOCATION = Identifier.fromNamespaceAndPath((String)"astolfoclient", (String)"textures/models/cow.png");
     private static final float MODEL_SCALE = 0.48f;
     private final List<MeshTriangle> triangles = new ArrayList<MeshTriangle>();
     private boolean loaded;
@@ -36,35 +35,35 @@ public class CowModel {
     private float minY;
     private float bodyPivotY;
 
-    public void render(MatrixStack matrixStack, VertexConsumerProvider vertexConsumers, PlayerEntityRenderState state, int light) {
+    public void render(PoseStack matrixStack, MultiBufferSource vertexConsumers, AvatarRenderState state, int light) {
         this.ensureLoaded();
         if (this.failed || this.triangles.isEmpty()) {
             return;
         }
-        float ageInTicks = state.age;
-        float walkAmount = Math.min(state.limbSwingAmplitude, 1.0f);
-        float bob = (float)Math.sin(state.limbSwingAnimationProgress * 0.6662f) * walkAmount * 0.035f + (float)Math.sin(ageInTicks * 0.08f) * 0.01f;
+        float ageInTicks = state.ageInTicks;
+        float walkAmount = Math.min(state.walkAnimationSpeed, 1.0f);
+        float bob = (float)Math.sin(state.walkAnimationPos * 0.6662f) * walkAmount * 0.035f + (float)Math.sin(ageInTicks * 0.08f) * 0.01f;
         float sway = (float)Math.sin(ageInTicks * 0.05f) * 0.9f;
         float pitch = -2.0f + walkAmount * 5.5f + (float)Math.cos(ageInTicks * 0.07f) * 0.6f;
-        VertexConsumer buffer = vertexConsumers.getBuffer(RenderLayers.entityTranslucent((Identifier)TEXTURE_LOCATION));
-        matrixStack.push();
+        VertexConsumer buffer = vertexConsumers.getBuffer(RenderTypes.entityTranslucent((Identifier)TEXTURE_LOCATION));
+        matrixStack.pushPose();
         matrixStack.translate(0.0, (double)bob, 0.0);
-        matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(state.bodyYaw));
+        matrixStack.mulPose(Axis.YP.rotationDegrees(state.bodyRot));
         matrixStack.scale(0.48f, 0.48f, 0.48f);
         matrixStack.translate(this.centerX, this.bodyPivotY, this.centerZ);
-        matrixStack.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(sway));
-        matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(pitch));
+        matrixStack.mulPose(Axis.ZP.rotationDegrees(sway));
+        matrixStack.mulPose(Axis.XP.rotationDegrees(pitch));
         matrixStack.translate(-this.centerX, -this.bodyPivotY, -this.centerZ);
         matrixStack.translate(-this.centerX, -this.minY, -this.centerZ);
         this.renderTriangles(matrixStack, buffer, light);
-        matrixStack.pop();
+        matrixStack.popPose();
     }
 
     private void ensureLoaded() {
         if (this.loaded || this.failed) {
             return;
         }
-        try (InputStream stream = MinecraftClient.getInstance().getResourceManager().getResourceOrThrow(MODEL_LOCATION).getInputStream();
+        try (InputStream stream = Minecraft.getInstance().getResourceManager().getResourceOrThrow(MODEL_LOCATION).open();
              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);){
             this.parse(JsonParser.parseReader((Reader)reader).getAsJsonObject());
             this.loaded = true;
@@ -102,8 +101,8 @@ public class CowModel {
         return new MeshVertex(vertexArray.get(0).getAsFloat(), vertexArray.get(1).getAsFloat(), vertexArray.get(2).getAsFloat(), vertexArray.get(3).getAsFloat(), vertexArray.get(4).getAsFloat());
     }
 
-    private void renderTriangles(MatrixStack matrixStack, VertexConsumer buffer, int light) {
-        Matrix4f matrix = matrixStack.peek().getPositionMatrix();
+    private void renderTriangles(PoseStack matrixStack, VertexConsumer buffer, int light) {
+        Matrix4f matrix = matrixStack.last().pose();
         for (MeshTriangle triangle : this.triangles) {
             this.putVertex(buffer, matrix, triangle.a, light);
             this.putVertex(buffer, matrix, triangle.b, light);
@@ -112,7 +111,7 @@ public class CowModel {
     }
 
     private void putVertex(VertexConsumer buffer, Matrix4f matrix, MeshVertex vertex, int light) {
-        buffer.vertex(matrix, vertex.x, vertex.y, vertex.z).color(255, 255, 255, 255).texture(vertex.u, vertex.v).overlay(OverlayTexture.DEFAULT_UV).light(light).normal(0.0f, 1.0f, 0.0f);
+        buffer.addVertex(matrix, vertex.x, vertex.y, vertex.z).setColor(255, 255, 255, 255).setUv(vertex.u, vertex.v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light).setNormal(0.0f, 1.0f, 0.0f);
     }
 
     @Environment(value=EnvType.CLIENT)

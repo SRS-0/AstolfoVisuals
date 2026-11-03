@@ -1,20 +1,34 @@
 plugins {
-    id 'fabric-loom' version '1.17.21'
+    id 'net.fabricmc.fabric-loom' version '1.17.21'
     id 'maven-publish'
 }
 
-version = '2.0-port.3+1.21.11'
+version = '2.0-port.2+26.2'
 group = 'xyz.angames'
 
 repositories { mavenCentral() }
 
 configurations { shaderCompiler }
 
+loom {
+    splitEnvironmentSourceSets()
+    mods {
+        astolfovisuals {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+sourceSets {
+    main.java.setSrcDirs([])
+    client.java.setSrcDirs(['src/main/java'])
+}
+
 dependencies {
-    minecraft 'com.mojang:minecraft:1.21.11'
-    mappings 'net.fabricmc:yarn:1.21.11+build.6:v2'
-    modImplementation 'net.fabricmc:fabric-loader:0.19.3'
-    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.141.6+1.21.11'
+    minecraft 'com.mojang:minecraft:26.2'
+    implementation 'net.fabricmc:fabric-loader:0.20.1'
+    implementation 'net.fabricmc.fabric-api:fabric-api:0.161.0+26.2'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     shaderCompiler 'org.lwjgl:lwjgl:3.4.3'
     shaderCompiler 'org.lwjgl:lwjgl:3.4.3:natives-windows'
@@ -23,20 +37,20 @@ dependencies {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
     withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 21
+    options.release = 25
     options.encoding = 'UTF-8'
     options.compilerArgs += ['-Xmaxerrs', '10000']
 }
 
 tasks.register('writeCompileClasspath') {
     doLast {
-        file('compile-classpath.txt').text = sourceSets.main.compileClasspath.asPath
+        file('compile-classpath.txt').text = sourceSets.client.compileClasspath.asPath
     }
 }
 
@@ -46,7 +60,7 @@ tasks.register('compileRendererJava', JavaCompile) {
         include 'dev/sxmurxy/mre/**/*.java'
         include 'xyz/angames/astolfoclient/client/mixin/BufferBuilderGpuAccessor.java'
     }
-    classpath = sourceSets.main.compileClasspath
+    classpath = sourceSets.client.compileClasspath
     destinationDirectory = layout.buildDirectory.dir('classes/renderer')
 }
 
@@ -62,7 +76,7 @@ tasks.register('verifyShaders', JavaExec) {
     mainClass = 'VerifyShaders'
     jvmArgs '--enable-native-access=ALL-UNNAMED'
     doFirst {
-        def minecraftJar = sourceSets.main.compileClasspath.files.find { it.name.startsWith('minecraft-merged-') && it.name.endsWith('.jar') }
+        def minecraftJar = sourceSets.client.compileClasspath.files.find { it.name.startsWith('minecraft-client') && it.name.endsWith('.jar') }
         if (minecraftJar == null) throw new GradleException('Cannot locate mapped Minecraft client resources')
         args file('src/main/resources').absolutePath, minecraftJar.absolutePath
     }

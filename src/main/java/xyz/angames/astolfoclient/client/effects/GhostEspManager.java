@@ -4,7 +4,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.entity.Entity;
+import net.minecraft.world.entity.Entity;
 import xyz.angames.astolfoclient.client.effects.GhostEspEffect;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 

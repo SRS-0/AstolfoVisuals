@@ -5,8 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import xyz.angames.astolfoclient.client.gui.ClickGuiScreen;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.modules.BoyKisserModule;
@@ -112,8 +112,8 @@ public class ModuleManager {
         }
         modules.removeIf(m -> m.getName().equalsIgnoreCase(module.getName()));
         modules.add(module);
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc != null && (screen = mc.currentScreen) instanceof ClickGuiScreen) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && (screen = mc.gui.screen()) instanceof ClickGuiScreen) {
             ClickGuiScreen clickGui = (ClickGuiScreen)screen;
             clickGui.refreshModuleButtons();
         }
@@ -127,8 +127,8 @@ public class ModuleManager {
         module.setEnabled(false);
         modules.remove(module);
         modules.removeIf(m -> m.getName().equalsIgnoreCase(module.getName()));
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc != null && (screen = mc.currentScreen) instanceof ClickGuiScreen) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && (screen = mc.gui.screen()) instanceof ClickGuiScreen) {
             ClickGuiScreen clickGui = (ClickGuiScreen)screen;
             clickGui.refreshModuleButtons();
         }

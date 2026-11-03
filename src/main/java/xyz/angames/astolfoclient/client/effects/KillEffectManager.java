@@ -7,11 +7,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.modules.render.KillEffectModule;
 
@@ -20,7 +20,7 @@ public class KillEffectManager {
     public static final long LIFESPAN = 3000L;
     private final List<KillEffect> effects = new CopyOnWriteArrayList<KillEffect>();
     private final Map<Integer, TrackedTarget> recentAttacks = new ConcurrentHashMap<Integer, TrackedTarget>();
-    private final MinecraftClient client = MinecraftClient.getInstance();
+    private final Minecraft client = Minecraft.getInstance();
 
     public void onAttack(Entity target) {
         if (target instanceof LivingEntity) {
@@ -30,7 +30,7 @@ public class KillEffectManager {
     }
 
     public void tick() {
-        if (this.client.world == null || this.client.player == null) {
+        if (this.client.level == null || this.client.player == null) {
             this.effects.clear();
             this.recentAttacks.clear();
             return;
@@ -43,20 +43,20 @@ public class KillEffectManager {
                 this.recentAttacks.remove(id);
                 continue;
             }
-            Entity currentEntity = this.client.world.getEntityById(id);
+            Entity currentEntity = this.client.level.getEntity(id);
             boolean isKilled = false;
-            Vec3d deathPos = tracked.lastPos;
-            Box deathBox = tracked.lastBox;
+            Vec3 deathPos = tracked.lastPos;
+            AABB deathBox = tracked.lastBox;
             if (currentEntity == null) {
                 isKilled = true;
             } else if (currentEntity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity)currentEntity;
-                Vec3d currentPos = living.getEntityPos();
-                if (living.isDead() || living.getHealth() <= 0.0f || living.deathTime > 0 || !living.isAlive()) {
+                Vec3 currentPos = living.position();
+                if (living.isDeadOrDying() || living.getHealth() <= 0.0f || living.deathTime > 0 || !living.isAlive()) {
                     isKilled = true;
                     deathPos = currentPos;
                     deathBox = living.getBoundingBox();
-                } else if (currentPos.squaredDistanceTo(tracked.lastPos) > 400.0) {
+                } else if (currentPos.distanceToSqr(tracked.lastPos) > 400.0) {
                     isKilled = true;
                 }
                 if (!isKilled) {
@@ -79,12 +79,12 @@ public class KillEffectManager {
 
     @Environment(value=EnvType.CLIENT)
     private static class TrackedTarget {
-        public Vec3d lastPos;
-        public Box lastBox;
+        public Vec3 lastPos;
+        public AABB lastBox;
         public final long lastHitTime;
 
         public TrackedTarget(LivingEntity entity) {
-            this.lastPos = entity.getEntityPos();
+            this.lastPos = entity.position();
             this.lastBox = entity.getBoundingBox();
             this.lastHitTime = System.currentTimeMillis();
         }
@@ -92,16 +92,16 @@ public class KillEffectManager {
 
     @Environment(value=EnvType.CLIENT)
     public static class KillEffect {
-        public final Vec3d pos;
+        public final Vec3 pos;
         public final String mode;
         public final long startTime;
-        public final List<Vec3d> zapPoints;
+        public final List<Vec3> zapPoints;
         public final List<ThanosParticle> thanosParticles;
 
-        public KillEffect(Vec3d pos, Box box, String mode, long startTime) {
+        public KillEffect(Vec3 pos, AABB box, String mode, long startTime) {
             block3: {
                 block2: {
-                    this.zapPoints = new ArrayList<Vec3d>();
+                    this.zapPoints = new ArrayList<Vec3>();
                     this.thanosParticles = new ArrayList<ThanosParticle>();
                     this.pos = pos;
                     this.mode = mode;
@@ -109,12 +109,12 @@ public class KillEffectManager {
                     if (!mode.equals("Zap")) break block2;
                     float currentX = 0.0f;
                     float currentZ = 0.0f;
-                    this.zapPoints.add(new Vec3d(0.0, 0.0, 0.0));
+                    this.zapPoints.add(new Vec3(0.0, 0.0, 0.0));
                     float y = 1.0f + (float)Math.random() * 1.5f;
                     while (y <= 20.0f) {
                         currentX = (float)((double)currentX + (Math.random() - 0.5) * 3.5);
                         currentZ = (float)((double)currentZ + (Math.random() - 0.5) * 3.5);
-                        this.zapPoints.add(new Vec3d((double)currentX, (double)y, (double)currentZ));
+                        this.zapPoints.add(new Vec3((double)currentX, (double)y, (double)currentZ));
                         y = (float)((double)y + (1.0 + Math.random() * 1.5));
                     }
                     break block3;

@@ -1,16 +1,16 @@
 package xyz.angames.astolfoclient.client.render;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.Camera;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 public final class WetSurfaceRenderer {
  private static final WetSurfaceRenderer INSTANCE=new WetSurfaceRenderer();
  private WetSurfaceRenderer(){} public static WetSurfaceRenderer getInstance(){return INSTANCE;}
- public void apply(MinecraftClient mc,Camera camera,Matrix4f viewMatrix,Matrix4f projectionMatrix,Parameters parameters){
- if(mc==null||mc.world==null||mc.player==null||camera==null||parameters==null||parameters.wetness<=0.0001f||parameters.reflectionStrength<=0.0001f)return;
- var target=mc.getFramebuffer();if(target.getDepthAttachmentView()==null)return;int width=target.textureWidth,height=target.textureHeight;
- var inverseProjection=new Matrix4f(projectionMatrix).invert();var inverseView=new Matrix4f(viewMatrix).invert();Vec3d cameraPos=camera.getCameraPos();inverseView.m30((float)cameraPos.x).m31((float)cameraPos.y).m32((float)cameraPos.z);parameters.cameraX=(float)cameraPos.x;parameters.cameraY=(float)cameraPos.y;parameters.cameraZ=(float)cameraPos.z;
- var scene=dev.sxmurxy.mre.renderers.GpuSceneCopy.capture();var pass=new xyz.angames.astolfoclient.client.render.compat.ScreenPass("wet_surface_gpu").texture(0,scene.getColorAttachmentView(),true).texture(1,target.getDepthAttachmentView(),false);
+ public void apply(Minecraft mc,Camera camera,Matrix4f viewMatrix,Matrix4f projectionMatrix,Parameters parameters){
+ if(mc==null||mc.level==null||mc.player==null||camera==null||parameters==null||parameters.wetness<=0.0001f||parameters.reflectionStrength<=0.0001f)return;
+ var target=mc.gameRenderer.mainRenderTarget();if(target.getDepthTextureView()==null)return;int width=target.width,height=target.height;
+ var inverseProjection=new Matrix4f(projectionMatrix).invert();var inverseView=new Matrix4f(viewMatrix).invert();Vec3 cameraPos=camera.position();inverseView.m30((float)cameraPos.x).m31((float)cameraPos.y).m32((float)cameraPos.z);parameters.cameraX=(float)cameraPos.x;parameters.cameraY=(float)cameraPos.y;parameters.cameraZ=(float)cameraPos.z;
+ var scene=dev.sxmurxy.mre.renderers.GpuSceneCopy.capture();var pass=new xyz.angames.astolfoclient.client.render.compat.ScreenPass("wet_surface_gpu").texture(0,scene.getColorTextureView(),true).texture(1,target.getDepthTextureView(),false);
          pass.uniform("u_Resolution", width, height);
         pass.uniform("u_ViewMatrix", viewMatrix.get(new float[16]));
         pass.uniform("u_ProjectionMatrix", projectionMatrix.get(new float[16]));
