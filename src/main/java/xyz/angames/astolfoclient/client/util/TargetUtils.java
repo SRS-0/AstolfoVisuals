@@ -3,66 +3,60 @@ package xyz.angames.astolfoclient.client.util;
 import java.util.Optional;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1294;
-import net.minecraft.class_1297;
-import net.minecraft.class_1309;
-import net.minecraft.class_1531;
-import net.minecraft.class_238;
-import net.minecraft.class_243;
-import net.minecraft.class_310;
-import net.minecraft.class_3959;
-import net.minecraft.class_3965;
-import net.minecraft.class_239.class_240;
-import net.minecraft.class_3959.class_242;
-import net.minecraft.class_3959.class_3960;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class TargetUtils {
-   public static class_1309 getLookedAtTarget(class_310 client, double maxDistance) {
-      if (client != null && client.field_1724 != null && client.field_1687 != null) {
-         class_1297 cameraEntity = client.method_1560();
-         if (cameraEntity == null) {
-            cameraEntity = client.field_1724;
-         }
+    public static LivingEntity getLookedAtTarget(MinecraftClient client, double maxDistance) {
+        Vec3d rot;
+        Vec3d end;
+        Vec3d start;
+        BlockHitResult blockHit;
+        if (client == null || client.player == null || client.world == null) {
+            return null;
+        }
+        Entity cameraEntity = client.getCameraEntity();
+        if (cameraEntity == null) {
+            cameraEntity = client.player;
+        }
+        double effectiveDist = (blockHit = client.world.raycast(new RaycastContext(start = cameraEntity.getCameraPosVec(1.0f), end = start.add((rot = cameraEntity.getRotationVec(1.0f)).multiply(maxDistance)), RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, cameraEntity))) != null && blockHit.getType() != HitResult.Type.MISS ? start.distanceTo(blockHit.getPos()) : maxDistance;
+        Box searchBox = cameraEntity.getBoundingBox().stretch(rot.multiply(effectiveDist)).expand(1.0, 1.0, 1.0);
+        double closestDist = effectiveDist;
+        LivingEntity closestEntity = null;
+        for (Entity entity : client.world.getOtherEntities(cameraEntity, searchBox, e -> e instanceof LivingEntity && !(e instanceof ArmorStandEntity) && e.isAlive() && !e.isSpectator())) {
+            double dist;
+            if (TargetUtils.isInvisible(entity)) continue;
+            float margin = entity.getTargetingMargin();
+            Box entityBox = entity.getBoundingBox().expand(margin > 0.0f ? (double)margin : 0.1);
+            Optional hit = entityBox.raycast(start, end);
+            if (!hit.isPresent() || !((dist = start.distanceTo((Vec3d)hit.get())) < closestDist)) continue;
+            closestDist = dist;
+            closestEntity = (LivingEntity)entity;
+        }
+        return closestEntity;
+    }
 
-         class_243 start = cameraEntity.method_5836(1.0F);
-         class_243 rot = cameraEntity.method_5828(1.0F);
-         class_243 end = start.method_1019(rot.method_1021(maxDistance));
-         class_3965 blockHit = client.field_1687.method_17742(new class_3959(start, end, class_3960.field_17558, class_242.field_1348, cameraEntity));
-         double effectiveDist = blockHit != null && blockHit.method_17783() != class_240.field_1333 ? start.method_1022(blockHit.method_17784()) : maxDistance;
-         class_238 searchBox = cameraEntity.method_5829().method_18804(rot.method_1021(effectiveDist)).method_1009(1.0, 1.0, 1.0);
-         double closestDist = effectiveDist;
-         class_1309 closestEntity = null;
-
-         for (class_1297 entity : client.field_1687
-            .method_8333(cameraEntity, searchBox, e -> e instanceof class_1309 && !(e instanceof class_1531) && e.method_5805() && !e.method_7325())) {
-            if (!isInvisible(entity)) {
-               float margin = entity.method_5871();
-               class_238 entityBox = entity.method_5829().method_1014(margin > 0.0F ? margin : 0.1);
-               Optional<class_243> hit = entityBox.method_992(start, end);
-               if (hit.isPresent()) {
-                  double dist = start.method_1022(hit.get());
-                  if (dist < closestDist) {
-                     closestDist = dist;
-                     closestEntity = (class_1309)entity;
-                  }
-               }
-            }
-         }
-
-         return closestEntity;
-      } else {
-         return null;
-      }
-   }
-
-   public static boolean isInvisible(class_1297 entity) {
-      if (entity == null) {
-         return false;
-      } else if (entity.method_5767()) {
-         return true;
-      } else {
-         return entity instanceof class_1309 living ? living.method_6059(class_1294.field_5905) : false;
-      }
-   }
+    public static boolean isInvisible(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        if (entity.isInvisible()) {
+            return true;
+        }
+        if (entity instanceof LivingEntity) {
+            LivingEntity living = (LivingEntity)entity;
+            return living.hasStatusEffect(StatusEffects.INVISIBILITY);
+        }
+        return false;
+    }
 }
+

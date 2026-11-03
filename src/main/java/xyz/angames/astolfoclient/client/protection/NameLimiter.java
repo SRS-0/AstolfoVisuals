@@ -2,31 +2,29 @@ package xyz.angames.astolfoclient.client.protection;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
+import net.minecraft.text.Text;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class NameLimiter {
-   public static final int MAX_LENGTH = 64;
+    public static final int MAX_LENGTH = 64;
 
-   private NameLimiter() {
-   }
+    private NameLimiter() {
+    }
 
-   public static class_2561 truncate(class_2561 name) {
-      if (name == null) {
-         return null;
-      }
-
-      String text = name.getString();
-      if (text.length() <= 64) {
-         return name;
-      }
-
-      int cutIndex = 64;
-      if (Character.isHighSurrogate(text.charAt(cutIndex - 1))) {
-         cutIndex--;
-      }
-
-      String cut = text.substring(0, cutIndex) + "...";
-      return class_2561.method_43470(cut);
-   }
+    public static Text truncate(Text name) {
+        if (name == null) {
+            return null;
+        }
+        String text = name.getString();
+        if (text.length() <= 64) {
+            return name;
+        }
+        int cutIndex = 64;
+        if (Character.isHighSurrogate(text.charAt(cutIndex - 1))) {
+            --cutIndex;
+        }
+        String cut = text.substring(0, cutIndex) + "...";
+        return Text.literal((String)cut);
+    }
 }
+

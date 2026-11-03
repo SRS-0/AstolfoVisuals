@@ -1,5 +1,33 @@
 #version 150
 
+layout(std140) uniform EffectData {
+    vec4 SizeData;
+    vec4 RadiusData;
+    vec4 SmoothnessData;
+    vec4 CornerSmoothnessData;
+    vec4 GlobalAlphaData;
+    vec4 FresnelPowerData;
+    vec4 FresnelColorData;
+    vec4 FresnelAlphaData;
+    vec4 BaseAlphaData;
+    vec4 FresnelInvertData;
+    vec4 FresnelMixData;
+    vec4 DistortStrengthData;
+};
+#define Size SizeData.xy
+#define Radius RadiusData
+#define Smoothness SmoothnessData.x
+#define CornerSmoothness CornerSmoothnessData.x
+#define GlobalAlpha GlobalAlphaData.x
+#define FresnelPower FresnelPowerData.x
+#define FresnelColor FresnelColorData.xyz
+#define FresnelAlpha FresnelAlphaData.x
+#define BaseAlpha BaseAlphaData.x
+#define FresnelInvert (FresnelInvertData.x != 0.0)
+#define FresnelMix FresnelMixData.x
+#define DistortStrength DistortStrengthData.x
+
+
 #moj_import <mre:common.glsl>
 
 in vec2 FragCoord;
@@ -7,19 +35,19 @@ in vec2 TexCoord;
 in vec4 FragColor;
 
 uniform sampler2D Sampler0;
-uniform vec2 Size;
-uniform vec4 Radius;
-uniform float Smoothness;
-uniform float CornerSmoothness;
-uniform float GlobalAlpha;
 
-uniform float FresnelPower;
-uniform vec3 FresnelColor;
-uniform float FresnelAlpha;
-uniform float BaseAlpha;
-uniform bool FresnelInvert;
-uniform float FresnelMix;
-uniform float DistortStrength;
+
+
+
+
+
+
+
+
+
+
+
+
 
 out vec4 OutColor;
 

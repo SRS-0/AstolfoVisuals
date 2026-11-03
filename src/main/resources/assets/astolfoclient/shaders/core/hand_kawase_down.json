@@ -1,0 +1,43 @@
+{
+  "screen": true,
+  "blockSize": 16,
+  "uniforms": [
+    {
+      "name": "uOffset",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec2",
+      "length": 1,
+      "components": 2,
+      "offset": 0,
+      "stride": 8
+    },
+    {
+      "name": "uHalfPixel",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec2",
+      "length": 1,
+      "components": 2,
+      "offset": 8,
+      "stride": 8
+    }
+  ],
+  "samplers": [
+    {
+      "name": "inTexture"
+    }
+  ]
+}

@@ -4,47 +4,44 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1297;
+import net.minecraft.entity.Entity;
+import xyz.angames.astolfoclient.client.effects.GhostEspEffect;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class GhostEspManager {
-   public static final long LIFESPAN = 450L;
-   private final Map<class_1297, GhostEspEffect> effects = new ConcurrentHashMap<>();
+    public static final long LIFESPAN = 450L;
+    private final Map<Entity, GhostEspEffect> effects = new ConcurrentHashMap<Entity, GhostEspEffect>();
 
-   public void addEffect(class_1297 target) {
-      if (target != null && !TargetUtils.isInvisible(target)) {
-         this.effects.compute(target, (entity, effect) -> {
+    public void addEffect(Entity target) {
+        if (target == null || TargetUtils.isInvisible(target)) {
+            return;
+        }
+        this.effects.compute(target, (entity, effect) -> {
             if (effect == null) {
-               return new GhostEspEffect(target);
+                return new GhostEspEffect(target);
             }
-
             effect.lastHitTime = System.currentTimeMillis();
-            return (GhostEspEffect)effect;
-         });
-      }
-   }
+            return effect;
+        });
+    }
 
-   public void addAttack(class_1297 target) {
-      if (target != null && !TargetUtils.isInvisible(target)) {
-         this.effects.computeIfPresent(target, (entity, effect) -> {
+    public void addAttack(Entity target) {
+        if (target == null || TargetUtils.isInvisible(target)) {
+            return;
+        }
+        this.effects.computeIfPresent(target, (entity, effect) -> {
             effect.lastAttackTime = System.currentTimeMillis();
-            return (GhostEspEffect)effect;
-         });
-      }
-   }
+            return effect;
+        });
+    }
 
-   public void tick() {
-      this.effects
-         .entrySet()
-         .removeIf(
-            entry -> !entry.getKey().method_5805()
-               || System.currentTimeMillis() - entry.getValue().lastHitTime > 450L
-               || TargetUtils.isInvisible(entry.getKey())
-         );
-   }
+    public void tick() {
+        this.effects.entrySet().removeIf(entry -> !((Entity)entry.getKey()).isAlive() || System.currentTimeMillis() - ((GhostEspEffect)entry.getValue()).lastHitTime > 450L || TargetUtils.isInvisible((Entity)entry.getKey()));
+    }
 
-   public Map<class_1297, GhostEspEffect> getEffects() {
-      return this.effects;
-   }
+    public Map<Entity, GhostEspEffect> getEffects() {
+        return this.effects;
+    }
 }
+

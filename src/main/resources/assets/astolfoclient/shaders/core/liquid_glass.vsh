@@ -1,4 +1,10 @@
 #version 150
+layout(std140) uniform EffectData {
+    vec4 ColorModulatorData;
+};
+#define ColorModulator ColorModulatorData
+layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
+#moj_import <minecraft:projection.glsl>
 
 in vec3 Position;
 in vec4 Color;
@@ -7,8 +13,8 @@ in ivec2 UV1;
 in ivec2 UV2;
 in vec3 Normal;
 
-uniform mat4 ModelViewMat;
-uniform mat4 ProjMat;
+
+
 
 out vec4 vertexColor;
 out vec2 texCoord0;

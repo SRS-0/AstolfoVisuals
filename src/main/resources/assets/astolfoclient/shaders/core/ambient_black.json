@@ -1,0 +1,79 @@
+{
+  "screen": true,
+  "blockSize": 144,
+  "uniforms": [
+    {
+      "name": "uModelViewMat",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 0,
+      "stride": 64
+    },
+    {
+      "name": "uProjMat",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 64,
+      "stride": 64
+    },
+    {
+      "name": "alpha",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 128,
+      "stride": 4
+    }
+  ],
+  "samplers": []
+}

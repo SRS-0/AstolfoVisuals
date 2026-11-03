@@ -1,25 +1,69 @@
 plugins {
-    id 'fabric-loom' version "${loom_version}"
+    id 'fabric-loom' version '1.17.21'
     id 'maven-publish'
 }
 
-version = project.mod_version
-group = project.maven_group
-
-base { archivesName = project.archives_base_name }
+version = '2.0-port.3+1.21.11'
+group = 'xyz.angames'
 
 repositories { mavenCentral() }
 
+configurations { shaderCompiler }
+
 dependencies {
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    minecraft 'com.mojang:minecraft:1.21.11'
+    mappings 'net.fabricmc:yarn:1.21.11+build.6:v2'
+    modImplementation 'net.fabricmc:fabric-loader:0.19.3'
+    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.141.6+1.21.11'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    shaderCompiler 'org.lwjgl:lwjgl:3.4.3'
+    shaderCompiler 'org.lwjgl:lwjgl:3.4.3:natives-windows'
+    shaderCompiler 'org.lwjgl:lwjgl-shaderc:3.4.3'
+    shaderCompiler 'org.lwjgl:lwjgl-shaderc:3.4.3:natives-windows'
 }
 
-processResources {
-    inputs.property "version", project.version
-    filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+    withSourcesJar()
 }
 
-tasks.withType(JavaCompile).configureEach { it.options.release = 21 }
-java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xmaxerrs', '10000']
+}
+
+tasks.register('writeCompileClasspath') {
+    doLast {
+        file('compile-classpath.txt').text = sourceSets.main.compileClasspath.asPath
+    }
+}
+
+// Validate the migrated renderer independently while the legacy client is ported.
+tasks.register('compileRendererJava', JavaCompile) {
+    source = fileTree('src/main/java') {
+        include 'dev/sxmurxy/mre/**/*.java'
+        include 'xyz/angames/astolfoclient/client/mixin/BufferBuilderGpuAccessor.java'
+    }
+    classpath = sourceSets.main.compileClasspath
+    destinationDirectory = layout.buildDirectory.dir('classes/renderer')
+}
+
+tasks.register('compileShaderValidator', JavaCompile) {
+    source = fileTree('tools') { include 'VerifyShaders.java' }
+    classpath = configurations.shaderCompiler
+    destinationDirectory = layout.buildDirectory.dir('classes/shaderValidator')
+}
+
+tasks.register('verifyShaders', JavaExec) {
+    dependsOn 'compileShaderValidator'
+    classpath = configurations.shaderCompiler + files(layout.buildDirectory.dir('classes/shaderValidator'))
+    mainClass = 'VerifyShaders'
+    jvmArgs '--enable-native-access=ALL-UNNAMED'
+    doFirst {
+        def minecraftJar = sourceSets.main.compileClasspath.files.find { it.name.startsWith('minecraft-merged-') && it.name.endsWith('.jar') }
+        if (minecraftJar == null) throw new GradleException('Cannot locate mapped Minecraft client resources')
+        args file('src/main/resources').absolutePath, minecraftJar.absolutePath
+    }
+}

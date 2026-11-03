@@ -1,22 +1,52 @@
 #version 150
+layout(std140) uniform EffectData {
+    vec4 ColorModulatorData;
+    vec4 uTimeData;
+    vec4 uColor1Data;
+    vec4 uColor2Data;
+    vec4 uBlockCenterData;
+    vec4 uGlowIntensityData;
+    vec4 uPulseSpeedData;
+    vec4 uPulseWidthData;
+    vec4 uDistortionData;
+    vec4 uChromaticData;
+    vec4 uFadeAlphaData;
+    vec4 uFillAlphaData;
+    ivec4 uModeData;
+};
+#define ColorModulator ColorModulatorData
+#define uTime uTimeData.x
+#define uColor1 uColor1Data.xyz
+#define uColor2 uColor2Data.xyz
+#define uBlockCenter uBlockCenterData.xyz
+#define uGlowIntensity uGlowIntensityData.x
+#define uPulseSpeed uPulseSpeedData.x
+#define uPulseWidth uPulseWidthData.x
+#define uDistortion uDistortionData.x
+#define uChromatic uChromaticData.x
+#define uFadeAlpha uFadeAlphaData.x
+#define uFillAlpha uFillAlphaData.x
+#define uMode uModeData.x
+layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
+#moj_import <minecraft:projection.glsl>
 
 in vec4 vertexColor;
 in vec2 texCoord0;
 in vec3 worldPos;
 
-uniform vec4 ColorModulator;
-uniform float uTime;
-uniform vec3 uColor1;
-uniform vec3 uColor2;
-uniform vec3 uBlockCenter;
-uniform float uGlowIntensity;
-uniform float uPulseSpeed;
-uniform float uPulseWidth;
-uniform float uDistortion;
-uniform float uChromatic;
-uniform float uFadeAlpha;
-uniform float uFillAlpha;
-uniform int uMode;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 out vec4 fragColor;
 

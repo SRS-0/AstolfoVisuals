@@ -4,32 +4,28 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1297;
+import net.minecraft.entity.Entity;
+import xyz.angames.astolfoclient.client.effects.TargetEspEffect;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class TargetEspManager {
-   public static final long LIFESPAN = 450L;
-   private final Map<class_1297, TargetEspEffect> effects = new ConcurrentHashMap<>();
+    public static final long LIFESPAN = 450L;
+    private final Map<Entity, TargetEspEffect> effects = new ConcurrentHashMap<Entity, TargetEspEffect>();
 
-   public void addEffect(class_1297 target) {
-      if (target != null && !TargetUtils.isInvisible(target)) {
-         this.effects.computeIfAbsent(target, TargetEspEffect::new).registerHit();
-      }
-   }
+    public void addEffect(Entity target) {
+        if (target == null || TargetUtils.isInvisible(target)) {
+            return;
+        }
+        this.effects.computeIfAbsent(target, TargetEspEffect::new).registerHit();
+    }
 
-   public void tick() {
-      this.effects
-         .values()
-         .removeIf(
-            effect -> System.currentTimeMillis() - effect.lastHitTime > 450L
-               || effect.target.method_31481()
-               || !effect.target.method_5805()
-               || TargetUtils.isInvisible(effect.target)
-         );
-   }
+    public void tick() {
+        this.effects.values().removeIf(effect -> System.currentTimeMillis() - effect.lastHitTime > 450L || effect.target.isRemoved() || !effect.target.isAlive() || TargetUtils.isInvisible(effect.target));
+    }
 
-   public Map<class_1297, TargetEspEffect> getEffects() {
-      return this.effects;
-   }
+    public Map<Entity, TargetEspEffect> getEffects() {
+        return this.effects;
+    }
 }
+

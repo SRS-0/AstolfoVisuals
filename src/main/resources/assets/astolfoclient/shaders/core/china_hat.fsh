@@ -1,11 +1,23 @@
 #version 150
+layout(std140) uniform EffectData {
+    vec4 ColorModulatorData;
+    vec4 uResolutionData;
+    vec4 uTimeData;
+    vec4 uThemeColorData;
+};
+#define ColorModulator ColorModulatorData
+#define uResolution uResolutionData.xy
+#define uTime uTimeData.x
+#define uThemeColor uThemeColorData.xyz
+layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
+#moj_import <minecraft:projection.glsl>
 
 in vec4 vertexColor;
 in vec2 texCoord0;
 
-uniform vec2 uResolution;
-uniform float uTime;
-uniform vec3 uThemeColor;
+
+
+
 
 out vec4 fragColor;
 

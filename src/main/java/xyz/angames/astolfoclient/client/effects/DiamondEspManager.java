@@ -4,61 +4,62 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1297;
+import net.minecraft.entity.Entity;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class DiamondEspManager {
-   public static final long LIFESPAN = 450L;
-   private final Map<class_1297, DiamondEspManager.DiamondEffect> effects = new ConcurrentHashMap<>();
+    public static final long LIFESPAN = 450L;
+    private final Map<Entity, DiamondEffect> effects = new ConcurrentHashMap<Entity, DiamondEffect>();
 
-   public void addEffect(class_1297 target) {
-      if (target != null && !TargetUtils.isInvisible(target)) {
-         this.effects.compute(target, (k, existing) -> {
+    public void addEffect(Entity target) {
+        if (target == null || TargetUtils.isInvisible(target)) {
+            return;
+        }
+        this.effects.compute(target, (k, existing) -> {
             if (existing == null) {
-               return new DiamondEspManager.DiamondEffect(target);
+                return new DiamondEffect(target);
             }
-
             existing.updateHit();
-            return (DiamondEspManager.DiamondEffect)existing;
-         });
-      }
-   }
+            return existing;
+        });
+    }
 
-   public void addAttack(class_1297 target) {
-      if (target != null && !TargetUtils.isInvisible(target)) {
-         DiamondEspManager.DiamondEffect effect = this.effects.get(target);
-         if (effect != null) {
+    public void addAttack(Entity target) {
+        if (target == null || TargetUtils.isInvisible(target)) {
+            return;
+        }
+        DiamondEffect effect = this.effects.get(target);
+        if (effect != null) {
             effect.lastAttackTime = System.currentTimeMillis();
-         }
-      }
-   }
+        }
+    }
 
-   public void tick() {
-      long now = System.currentTimeMillis();
-      this.effects.values().removeIf(effect -> now - effect.lastHitTime > 450L || !effect.target.method_5805() || TargetUtils.isInvisible(effect.target));
-   }
+    public void tick() {
+        long now = System.currentTimeMillis();
+        this.effects.values().removeIf(effect -> now - effect.lastHitTime > 450L || !effect.target.isAlive() || TargetUtils.isInvisible(effect.target));
+    }
 
-   public Map<class_1297, DiamondEspManager.DiamondEffect> getEffects() {
-      return this.effects;
-   }
+    public Map<Entity, DiamondEffect> getEffects() {
+        return this.effects;
+    }
 
-   @Environment(EnvType.CLIENT)
-   public static class DiamondEffect {
-      public final long startTime;
-      public long lastHitTime;
-      public long lastAttackTime;
-      public final class_1297 target;
+    @Environment(value=EnvType.CLIENT)
+    public static class DiamondEffect {
+        public final long startTime;
+        public long lastHitTime;
+        public long lastAttackTime;
+        public final Entity target;
 
-      public DiamondEffect(class_1297 target) {
-         this.target = target;
-         this.startTime = System.currentTimeMillis();
-         this.lastHitTime = this.startTime;
-         this.lastAttackTime = 0L;
-      }
+        public DiamondEffect(Entity target) {
+            this.target = target;
+            this.lastHitTime = this.startTime = System.currentTimeMillis();
+            this.lastAttackTime = 0L;
+        }
 
-      public void updateHit() {
-         this.lastHitTime = System.currentTimeMillis();
-      }
-   }
+        public void updateHit() {
+            this.lastHitTime = System.currentTimeMillis();
+        }
+    }
 }
+

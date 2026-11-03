@@ -1,0 +1,186 @@
+{
+  "screen": true,
+  "blockSize": 128,
+  "uniforms": [
+    {
+      "name": "uInvViewProjMat",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 0,
+      "stride": 64
+    },
+    {
+      "name": "uSphereCenterRelCam",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec3",
+      "length": 1,
+      "components": 3,
+      "offset": 64,
+      "stride": 12
+    },
+    {
+      "name": "uSphereRadius",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 76,
+      "stride": 4
+    },
+    {
+      "name": "uSmoothness",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 80,
+      "stride": 4
+    },
+    {
+      "name": "uBlurStrength",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 84,
+      "stride": 4
+    },
+    {
+      "name": "uResolution",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec2",
+      "length": 1,
+      "components": 2,
+      "offset": 88,
+      "stride": 8
+    },
+    {
+      "name": "uSampleCount",
+      "type": "int",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "int",
+      "length": 1,
+      "components": 1,
+      "offset": 96,
+      "stride": 4
+    },
+    {
+      "name": "uBlurSky",
+      "type": "int",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "int",
+      "length": 1,
+      "components": 1,
+      "offset": 100,
+      "stride": 4
+    },
+    {
+      "name": "uThemeColor",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec3",
+      "length": 1,
+      "components": 3,
+      "offset": 112,
+      "stride": 12
+    },
+    {
+      "name": "uThemeTint",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 124,
+      "stride": 4
+    }
+  ],
+  "samplers": [
+    {
+      "name": "uColorTexture"
+    },
+    {
+      "name": "uDepthTexture"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "screen": true,
+  "blockSize": 16,
+  "uniforms": [
+    {
+      "name": "uSaturation",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 0,
+      "stride": 4
+    }
+  ],
+  "samplers": [
+    {
+      "name": "uColorTexture"
+    }
+  ]
+}

@@ -7,6 +7,9 @@ import dev.sxmurxy.mre.builders.states.QuadColorState;
 import dev.sxmurxy.mre.builders.states.QuadRadiusState;
 import dev.sxmurxy.mre.builders.states.SizeState;
 import dev.sxmurxy.mre.msdf.MsdfFont;
+import dev.sxmurxy.mre.renderers.impl.BuiltRectangle;
+import dev.sxmurxy.mre.renderers.impl.BuiltText;
+import dev.sxmurxy.mre.renderers.impl.BuiltTexture;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -15,759 +18,604 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.Map.Entry;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1291;
-import net.minecraft.class_1293;
-import net.minecraft.class_1294;
-import net.minecraft.class_2561;
-import net.minecraft.class_2960;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
-import net.minecraft.class_6880;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.entity.effect.StatusEffect;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.registry.entry.RegistryEntry;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
 import xyz.angames.astolfoclient.client.gui.clickgui.GuiUtils;
+import xyz.angames.astolfoclient.client.hud.LogoRenderer;
 import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class EffectHudManager {
-   public float x = 10.0F;
-   public float y = 100.0F;
-   public EffectHudManager.Position position = EffectHudManager.Position.LEFT;
-   public boolean panelOpen = false;
-   private boolean submenuOpen = false;
-   private float mainPanelAnim = 0.0F;
-   private float subPanelAnim = 0.0F;
-   private boolean wasMouseDown = false;
-   private final Map<class_1291, EffectHudManager.PotionCardState> cardStateMap = new LinkedHashMap<>();
-   private float totalHeight = 0.0F;
-   private float lastFrameTotalMaxWidth = 90.0F;
-   private float animatedX = 10.0F;
-   private float masterAlpha = 0.0F;
-   private long lastUpdateTimeNs = -1L;
-   private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
-   private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
-   private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
-   private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("icon").data("icon").build());
+    public float x = 10.0f;
+    public float y = 100.0f;
+    public Position position = Position.LEFT;
+    public boolean panelOpen = false;
+    private boolean submenuOpen = false;
+    private float mainPanelAnim = 0.0f;
+    private float subPanelAnim = 0.0f;
+    private boolean wasMouseDown = false;
+    private final Map<StatusEffect, PotionCardState> cardStateMap = new LinkedHashMap<StatusEffect, PotionCardState>();
+    private float totalHeight = 0.0f;
+    private float lastFrameTotalMaxWidth = 90.0f;
+    private float animatedX = 10.0f;
+    private float masterAlpha = 0.0f;
+    private long lastUpdateTimeNs = -1L;
+    private static final Supplier<MsdfFont> BOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("bold").data("bold").build());
+    private static final Supplier<MsdfFont> SEMIBOLD_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("semibold").data("semibold").build());
+    private static final Supplier<MsdfFont> MEDIUM_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("medium").data("medium").build());
+    private static final Supplier<MsdfFont> ICON_FONT = Suppliers.memoize(() -> MsdfFont.builder().atlas("icon").data("icon").build());
 
-   public void render(class_332 context) {
-      this.render(context, class_310.method_1551().method_61966().method_60637(false));
-   }
+    public void render(DrawContext context) {
+        this.render(context, MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false));
+    }
 
-   public void render(class_332 context, float tickDelta) {
-      class_310 client = class_310.method_1551();
-      if (client.field_1724 != null) {
-         Collection<class_1293> effects = client.field_1724.method_6026();
-         boolean isEditing = client.field_1755 instanceof HudEditorScreen;
-         InterfaceModule interfaceMod = (InterfaceModule)(
-            AstolfoclientClient.moduleManager != null ? AstolfoclientClient.moduleManager.getModuleByName("Interface") : null
-         );
-         boolean isSettingEnabled = interfaceMod == null || interfaceMod.effectHud.get();
-         long nowNs = System.nanoTime();
-         if (this.lastUpdateTimeNs == -1L) {
+    public void render(DrawContext context, float tickDelta) {
+        PotionCardState state;
+        StatusEffect effect;
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) {
+            return;
+        }
+        Collection effects = client.player.getStatusEffects();
+        boolean isEditing = client.currentScreen instanceof HudEditorScreen;
+        InterfaceModule interfaceMod = (InterfaceModule)(AstolfoclientClient.moduleManager != null ? AstolfoclientClient.moduleManager.getModuleByName("Interface") : null);
+        boolean isSettingEnabled = interfaceMod == null || interfaceMod.effectHud.get();
+        long nowNs = System.nanoTime();
+        if (this.lastUpdateTimeNs == -1L) {
             this.lastUpdateTimeNs = nowNs;
-         }
-
-         long elapsedNs = nowNs - this.lastUpdateTimeNs;
-         this.lastUpdateTimeNs = nowNs;
-         double deltaSeconds = elapsedNs / 1.0E9;
-         if (deltaSeconds > 0.1) {
+        }
+        long elapsedNs = nowNs - this.lastUpdateTimeNs;
+        this.lastUpdateTimeNs = nowNs;
+        double deltaSeconds = (double)elapsedNs / 1.0E9;
+        if (deltaSeconds > 0.1) {
             deltaSeconds = 0.1;
-         }
-
-         long themeTime = (long)(nowNs / 1000000.0);
-         Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
-         List<class_1293> list = isEditing ? this.getPlaceholders() : new ArrayList<>(effects);
-         Set<class_1291> currentActiveEffects = new HashSet<>();
-         if (isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing)) {
-            for (class_1293 inst : list) {
-               class_1291 effect = (class_1291)inst.method_5579().comp_349();
-               currentActiveEffects.add(effect);
-               EffectHudManager.PotionCardState state = this.cardStateMap.computeIfAbsent(effect, k -> new EffectHudManager.PotionCardState());
-               state.cachedInstance = inst;
+        }
+        long themeTime = (long)((double)nowNs / 1000000.0);
+        Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
+        List<StatusEffectInstance> list = isEditing ? this.getPlaceholders() : new ArrayList(effects);
+        HashSet<StatusEffect> currentActiveEffects = new HashSet<StatusEffect>();
+        if (isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing)) {
+            for (StatusEffectInstance inst : list) {
+                effect = (StatusEffect)inst.getEffectType().value();
+                currentActiveEffects.add(effect);
+                state = this.cardStateMap.computeIfAbsent(effect, k -> new PotionCardState());
+                state.cachedInstance = inst;
             }
-         }
-
-         Iterator<Entry<class_1291, EffectHudManager.PotionCardState>> iterator = this.cardStateMap.entrySet().iterator();
-
-         while (iterator.hasNext()) {
-            Entry<class_1291, EffectHudManager.PotionCardState> entry = iterator.next();
-            class_1291 effect = entry.getKey();
-            EffectHudManager.PotionCardState state = entry.getValue();
+        }
+        Iterator<Map.Entry<StatusEffect, PotionCardState>> iterator = this.cardStateMap.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<StatusEffect, PotionCardState> entry = iterator.next();
+            effect = entry.getKey();
+            state = entry.getValue();
             boolean isActive = currentActiveEffects.contains(effect);
-            float targetAnim = isActive ? 1.0F : 0.0F;
-            float speed = 14.0F;
-            state.animProgress = state.animProgress + (targetAnim - state.animProgress) * (float)(1.0 - Math.exp(-speed * deltaSeconds));
-            float targetHeightScale = isActive ? 1.0F : (state.animProgress < 0.35F ? 0.0F : 1.0F);
-            state.heightScale = state.heightScale + (targetHeightScale - state.heightScale) * (float)(1.0 - Math.exp(-speed * deltaSeconds));
-            if (!isActive && state.animProgress < 0.005F && state.heightScale < 0.005F) {
-               iterator.remove();
-            }
-         }
-
-         boolean shouldShow = !this.cardStateMap.isEmpty() && isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing);
-         float targetMasterAlpha = shouldShow ? 1.0F : 0.0F;
-         this.masterAlpha = this.masterAlpha + (targetMasterAlpha - this.masterAlpha) * (float)(1.0 - Math.exp(-12.0 * deltaSeconds));
-         if (this.masterAlpha < 0.005F && !shouldShow) {
+            float targetAnim = isActive ? 1.0f : 0.0f;
+            float speed = 14.0f;
+            state.animProgress += (targetAnim - state.animProgress) * (float)(1.0 - Math.exp((double)(-speed) * deltaSeconds));
+            float targetHeightScale = isActive ? 1.0f : (state.animProgress < 0.35f ? 0.0f : 1.0f);
+            state.heightScale += (targetHeightScale - state.heightScale) * (float)(1.0 - Math.exp((double)(-speed) * deltaSeconds));
+            if (isActive || !(state.animProgress < 0.005f) || !(state.heightScale < 0.005f)) continue;
+            iterator.remove();
+        }
+        boolean shouldShow = !this.cardStateMap.isEmpty() && isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing);
+        float targetMasterAlpha = shouldShow ? 1.0f : 0.0f;
+        this.masterAlpha += (targetMasterAlpha - this.masterAlpha) * (float)(1.0 - Math.exp(-12.0 * deltaSeconds));
+        if (this.masterAlpha < 0.005f && !shouldShow) {
             this.panelOpen = false;
             this.submenuOpen = false;
-            this.mainPanelAnim = 0.0F;
-            this.subPanelAnim = 0.0F;
-         } else {
-            float cardHeight = 26.0F;
-            float radius = 6.0F;
-            float iconSize = 14.0F;
-            float nameSize = 8.0F;
-            float infoSize = 7.0F;
-            float paddingX = 8.0F;
-            float iconGap = 6.5F;
-            float gap = 4.0F;
-            MsdfFont bold = (MsdfFont)BOLD_FONT.get();
-            MsdfFont semibold = (MsdfFont)SEMIBOLD_FONT.get();
-            MsdfFont medium = (MsdfFont)MEDIUM_FONT.get();
-            MsdfFont iconFont = (MsdfFont)ICON_FONT.get();
-            float scaleModifier = this.getScaleModifier();
-            float scaledWidth = client.method_22683().method_4486() / scaleModifier;
-            float scaledHeight = client.method_22683().method_4502() / scaleModifier;
-            float computedTotalHeight = 0.0F;
-
-            for (EffectHudManager.PotionCardState state : this.cardStateMap.values()) {
-               computedTotalHeight += (cardHeight + gap) * state.heightScale;
+            this.mainPanelAnim = 0.0f;
+            this.subPanelAnim = 0.0f;
+            return;
+        }
+        float cardHeight = 26.0f;
+        float radius = 6.0f;
+        float iconSize = 14.0f;
+        float nameSize = 8.0f;
+        float infoSize = 7.0f;
+        float paddingX = 8.0f;
+        float iconGap = 6.5f;
+        float gap = 4.0f;
+        MsdfFont bold = (MsdfFont)BOLD_FONT.get();
+        MsdfFont semibold = (MsdfFont)SEMIBOLD_FONT.get();
+        MsdfFont medium = (MsdfFont)MEDIUM_FONT.get();
+        MsdfFont iconFont = (MsdfFont)ICON_FONT.get();
+        float scaleModifier = this.getScaleModifier();
+        float scaledWidth = (float)client.getWindow().getScaledWidth() / scaleModifier;
+        float scaledHeight = (float)client.getWindow().getScaledHeight() / scaleModifier;
+        float computedTotalHeight = 0.0f;
+        for (PotionCardState state2 : this.cardStateMap.values()) {
+            computedTotalHeight += (cardHeight + gap) * state2.heightScale;
+        }
+        if (computedTotalHeight > gap) {
+            computedTotalHeight -= gap;
+        }
+        this.y = (scaledHeight - computedTotalHeight) / 2.0f;
+        float targetBaseX = this.position == Position.RIGHT ? scaledWidth - this.lastFrameTotalMaxWidth - 10.0f : 10.0f;
+        this.animatedX += (targetBaseX - this.animatedX) * (float)(1.0 - Math.exp(-14.0 * deltaSeconds));
+        this.x = this.animatedX;
+        context.getMatrices().pushMatrix();
+        context.getMatrices().scale(scaleModifier, scaleModifier);
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        float currentY = this.y;
+        float currentFrameMaxWidth = 0.0f;
+        for (Map.Entry<StatusEffect, PotionCardState> entry : this.cardStateMap.entrySet()) {
+            float levelW;
+            float nameW;
+            float cardProgress;
+            float effectiveAlpha;
+            StatusEffect effect2 = entry.getKey();
+            PotionCardState state3 = entry.getValue();
+            StatusEffectInstance instance = state3.cachedInstance;
+            if (instance == null || (effectiveAlpha = (cardProgress = state3.animProgress) * this.masterAlpha) <= 0.002f) continue;
+            String name = Text.translatable((String)effect2.getTranslationKey()).getString();
+            int level = instance.getAmplifier() + 1;
+            boolean showLevel = level > 1;
+            String levelNum = String.valueOf(level);
+            String duration = this.formatDuration(instance);
+            state3.durationAnimator.update(duration);
+            float f = nameW = bold != null ? bold.getWidth(name, nameSize) : 35.0f;
+            levelW = showLevel ? (bold != null ? bold.getWidth(levelNum, nameSize) : 8.0f) : 0.0f;
+            float spaceW = showLevel ? (bold != null ? bold.getWidth(" ", nameSize) : 3.0f) : 0.0f;
+            float durationW = medium != null ? medium.getWidth(duration, infoSize) : 20.0f;
+            float topLineW = nameW + spaceW + levelW;
+            float bottomLineW = durationW;
+            float maxTextW = Math.max(topLineW, bottomLineW);
+            float targetWidth = paddingX + iconSize + iconGap + maxTextW + paddingX;
+            state3.width += (targetWidth - state3.width) * (float)(1.0 - Math.exp(-14.0 * deltaSeconds));
+            float currentAnimatedWidth = state3.width;
+            if (currentAnimatedWidth > currentFrameMaxWidth) {
+                currentFrameMaxWidth = currentAnimatedWidth;
             }
-
-            if (computedTotalHeight > gap) {
-               computedTotalHeight -= gap;
+            float cardX = this.position == Position.RIGHT ? this.animatedX + (this.lastFrameTotalMaxWidth - currentAnimatedWidth) : this.animatedX;
+            float cardEase = 1.0f - (float)Math.pow(1.0f - cardProgress, 3.0);
+            float cardScale = 0.88f + 0.12f * cardEase;
+            context.getMatrices().pushMatrix();
+            if (cardScale < 0.999f) {
+                float cx = cardX + (this.position == Position.RIGHT ? currentAnimatedWidth : 0.0f);
+                float cy = currentY + cardHeight / 2.0f;
+                context.getMatrices().translate(cx, cy);
+                context.getMatrices().scale(cardScale, cardScale);
+                context.getMatrices().translate(-cx, -cy);
             }
-
-            this.y = (scaledHeight - computedTotalHeight) / 2.0F;
-            float targetBaseX = this.position == EffectHudManager.Position.RIGHT ? scaledWidth - this.lastFrameTotalMaxWidth - 10.0F : 10.0F;
-            this.animatedX = this.animatedX + (targetBaseX - this.animatedX) * (float)(1.0 - Math.exp(-14.0 * deltaSeconds));
-            this.x = this.animatedX;
-            context.method_51448().method_22903();
-            context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-            Matrix4f matrix = context.method_51448().method_23760().method_23761();
-            float currentY = this.y;
-            float currentFrameMaxWidth = 0.0F;
-
-            for (Entry<class_1291, EffectHudManager.PotionCardState> entry : this.cardStateMap.entrySet()) {
-               class_1291 effect = entry.getKey();
-               EffectHudManager.PotionCardState state = entry.getValue();
-               class_1293 instance = state.cachedInstance;
-               if (instance != null) {
-                  float cardProgress = state.animProgress;
-                  float effectiveAlpha = cardProgress * this.masterAlpha;
-                  if (!(effectiveAlpha <= 0.002F)) {
-                     String name = class_2561.method_43471(effect.method_5567()).getString();
-                     int level = instance.method_5578() + 1;
-                     boolean showLevel = level > 1;
-                     String levelNum = String.valueOf(level);
-                     String duration = this.formatDuration(instance);
-                     state.durationAnimator.update(duration);
-                     float nameW = bold != null ? bold.getWidth(name, nameSize) : 35.0F;
-                     float levelW = showLevel ? (bold != null ? bold.getWidth(levelNum, nameSize) : 8.0F) : 0.0F;
-                     float spaceW = showLevel ? (bold != null ? bold.getWidth(" ", nameSize) : 3.0F) : 0.0F;
-                     float durationW = medium != null ? medium.getWidth(duration, infoSize) : 20.0F;
-                     float topLineW = nameW + spaceW + levelW;
-                     float bottomLineW = durationW;
-                     float maxTextW = Math.max(topLineW, bottomLineW);
-                     float targetWidth = paddingX + iconSize + iconGap + maxTextW + paddingX;
-                     state.width = state.width + (targetWidth - state.width) * (float)(1.0 - Math.exp(-14.0 * deltaSeconds));
-                     float currentAnimatedWidth = state.width;
-                     if (currentAnimatedWidth > currentFrameMaxWidth) {
-                        currentFrameMaxWidth = currentAnimatedWidth;
-                     }
-
-                     float cardX = this.position == EffectHudManager.Position.RIGHT
-                        ? this.animatedX + (this.lastFrameTotalMaxWidth - currentAnimatedWidth)
-                        : this.animatedX;
-                     float cardEase = 1.0F - (float)Math.pow(1.0F - cardProgress, 3.0);
-                     float cardScale = 0.88F + 0.12F * cardEase;
-                     context.method_51448().method_22903();
-                     if (cardScale < 0.999F) {
-                        float cx = cardX + (this.position == EffectHudManager.Position.RIGHT ? currentAnimatedWidth : 0.0F);
-                        float cy = currentY + cardHeight / 2.0F;
-                        context.method_51448().method_46416(cx, cy, 0.0F);
-                        context.method_51448().method_22905(cardScale, cardScale, 1.0F);
-                        context.method_51448().method_46416(-cx, -cy, 0.0F);
-                     }
-
-                     Matrix4f cardMat = context.method_51448().method_23760().method_23761();
-                     this.renderShadow(cardMat, cardX, currentY, currentAnimatedWidth, cardHeight, radius, effectiveAlpha);
-                     Builder.rectangle()
-                        .size(new SizeState(currentAnimatedWidth, cardHeight))
-                        .radius(new QuadRadiusState(radius))
-                        .color(new QuadColorState(new Color(0, 0, 0, (int)(255.0F * effectiveAlpha))))
-                        .build()
-                        .render(cardMat, cardX, currentY);
-                     float centerY = currentY + cardHeight / 2.0F;
-                     float currentX = cardX + paddingX;
-                     float iconCX = currentX + iconSize / 2.0F;
-                     this.drawIconGlowShadow(cardMat, iconCX, centerY, iconSize / 2.0F, themeColor, 0.12F * effectiveAlpha);
-                     class_2960 icon = this.getEffectIconIdentifier(instance.method_5579());
-                     Builder.texture()
-                        .size(new SizeState(iconSize, iconSize))
-                        .radius(new QuadRadiusState(3.0F))
-                        .texture(0.0F, 0.0F, 1.0F, 1.0F, client.method_1531().method_4619(icon))
-                        .color(new QuadColorState(new Color(255, 255, 255, (int)(255.0F * effectiveAlpha))))
-                        .build()
-                        .render(cardMat, currentX, centerY - iconSize / 2.0F);
-                     currentX += iconSize + iconGap;
-                     if (bold != null) {
-                        Color whiteText = GuiUtils.withAlpha(Color.WHITE, effectiveAlpha);
-                        Builder.text().font(bold).text(name).color(whiteText).size(nameSize).build().render(cardMat, currentX, currentY + 4.5F);
-                        if (showLevel) {
-                           Builder.text()
-                              .font(bold)
-                              .text(levelNum)
-                              .color(GuiUtils.withAlpha(themeColor, effectiveAlpha))
-                              .size(nameSize)
-                              .build()
-                              .render(cardMat, currentX + nameW + spaceW, currentY + 4.5F);
-                        }
-                     }
-
-                     if (medium != null) {
-                        Color grayText = GuiUtils.withAlpha(new Color(160, 160, 165), effectiveAlpha);
-                        state.durationAnimator.render(cardMat, currentX, currentY + 14.5F, grayText, medium, infoSize, effectiveAlpha);
-                     }
-
-                     context.method_51448().method_22909();
-                     currentY += (cardHeight + gap) * state.heightScale;
-                  }
-               }
+            Matrix4f cardMat = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+            this.renderShadow(cardMat, cardX, currentY, currentAnimatedWidth, cardHeight, radius, effectiveAlpha);
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(currentAnimatedWidth, cardHeight)).radius(new QuadRadiusState(radius)).color(new QuadColorState(new Color(0, 0, 0, (int)(255.0f * effectiveAlpha)))).build()).render(cardMat, cardX, currentY);
+            float centerY = currentY + cardHeight / 2.0f;
+            float currentX = cardX + paddingX;
+            float iconCX = currentX + iconSize / 2.0f;
+            this.drawIconGlowShadow(cardMat, iconCX, centerY, iconSize / 2.0f, themeColor, 0.12f * effectiveAlpha);
+            Identifier icon = this.getEffectIconIdentifier((RegistryEntry<StatusEffect>)instance.getEffectType());
+            ((BuiltTexture)Builder.texture().size(new SizeState(iconSize, iconSize)).radius(new QuadRadiusState(3.0f)).texture(0.0f, 0.0f, 1.0f, 1.0f, client.getTextureManager().getTexture(icon)).color(new QuadColorState(new Color(255, 255, 255, (int)(255.0f * effectiveAlpha)))).build()).render(cardMat, currentX, centerY - iconSize / 2.0f);
+            currentX += iconSize + iconGap;
+            if (bold != null) {
+                Color whiteText = GuiUtils.withAlpha(Color.WHITE, effectiveAlpha);
+                ((BuiltText)Builder.text().font(bold).text(name).color(whiteText).size(nameSize).build()).render(cardMat, currentX, currentY + 4.5f);
+                if (showLevel) {
+                    ((BuiltText)Builder.text().font(bold).text(levelNum).color(GuiUtils.withAlpha(themeColor, effectiveAlpha)).size(nameSize).build()).render(cardMat, currentX + nameW + spaceW, currentY + 4.5f);
+                }
             }
-
-            this.totalHeight = currentY - this.y;
-            this.lastFrameTotalMaxWidth = currentFrameMaxWidth;
-            if (isEditing) {
-               double mx = this.getScaledMouseX();
-               double my = this.getScaledMouseY();
-               boolean isMouseDown = GLFW.glfwGetMouseButton(client.method_22683().method_4490(), 0) == 1;
-               this.drawConnectedContextPanel(context, scaledWidth, scaledHeight, themeColor, mx, my, isMouseDown, this.wasMouseDown, (float)deltaSeconds);
-               this.wasMouseDown = isMouseDown;
-            } else {
-               this.panelOpen = false;
-               this.submenuOpen = false;
-               this.mainPanelAnim = 0.0F;
-               this.subPanelAnim = 0.0F;
-               this.wasMouseDown = false;
+            if (medium != null) {
+                Color grayText = GuiUtils.withAlpha(new Color(160, 160, 165), effectiveAlpha);
+                state3.durationAnimator.render(cardMat, currentX, currentY + 14.5f, grayText, medium, infoSize, effectiveAlpha);
             }
-
-            context.method_51448().method_22909();
-         }
-      }
-   }
-
-   private void drawConnectedContextPanel(
-      class_332 context,
-      float screenW,
-      float screenH,
-      Color themeColor,
-      double mouseX,
-      double mouseY,
-      boolean isMouseDown,
-      boolean wasMouseDown,
-      float deltaTime
-   ) {
-      float targetMain = this.panelOpen ? 1.0F : 0.0F;
-      this.mainPanelAnim = this.mainPanelAnim + (targetMain - this.mainPanelAnim) * (float)(1.0 - Math.exp(-14.0 * deltaTime));
-      if (!this.panelOpen && this.mainPanelAnim < 0.01F) {
-         this.mainPanelAnim = 0.0F;
-         this.subPanelAnim = 0.0F;
-      } else {
-         float targetSub = this.submenuOpen && this.panelOpen ? 1.0F : 0.0F;
-         this.subPanelAnim = this.subPanelAnim + (targetSub - this.subPanelAnim) * (float)(1.0 - Math.exp(-14.0 * deltaTime));
-         float mainW = 110.0F;
-         float mainH = 48.0F;
-         float subW = 88.0F;
-         float subH = 38.0F;
-         float mY = this.y;
-         boolean opensToRight = this.position == EffectHudManager.Position.LEFT;
-         float mX;
-         if (opensToRight) {
-            mX = this.animatedX + this.lastFrameTotalMaxWidth + 8.0F;
-         } else {
-            float totalW = mainW + (this.subPanelAnim > 0.01F ? subW + 5.0F : 0.0F);
-            mX = this.animatedX - totalW - 8.0F;
-         }
-
-         if (mX + mainW + (this.subPanelAnim > 0.01F ? subW + 5.0F : 0.0F) > screenW - 6.0F) {
-            mX = screenW - mainW - (this.subPanelAnim > 0.01F ? subW + 5.0F : 0.0F) - 6.0F;
-         }
-
-         if (mX < 6.0F) {
-            mX = 6.0F;
-         }
-
-         if (mY + mainH > screenH - 6.0F) {
-            mY = screenH - mainH - 6.0F;
-         }
-
-         if (mY < 6.0F) {
-            mY = 6.0F;
-         }
-
-         MsdfFont boldFont = (MsdfFont)BOLD_FONT.get();
-         MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
-         MsdfFont spFont = (MsdfFont)LogoRenderer.SP_FONT.get();
-         float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
-         float mainScale = 0.88F + 0.12F * mainEase;
-         context.method_51448().method_22903();
-         if (mainScale < 0.999F) {
-            float cx = mX + mainW / 2.0F;
-            float cy = mY + mainH / 2.0F;
-            context.method_51448().method_46416(cx, cy, 0.0F);
-            context.method_51448().method_22905(mainScale, mainScale, 1.0F);
-            context.method_51448().method_46416(-cx, -cy, 0.0F);
-         }
-
-         Matrix4f matrix = context.method_51448().method_23760().method_23761();
-
-         for (int i = 6; i >= 0; i--) {
-            float progress = i / 6.0F;
-            float spread = progress * 4.0F;
-            int alpha = (int)(60.0F * (1.0F - progress) * (1.0F - progress) * mainEase);
-            if (alpha > 0) {
-               Builder.rectangle()
-                  .size(new SizeState(mainW + spread * 2.0F, mainH + spread * 2.0F))
-                  .radius(new QuadRadiusState(8.0F + spread))
-                  .color(new QuadColorState(new Color(0, 0, 0, alpha)))
-                  .build()
-                  .render(matrix, mX - spread, mY - spread);
-            }
-         }
-
-         Color bgMain = new Color(0, 0, 0, (int)(255.0F * mainEase));
-         Builder.rectangle()
-            .size(new SizeState(mainW, mainH))
-            .radius(new QuadRadiusState(8.0F))
-            .color(new QuadColorState(bgMain))
-            .build()
-            .render(matrix, mX, mY);
-         if (boldFont != null) {
-            Builder.text()
-               .font(boldFont)
-               .text("Potions")
-               .size(7.5F)
-               .color(new Color(255, 255, 255, (int)(255.0F * mainEase)))
-               .build()
-               .render(matrix, mX + 8.0F, mY + 6.5F);
-         }
-
-         float closeX = mX + mainW - 14.0F;
-         float closeY = mY + 6.5F;
-         boolean closeHover = mouseX >= closeX - 2.0F && mouseX <= closeX + 10.0F && mouseY >= closeY - 2.0F && mouseY <= closeY + 10.0F;
-         Color closeColor = closeHover ? new Color(255, 80, 80, (int)(255.0F * mainEase)) : new Color(140, 140, 150, (int)(255.0F * mainEase));
-         if (spFont != null) {
-            Builder.text().font(spFont).text("A").size(7.0F).color(closeColor).build().render(matrix, closeX, closeY);
-         }
-
-         if (closeHover && isMouseDown && !wasMouseDown) {
+            context.getMatrices().popMatrix();
+            currentY += (cardHeight + gap) * state3.heightScale;
+        }
+        this.totalHeight = currentY - this.y;
+        this.lastFrameTotalMaxWidth = currentFrameMaxWidth;
+        if (isEditing) {
+            double mx = this.getScaledMouseX();
+            double my = this.getScaledMouseY();
+            boolean isMouseDown = GLFW.glfwGetMouseButton((long)client.getWindow().getHandle(), (int)0) == 1;
+            this.drawConnectedContextPanel(context, scaledWidth, scaledHeight, themeColor, mx, my, isMouseDown, this.wasMouseDown, (float)deltaSeconds);
+            this.wasMouseDown = isMouseDown;
+        } else {
             this.panelOpen = false;
             this.submenuOpen = false;
-            context.method_51448().method_22909();
-         } else {
-            float c1X = mX + 4.0F;
-            float c1Y = mY + 20.0F;
-            float c1W = mainW - 8.0F;
-            float c1H = 22.0F;
-            Builder.rectangle()
-               .size(new SizeState(c1W, c1H))
-               .radius(new QuadRadiusState(6.0F))
-               .color(new QuadColorState(new Color(10, 10, 15, (int)(220.0F * mainEase))))
-               .build()
-               .render(matrix, c1X, c1Y);
-            float r1Y = c1Y + 3.0F;
-            float r1H = 16.0F;
-            boolean r1Hov = mouseX >= c1X && mouseX <= c1X + c1W && mouseY >= r1Y && mouseY <= r1Y + r1H;
-            boolean r1Active = this.submenuOpen;
-            if (r1Hov) {
-               Builder.rectangle()
-                  .size(new SizeState(c1W - 4.0F, r1H))
-                  .radius(new QuadRadiusState(4.0F))
-                  .color(new QuadColorState(new Color(22, 22, 32, (int)(180.0F * mainEase))))
-                  .build()
-                  .render(matrix, c1X + 2.0F, r1Y);
+            this.mainPanelAnim = 0.0f;
+            this.subPanelAnim = 0.0f;
+            this.wasMouseDown = false;
+        }
+        context.getMatrices().popMatrix();
+    }
+
+    private void drawConnectedContextPanel(DrawContext context, float screenW, float screenH, Color themeColor, double mouseX, double mouseY, boolean isMouseDown, boolean wasMouseDown, float deltaTime) {
+        Color closeColor;
+        float mX;
+        boolean opensToRight;
+        float targetMain = this.panelOpen ? 1.0f : 0.0f;
+        this.mainPanelAnim += (targetMain - this.mainPanelAnim) * (float)(1.0 - Math.exp(-14.0 * (double)deltaTime));
+        if (!this.panelOpen && this.mainPanelAnim < 0.01f) {
+            this.mainPanelAnim = 0.0f;
+            this.subPanelAnim = 0.0f;
+            return;
+        }
+        float targetSub = this.submenuOpen && this.panelOpen ? 1.0f : 0.0f;
+        this.subPanelAnim += (targetSub - this.subPanelAnim) * (float)(1.0 - Math.exp(-14.0 * (double)deltaTime));
+        float mainW = 110.0f;
+        float mainH = 48.0f;
+        float subW = 88.0f;
+        float subH = 38.0f;
+        float mY = this.y;
+        boolean bl = opensToRight = this.position == Position.LEFT;
+        if (opensToRight) {
+            mX = this.animatedX + this.lastFrameTotalMaxWidth + 8.0f;
+        } else {
+            float totalW = mainW + (this.subPanelAnim > 0.01f ? subW + 5.0f : 0.0f);
+            mX = this.animatedX - totalW - 8.0f;
+        }
+        float f = this.subPanelAnim > 0.01f ? subW + 5.0f : 0.0f;
+        if (mX + mainW + f > screenW - 6.0f) {
+            mX = screenW - mainW - (this.subPanelAnim > 0.01f ? subW + 5.0f : 0.0f) - 6.0f;
+        }
+        if (mX < 6.0f) {
+            mX = 6.0f;
+        }
+        if (mY + mainH > screenH - 6.0f) {
+            mY = screenH - mainH - 6.0f;
+        }
+        if (mY < 6.0f) {
+            mY = 6.0f;
+        }
+        MsdfFont boldFont = (MsdfFont)BOLD_FONT.get();
+        MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
+        MsdfFont spFont = (MsdfFont)LogoRenderer.SP_FONT.get();
+        float mainEase = 1.0f - (float)Math.pow(1.0f - this.mainPanelAnim, 3.0);
+        float mainScale = 0.88f + 0.12f * mainEase;
+        context.getMatrices().pushMatrix();
+        if (mainScale < 0.999f) {
+            float cx = mX + mainW / 2.0f;
+            float cy = mY + mainH / 2.0f;
+            context.getMatrices().translate(cx, cy);
+            context.getMatrices().scale(mainScale, mainScale);
+            context.getMatrices().translate(-cx, -cy);
+        }
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        for (int i = 6; i >= 0; --i) {
+            float progress = (float)i / 6.0f;
+            float spread = progress * 4.0f;
+            int alpha = (int)(60.0f * (1.0f - progress) * (1.0f - progress) * mainEase);
+            if (alpha <= 0) continue;
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(mainW + spread * 2.0f, mainH + spread * 2.0f)).radius(new QuadRadiusState(8.0f + spread)).color(new QuadColorState(new Color(0, 0, 0, alpha))).build()).render(matrix, mX - spread, mY - spread);
+        }
+        Color bgMain = new Color(0, 0, 0, (int)(255.0f * mainEase));
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(mainW, mainH)).radius(new QuadRadiusState(8.0f)).color(new QuadColorState(bgMain)).build()).render(matrix, mX, mY);
+        if (boldFont != null) {
+            ((BuiltText)Builder.text().font(boldFont).text("Potions").size(7.5f).color(new Color(255, 255, 255, (int)(255.0f * mainEase))).build()).render(matrix, mX + 8.0f, mY + 6.5f);
+        }
+        float closeX = mX + mainW - 14.0f;
+        float closeY = mY + 6.5f;
+        boolean closeHover = mouseX >= (double)(closeX - 2.0f) && mouseX <= (double)(closeX + 10.0f) && mouseY >= (double)(closeY - 2.0f) && mouseY <= (double)(closeY + 10.0f);
+        Color color = closeColor = closeHover ? new Color(255, 80, 80, (int)(255.0f * mainEase)) : new Color(140, 140, 150, (int)(255.0f * mainEase));
+        if (spFont != null) {
+            ((BuiltText)Builder.text().font(spFont).text("A").size(7.0f).color(closeColor).build()).render(matrix, closeX, closeY);
+        }
+        if (closeHover && isMouseDown && !wasMouseDown) {
+            this.panelOpen = false;
+            this.submenuOpen = false;
+            context.getMatrices().popMatrix();
+            return;
+        }
+        float c1X = mX + 4.0f;
+        float c1Y = mY + 20.0f;
+        float c1W = mainW - 8.0f;
+        float c1H = 22.0f;
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(c1W, c1H)).radius(new QuadRadiusState(6.0f)).color(new QuadColorState(new Color(10, 10, 15, (int)(220.0f * mainEase)))).build()).render(matrix, c1X, c1Y);
+        float r1Y = c1Y + 3.0f;
+        float r1H = 16.0f;
+        boolean r1Hov = mouseX >= (double)c1X && mouseX <= (double)(c1X + c1W) && mouseY >= (double)r1Y && mouseY <= (double)(r1Y + r1H);
+        boolean r1Active = this.submenuOpen;
+        if (r1Hov) {
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(c1W - 4.0f, r1H)).radius(new QuadRadiusState(4.0f)).color(new QuadColorState(new Color(22, 22, 32, (int)(180.0f * mainEase)))).build()).render(matrix, c1X + 2.0f, r1Y);
+        }
+        if (spFont != null) {
+            ((BuiltText)Builder.text().font(spFont).text("C").size(7.5f).color(new Color(170, 170, 190, (int)(255.0f * mainEase))).build()).render(matrix, c1X + 5.0f, r1Y + 4.0f);
+        }
+        if (mediumFont != null) {
+            ((BuiltText)Builder.text().font(mediumFont).text("Position").size(6.5f).color(new Color(230, 230, 245, (int)(255.0f * mainEase))).build()).render(matrix, c1X + 16.0f, r1Y + 5.5f);
+            String currentPosName = (this.position == Position.LEFT ? "Left" : "Right") + " >";
+            float posStrW = mediumFont.getWidth(currentPosName, 6.0f);
+            Color posCol = r1Active ? GuiUtils.withAlpha(themeColor, mainEase) : new Color(140, 140, 160, (int)(255.0f * mainEase));
+            ((BuiltText)Builder.text().font(mediumFont).text(currentPosName).size(6.0f).color(posCol).build()).render(matrix, c1X + c1W - posStrW - 5.0f, r1Y + 5.5f);
+        }
+        if (r1Hov && isMouseDown && !wasMouseDown) {
+            this.submenuOpen = !this.submenuOpen;
+        }
+        context.getMatrices().popMatrix();
+        if (this.subPanelAnim > 0.005f) {
+            float subEase = 1.0f - (float)Math.pow(1.0f - this.subPanelAnim, 3.0);
+            float subScale = 0.88f + 0.12f * subEase;
+            float sX = mX + mainW + 5.0f;
+            if (sX + subW > screenW - 6.0f) {
+                sX = mX - subW - 5.0f;
             }
-
-            if (spFont != null) {
-               Builder.text()
-                  .font(spFont)
-                  .text("C")
-                  .size(7.5F)
-                  .color(new Color(170, 170, 190, (int)(255.0F * mainEase)))
-                  .build()
-                  .render(matrix, c1X + 5.0F, r1Y + 4.0F);
+            float sY = mY;
+            context.getMatrices().pushMatrix();
+            if (subScale < 0.999f) {
+                float scx = sX + subW / 2.0f;
+                float scy = sY + subH / 2.0f;
+                context.getMatrices().translate(scx, scy);
+                context.getMatrices().scale(subScale, subScale);
+                context.getMatrices().translate(-scx, -scy);
             }
-
-            if (mediumFont != null) {
-               Builder.text()
-                  .font(mediumFont)
-                  .text("Position")
-                  .size(6.5F)
-                  .color(new Color(230, 230, 245, (int)(255.0F * mainEase)))
-                  .build()
-                  .render(matrix, c1X + 16.0F, r1Y + 5.5F);
-               String currentPosName = (this.position == EffectHudManager.Position.LEFT ? "Left" : "Right") + " >";
-               float posStrW = mediumFont.getWidth(currentPosName, 6.0F);
-               Color posCol = r1Active ? GuiUtils.withAlpha(themeColor, mainEase) : new Color(140, 140, 160, (int)(255.0F * mainEase));
-               Builder.text().font(mediumFont).text(currentPosName).size(6.0F).color(posCol).build().render(matrix, c1X + c1W - posStrW - 5.0F, r1Y + 5.5F);
+            matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+            for (int i = 6; i >= 0; --i) {
+                float progress = (float)i / 6.0f;
+                float spread = progress * 4.0f;
+                int alpha = (int)(60.0f * (1.0f - progress) * (1.0f - progress) * subEase);
+                if (alpha <= 0) continue;
+                ((BuiltRectangle)Builder.rectangle().size(new SizeState(subW + spread * 2.0f, subH + spread * 2.0f)).radius(new QuadRadiusState(8.0f + spread)).color(new QuadColorState(new Color(0, 0, 0, alpha))).build()).render(matrix, sX - spread, sY - spread);
             }
-
-            if (r1Hov && isMouseDown && !wasMouseDown) {
-               this.submenuOpen = !this.submenuOpen;
+            Color bgSub = new Color(0, 0, 0, (int)(255.0f * subEase));
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(subW, subH)).radius(new QuadRadiusState(8.0f)).color(new QuadColorState(bgSub)).build()).render(matrix, sX, sY);
+            Position[] posOptions = new Position[]{Position.LEFT, Position.RIGHT};
+            String[] posLabels = new String[]{"Left", "Right"};
+            float posRowH = 15.0f;
+            float listStartY = sY + 4.0f;
+            for (int i = 0; i < posOptions.length; ++i) {
+                boolean rHov;
+                float rowY = listStartY + (float)i * posRowH;
+                boolean isSel = this.position == posOptions[i];
+                boolean bl2 = rHov = mouseX >= (double)(sX + 3.0f) && mouseX <= (double)(sX + subW - 3.0f) && mouseY >= (double)rowY && mouseY <= (double)(rowY + 14.0f);
+                if (rHov) {
+                    ((BuiltRectangle)Builder.rectangle().size(new SizeState(subW - 6.0f, 14.0f)).radius(new QuadRadiusState(4.0f)).color(new QuadColorState(new Color(25, 25, 36, (int)(220.0f * subEase)))).build()).render(matrix, sX + 3.0f, rowY);
+                }
+                if (isSel && spFont != null) {
+                    ((BuiltText)Builder.text().font(spFont).text("D").size(6.5f).color(new Color(255, 255, 255, (int)(255.0f * subEase))).build()).render(matrix, sX + 6.0f, rowY + 3.5f);
+                }
+                if (mediumFont != null) {
+                    Color textCol = isSel ? new Color(240, 240, 255, (int)(255.0f * subEase)) : (rHov ? new Color(180, 180, 200, (int)(255.0f * subEase)) : new Color(110, 110, 130, (int)(255.0f * subEase)));
+                    ((BuiltText)Builder.text().font(mediumFont).text(posLabels[i]).size(6.5f).color(textCol).build()).render(matrix, sX + (isSel ? 18.0f : 8.0f), rowY + 4.5f);
+                }
+                if (!rHov || !isMouseDown || wasMouseDown) continue;
+                this.position = posOptions[i];
             }
+            context.getMatrices().popMatrix();
+        }
+    }
 
-            context.method_51448().method_22909();
-            if (this.subPanelAnim > 0.005F) {
-               float subEase = 1.0F - (float)Math.pow(1.0F - this.subPanelAnim, 3.0);
-               float subScale = 0.88F + 0.12F * subEase;
-               float sX = mX + mainW + 5.0F;
-               if (sX + subW > screenW - 6.0F) {
-                  sX = mX - subW - 5.0F;
-               }
+    private Identifier getEffectIconIdentifier(RegistryEntry<StatusEffect> effect) {
+        return effect.getKey().map(key -> Identifier.of((String)"minecraft", (String)("textures/mob_effect/" + key.getValue().getPath() + ".png"))).orElse(Identifier.of((String)"minecraft", (String)"textures/missing.png"));
+    }
 
-               float sY = mY;
-               context.method_51448().method_22903();
-               if (subScale < 0.999F) {
-                  float scx = sX + subW / 2.0F;
-                  float scy = sY + subH / 2.0F;
-                  context.method_51448().method_46416(scx, scy, 0.0F);
-                  context.method_51448().method_22905(subScale, subScale, 1.0F);
-                  context.method_51448().method_46416(-scx, -scy, 0.0F);
-               }
+    private String formatDuration(StatusEffectInstance effect) {
+        if (effect.isInfinite()) {
+            return "Infinite";
+        }
+        int totalSeconds = effect.getDuration() / 20;
+        return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
+    }
 
-               matrix = context.method_51448().method_23760().method_23761();
+    private List<StatusEffectInstance> getPlaceholders() {
+        return List.of(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 16500, 0), new StatusEffectInstance(StatusEffects.STRENGTH, 740, 1), new StatusEffectInstance(StatusEffects.SPEED, 1640, 1), new StatusEffectInstance(StatusEffects.ABSORPTION, 2260, 3));
+    }
 
-               for (int i = 6; i >= 0; i--) {
-                  float progress = i / 6.0F;
-                  float spread = progress * 4.0F;
-                  int alpha = (int)(60.0F * (1.0F - progress) * (1.0F - progress) * subEase);
-                  if (alpha > 0) {
-                     Builder.rectangle()
-                        .size(new SizeState(subW + spread * 2.0F, subH + spread * 2.0F))
-                        .radius(new QuadRadiusState(8.0F + spread))
-                        .color(new QuadColorState(new Color(0, 0, 0, alpha)))
-                        .build()
-                        .render(matrix, sX - spread, sY - spread);
-                  }
-               }
-
-               Color bgSub = new Color(0, 0, 0, (int)(255.0F * subEase));
-               Builder.rectangle()
-                  .size(new SizeState(subW, subH))
-                  .radius(new QuadRadiusState(8.0F))
-                  .color(new QuadColorState(bgSub))
-                  .build()
-                  .render(matrix, sX, sY);
-               EffectHudManager.Position[] posOptions = new EffectHudManager.Position[]{EffectHudManager.Position.LEFT, EffectHudManager.Position.RIGHT};
-               String[] posLabels = new String[]{"Left", "Right"};
-               float posRowH = 15.0F;
-               float listStartY = sY + 4.0F;
-
-               for (int i = 0; i < posOptions.length; i++) {
-                  float rowY = listStartY + i * posRowH;
-                  boolean isSel = this.position == posOptions[i];
-                  boolean rHov = mouseX >= sX + 3.0F && mouseX <= sX + subW - 3.0F && mouseY >= rowY && mouseY <= rowY + 14.0F;
-                  if (rHov) {
-                     Builder.rectangle()
-                        .size(new SizeState(subW - 6.0F, 14.0F))
-                        .radius(new QuadRadiusState(4.0F))
-                        .color(new QuadColorState(new Color(25, 25, 36, (int)(220.0F * subEase))))
-                        .build()
-                        .render(matrix, sX + 3.0F, rowY);
-                  }
-
-                  if (isSel && spFont != null) {
-                     Builder.text()
-                        .font(spFont)
-                        .text("D")
-                        .size(6.5F)
-                        .color(new Color(255, 255, 255, (int)(255.0F * subEase)))
-                        .build()
-                        .render(matrix, sX + 6.0F, rowY + 3.5F);
-                  }
-
-                  if (mediumFont != null) {
-                     Color textCol = isSel
-                        ? new Color(240, 240, 255, (int)(255.0F * subEase))
-                        : (rHov ? new Color(180, 180, 200, (int)(255.0F * subEase)) : new Color(110, 110, 130, (int)(255.0F * subEase)));
-                     Builder.text()
-                        .font(mediumFont)
-                        .text(posLabels[i])
-                        .size(6.5F)
-                        .color(textCol)
-                        .build()
-                        .render(matrix, sX + (isSel ? 18.0F : 8.0F), rowY + 4.5F);
-                  }
-
-                  if (rHov && isMouseDown && !wasMouseDown) {
-                     this.position = posOptions[i];
-                  }
-               }
-
-               context.method_51448().method_22909();
-            }
-         }
-      }
-   }
-
-   private class_2960 getEffectIconIdentifier(class_6880<class_1291> effect) {
-      return effect.method_40230()
-         .map(key -> class_2960.method_60655("minecraft", "textures/mob_effect/" + key.method_29177().method_12832() + ".png"))
-         .orElse(class_2960.method_60655("minecraft", "textures/missing.png"));
-   }
-
-   private String formatDuration(class_1293 effect) {
-      if (effect.method_48559()) {
-         return "Infinite";
-      }
-
-      int totalSeconds = effect.method_5584() / 20;
-      return String.format("%d:%02d", totalSeconds / 60, totalSeconds % 60);
-   }
-
-   private List<class_1293> getPlaceholders() {
-      return List.of(
-         new class_1293(class_1294.field_5918, 16500, 0),
-         new class_1293(class_1294.field_5910, 740, 1),
-         new class_1293(class_1294.field_5904, 1640, 1),
-         new class_1293(class_1294.field_5898, 2260, 3)
-      );
-   }
-
-   private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
-      int layers = 12;
-      float maxSpread = 8.0F;
-
-      for (int i = layers - 1; i >= 0; i--) {
-         float progress = (float)i / layers;
-         float spread = progress * maxSpread;
-         float alphaFactor = (1.0F - progress) * (1.0F - progress);
-         int alpha = (int)(102.0F * alphaFactor * masterAlpha);
-         if (alpha > 0) {
-            Builder.rectangle()
-               .size(new SizeState(w + spread * 2.0F, h + spread * 2.0F))
-               .radius(new QuadRadiusState(radius + spread))
-               .color(new QuadColorState(new Color(0, 0, 0, alpha)))
-               .build()
-               .render(matrix, x - spread, y - spread + 1.0F);
-         }
-      }
-   }
-
-   private void drawIconGlowShadow(Matrix4f matrix, float cx, float cy, float radius, Color color, float masterAlpha) {
-      if (!(masterAlpha <= 0.001F)) {
-         int steps = 10;
-         float maxSpread = 8.0F;
-         int cr = color.getRed();
-         int cg = color.getGreen();
-         int cb = color.getBlue();
-
-         for (int i = steps - 1; i >= 0; i--) {
-            float progress = (float)i / steps;
+    private void renderShadow(Matrix4f matrix, float x, float y, float w, float h, float radius, float masterAlpha) {
+        int layers = 12;
+        float maxSpread = 8.0f;
+        for (int i = layers - 1; i >= 0; --i) {
+            float progress = (float)i / (float)layers;
             float spread = progress * maxSpread;
-            float alphaFactor = (1.0F - progress) * (1.0F - progress);
-            int alpha = (int)(255.0F * alphaFactor * masterAlpha);
-            if (alpha > 0) {
-               float curR = radius + spread;
-               Builder.rectangle()
-                  .size(new SizeState(curR * 2.0F, curR * 2.0F))
-                  .radius(new QuadRadiusState(curR))
-                  .color(new QuadColorState(new Color(cr, cg, cb, alpha)))
-                  .build()
-                  .render(matrix, cx - curR, cy - curR);
+            float alphaFactor = (1.0f - progress) * (1.0f - progress);
+            int alpha = (int)(102.0f * alphaFactor * masterAlpha);
+            if (alpha <= 0) continue;
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(w + spread * 2.0f, h + spread * 2.0f)).radius(new QuadRadiusState(radius + spread)).color(new QuadColorState(new Color(0, 0, 0, alpha))).build()).render(matrix, x - spread, y - spread + 1.0f);
+        }
+    }
+
+    private void drawIconGlowShadow(Matrix4f matrix, float cx, float cy, float radius, Color color, float masterAlpha) {
+        if (masterAlpha <= 0.001f) {
+            return;
+        }
+        int steps = 10;
+        float maxSpread = 8.0f;
+        int cr = color.getRed();
+        int cg = color.getGreen();
+        int cb = color.getBlue();
+        for (int i = steps - 1; i >= 0; --i) {
+            float progress = (float)i / (float)steps;
+            float spread = progress * maxSpread;
+            float alphaFactor = (1.0f - progress) * (1.0f - progress);
+            int alpha = (int)(255.0f * alphaFactor * masterAlpha);
+            if (alpha <= 0) continue;
+            float curR = radius + spread;
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(curR * 2.0f, curR * 2.0f)).radius(new QuadRadiusState(curR)).color(new QuadColorState(new Color(cr, cg, cb, alpha))).build()).render(matrix, cx - curR, cy - curR);
+        }
+    }
+
+    private float getScaleModifier() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        double currentGuiScale = mc.getWindow().getScaleFactor();
+        if (currentGuiScale <= 0.0) {
+            currentGuiScale = 2.0;
+        }
+        return (float)(2.0 / currentGuiScale);
+    }
+
+    private double getScaledMouseX() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        double scaleModifier = this.getScaleModifier();
+        return mc.mouse.getX() * (double)mc.getWindow().getScaledWidth() / (double)mc.getWindow().getWidth() / scaleModifier;
+    }
+
+    private double getScaledMouseY() {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        double scaleModifier = this.getScaleModifier();
+        return mc.mouse.getY() * (double)mc.getWindow().getScaledHeight() / (double)mc.getWindow().getHeight() / scaleModifier;
+    }
+
+    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        boolean isOverEffectHud;
+        float currentCardX;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        boolean isEditing = mc.currentScreen instanceof HudEditorScreen;
+        if (!isEditing) {
+            return false;
+        }
+        float scaleModifier = this.getScaleModifier();
+        double mx = mouseX / (double)scaleModifier;
+        double my = mouseY / (double)scaleModifier;
+        float screenW = (float)mc.getWindow().getScaledWidth() / scaleModifier;
+        float f = currentCardX = this.position == Position.RIGHT ? screenW - this.lastFrameTotalMaxWidth - 10.0f : 10.0f;
+        if (this.panelOpen) {
+            boolean inSub;
+            float mainW = 110.0f;
+            float mainH = 48.0f;
+            float subW = 88.0f;
+            float subH = 38.0f;
+            float mX = this.position == Position.LEFT ? this.animatedX + this.lastFrameTotalMaxWidth + 8.0f : this.animatedX - mainW - (this.submenuOpen ? subW + 5.0f : 0.0f) - 8.0f;
+            float mY = this.y;
+            boolean inMain = mx >= (double)mX && mx <= (double)(mX + mainW) && my >= (double)mY && my <= (double)(mY + mainH);
+            float sX = mX + mainW + 5.0f;
+            if (sX + subW > screenW - 6.0f) {
+                sX = mX - subW - 5.0f;
             }
-         }
-      }
-   }
-
-   private float getScaleModifier() {
-      class_310 mc = class_310.method_1551();
-      double currentGuiScale = mc.method_22683().method_4495();
-      if (currentGuiScale <= 0.0) {
-         currentGuiScale = 2.0;
-      }
-
-      return (float)(2.0 / currentGuiScale);
-   }
-
-   private double getScaledMouseX() {
-      class_310 mc = class_310.method_1551();
-      double scaleModifier = this.getScaleModifier();
-      return mc.field_1729.method_1603() * mc.method_22683().method_4486() / mc.method_22683().method_4480() / scaleModifier;
-   }
-
-   private double getScaledMouseY() {
-      class_310 mc = class_310.method_1551();
-      double scaleModifier = this.getScaleModifier();
-      return mc.field_1729.method_1604() * mc.method_22683().method_4502() / mc.method_22683().method_4507() / scaleModifier;
-   }
-
-   public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-      class_310 mc = class_310.method_1551();
-      boolean isEditing = mc.field_1755 instanceof HudEditorScreen;
-      if (!isEditing) {
-         return false;
-      }
-
-      float scaleModifier = this.getScaleModifier();
-      double mx = mouseX / scaleModifier;
-      double my = mouseY / scaleModifier;
-      float screenW = mc.method_22683().method_4486() / scaleModifier;
-      float currentCardX = this.position == EffectHudManager.Position.RIGHT ? screenW - this.lastFrameTotalMaxWidth - 10.0F : 10.0F;
-      if (this.panelOpen) {
-         float mainW = 110.0F;
-         float mainH = 48.0F;
-         float subW = 88.0F;
-         float subH = 38.0F;
-         float mX = this.position == EffectHudManager.Position.LEFT
-            ? this.animatedX + this.lastFrameTotalMaxWidth + 8.0F
-            : this.animatedX - mainW - (this.submenuOpen ? subW + 5.0F : 0.0F) - 8.0F;
-         float mY = this.y;
-         boolean inMain = mx >= mX && mx <= mX + mainW && my >= mY && my <= mY + mainH;
-         float sX = mX + mainW + 5.0F;
-         if (sX + subW > screenW - 6.0F) {
-            sX = mX - subW - 5.0F;
-         }
-
-         boolean inSub = this.submenuOpen && mx >= sX && mx <= sX + subW && my >= mY && my <= mY + subH;
-         if (inMain || inSub) {
-            return true;
-         }
-
-         if (button == 0 || button == 1) {
-            this.panelOpen = false;
-            this.submenuOpen = false;
-         }
-      }
-
-      boolean isOverEffectHud = mx >= currentCardX - 2.0F
-         && mx <= currentCardX + this.lastFrameTotalMaxWidth + 2.0F
-         && my >= this.y - 2.0F
-         && my <= this.y + this.totalHeight + 2.0F;
-      if (button == 1 && isOverEffectHud) {
-         this.panelOpen = !this.panelOpen;
-         if (this.panelOpen) {
-            this.mainPanelAnim = 0.0F;
-            this.subPanelAnim = 0.0F;
-            this.submenuOpen = false;
-         } else {
-            this.submenuOpen = false;
-         }
-
-         return true;
-      } else {
-         return false;
-      }
-   }
-
-   public void onMouseDragged(double mouseX, double mouseY, int button) {
-   }
-
-   public void onMouseReleased(double mouseX, double mouseY, int button) {
-   }
-
-   public void onMouseReleased(int button) {
-   }
-
-   public float getX() {
-      return this.x;
-   }
-
-   public float getY() {
-      return this.y;
-   }
-
-   public void setX(float x) {
-      this.x = x;
-   }
-
-   public void setY(float y) {
-      this.y = y;
-   }
-
-   @Environment(EnvType.CLIENT)
-   public enum Position {
-      LEFT,
-      RIGHT;
-   }
-
-   @Environment(EnvType.CLIENT)
-   private static class PotionCardState {
-      float animProgress = 0.0F;
-      float heightScale = 0.0F;
-      float width = 80.0F;
-      class_1293 cachedInstance;
-      EffectHudManager.TextAnimator durationAnimator = new EffectHudManager.TextAnimator();
-   }
-
-   @Environment(EnvType.CLIENT)
-   private static class TextAnimator {
-      private String currentStr = "";
-      private final char[] oldChars = new char[32];
-      private final long[] animStartTimes = new long[32];
-      private static final long DURATION = 180L;
-
-      public void update(String newStr) {
-         if (newStr != null) {
-            if (this.currentStr.isEmpty()) {
-               this.currentStr = newStr;
-            } else if (!newStr.equals(this.currentStr)) {
-               long now = System.currentTimeMillis();
-               int maxLen = Math.max(newStr.length(), this.currentStr.length());
-
-               for (int i = 0; i < maxLen && i < 32; i++) {
-                  char cOld = i < this.currentStr.length() ? this.currentStr.charAt(i) : '\u0000';
-                  char cNew = i < newStr.length() ? newStr.charAt(i) : '\u0000';
-                  if (cOld != cNew && cOld != 0 && cNew != 0) {
-                     this.oldChars[i] = cOld;
-                     this.animStartTimes[i] = now;
-                  } else if (cOld == 0 || cNew == 0) {
-                     this.oldChars[i] = 0;
-                  }
-               }
-
-               this.currentStr = newStr;
+            boolean bl = inSub = this.submenuOpen && mx >= (double)sX && mx <= (double)(sX + subW) && my >= (double)mY && my <= (double)(mY + subH);
+            if (inMain || inSub) {
+                return true;
             }
-         }
-      }
-
-      public void render(Matrix4f matrix, float startX, float y, Color textColor, MsdfFont font, float fontSize, float masterAlpha) {
-         float currX = startX;
-         long now = System.currentTimeMillis();
-
-         for (int i = 0; i < this.currentStr.length(); i++) {
-            char cNew = this.currentStr.charAt(i);
-            String strNew = String.valueOf(cNew);
-            float charW = font.getWidth(strNew, fontSize);
-            long elapsed = now - this.animStartTimes[i];
-            if (this.oldChars[i] != 0 && elapsed >= 0L && elapsed < 180L) {
-               float progress = (float)elapsed / 180.0F;
-               float easeOut = 1.0F - (float)Math.pow(1.0F - progress, 3.0);
-               char cOld = this.oldChars[i];
-               String strOld = String.valueOf(cOld);
-               int oldAlpha = Math.max(0, Math.min(255, (int)(255.0F * (1.0F - easeOut) * masterAlpha)));
-               Color oldColor = new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), oldAlpha);
-               float oldOffsetY = -3.5F * easeOut;
-               Builder.text().font(font).text(strOld).size(fontSize).color(oldColor).build().render(matrix, currX, y + oldOffsetY);
-               int newAlpha = Math.max(0, Math.min(255, (int)(255.0F * easeOut * masterAlpha)));
-               Color newColor = new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), newAlpha);
-               float newOffsetY = 3.5F * (1.0F - easeOut);
-               Builder.text().font(font).text(strNew).size(fontSize).color(newColor).build().render(matrix, currX, y + newOffsetY);
+            if (button == 0 || button == 1) {
+                this.panelOpen = false;
+                this.submenuOpen = false;
+            }
+        }
+        boolean bl = isOverEffectHud = mx >= (double)(currentCardX - 2.0f) && mx <= (double)(currentCardX + this.lastFrameTotalMaxWidth + 2.0f) && my >= (double)(this.y - 2.0f) && my <= (double)(this.y + this.totalHeight + 2.0f);
+        if (button == 1 && isOverEffectHud) {
+            boolean bl2 = this.panelOpen = !this.panelOpen;
+            if (this.panelOpen) {
+                this.mainPanelAnim = 0.0f;
+                this.subPanelAnim = 0.0f;
+                this.submenuOpen = false;
             } else {
-               this.oldChars[i] = 0;
-               Builder.text().font(font).text(strNew).size(fontSize).color(textColor).build().render(matrix, currX, y);
+                this.submenuOpen = false;
             }
+            return true;
+        }
+        return false;
+    }
 
-            currX += charW;
-         }
-      }
-   }
+    public void onMouseDragged(double mouseX, double mouseY, int button) {
+    }
+
+    public void onMouseReleased(double mouseX, double mouseY, int button) {
+    }
+
+    public void onMouseReleased(int button) {
+    }
+
+    public float getX() {
+        return this.x;
+    }
+
+    public float getY() {
+        return this.y;
+    }
+
+    public void setX(float x) {
+        this.x = x;
+    }
+
+    public void setY(float y) {
+        this.y = y;
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    public static enum Position {
+        LEFT,
+        RIGHT;
+
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    private static class PotionCardState {
+        float animProgress = 0.0f;
+        float heightScale = 0.0f;
+        float width = 80.0f;
+        StatusEffectInstance cachedInstance;
+        TextAnimator durationAnimator = new TextAnimator();
+
+        private PotionCardState() {
+        }
+    }
+
+    @Environment(value=EnvType.CLIENT)
+    private static class TextAnimator {
+        private String currentStr = "";
+        private final char[] oldChars = new char[32];
+        private final long[] animStartTimes = new long[32];
+        private static final long DURATION = 180L;
+
+        private TextAnimator() {
+        }
+
+        public void update(String newStr) {
+            if (newStr == null) {
+                return;
+            }
+            if (this.currentStr.isEmpty()) {
+                this.currentStr = newStr;
+                return;
+            }
+            if (newStr.equals(this.currentStr)) {
+                return;
+            }
+            long now = System.currentTimeMillis();
+            int maxLen = Math.max(newStr.length(), this.currentStr.length());
+            for (int i = 0; i < maxLen && i < 32; ++i) {
+                char cNew;
+                char cOld = i < this.currentStr.length() ? this.currentStr.charAt(i) : (char)'\u0000';
+                char c = cNew = i < newStr.length() ? newStr.charAt(i) : (char)'\u0000';
+                if (cOld != cNew && cOld != '\u0000' && cNew != '\u0000') {
+                    this.oldChars[i] = cOld;
+                    this.animStartTimes[i] = now;
+                    continue;
+                }
+                if (cOld != '\u0000' && cNew != '\u0000') continue;
+                this.oldChars[i] = '\u0000';
+            }
+            this.currentStr = newStr;
+        }
+
+        public void render(Matrix4f matrix, float startX, float y, Color textColor, MsdfFont font, float fontSize, float masterAlpha) {
+            float currX = startX;
+            long now = System.currentTimeMillis();
+            for (int i = 0; i < this.currentStr.length(); ++i) {
+                char cNew = this.currentStr.charAt(i);
+                String strNew = String.valueOf(cNew);
+                float charW = font.getWidth(strNew, fontSize);
+                long elapsed = now - this.animStartTimes[i];
+                if (this.oldChars[i] != '\u0000' && elapsed >= 0L && elapsed < 180L) {
+                    float progress = (float)elapsed / 180.0f;
+                    float easeOut = 1.0f - (float)Math.pow(1.0f - progress, 3.0);
+                    char cOld = this.oldChars[i];
+                    String strOld = String.valueOf(cOld);
+                    int oldAlpha = Math.max(0, Math.min(255, (int)(255.0f * (1.0f - easeOut) * masterAlpha)));
+                    Color oldColor = new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), oldAlpha);
+                    float oldOffsetY = -3.5f * easeOut;
+                    ((BuiltText)Builder.text().font(font).text(strOld).size(fontSize).color(oldColor).build()).render(matrix, currX, y + oldOffsetY);
+                    int newAlpha = Math.max(0, Math.min(255, (int)(255.0f * easeOut * masterAlpha)));
+                    Color newColor = new Color(textColor.getRed(), textColor.getGreen(), textColor.getBlue(), newAlpha);
+                    float newOffsetY = 3.5f * (1.0f - easeOut);
+                    ((BuiltText)Builder.text().font(font).text(strNew).size(fontSize).color(newColor).build()).render(matrix, currX, y + newOffsetY);
+                } else {
+                    this.oldChars[i] = '\u0000';
+                    ((BuiltText)Builder.text().font(font).text(strNew).size(fontSize).color(textColor).build()).render(matrix, currX, y);
+                }
+                currX += charW;
+            }
+        }
+    }
 }
+

@@ -1,5 +1,15 @@
 #version 150
 
+layout(std140) uniform EffectData {
+    vec4 SizeData;
+    vec4 RadiusData;
+    vec4 SmoothnessData;
+};
+#define Size SizeData.xy
+#define Radius RadiusData
+#define Smoothness SmoothnessData.x
+
+
 #moj_import <mre:common.glsl>
 
 in vec2 FragCoord; // normalized fragment coord relative to the primitive
@@ -7,9 +17,9 @@ in vec2 TexCoord;
 in vec4 FragColor;
 
 uniform sampler2D Sampler0;
-uniform vec2 Size; // rectangle size
-uniform vec4 Radius; // radius for each vertex
-uniform float Smoothness; // edge smoothness;
+
+
+
 
 out vec4 OutColor;
 

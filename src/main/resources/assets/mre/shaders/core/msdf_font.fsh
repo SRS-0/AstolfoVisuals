@@ -1,15 +1,31 @@
 #version 150
 
+layout(std140) uniform EffectData {
+    vec4 RangeData;
+    vec4 ThicknessData;
+    vec4 SmoothnessData;
+    vec4 OutlineData;
+    vec4 OutlineThicknessData;
+    vec4 OutlineColorData;
+};
+#define Range RangeData.x
+#define Thickness ThicknessData.x
+#define Smoothness SmoothnessData.x
+#define Outline (OutlineData.x != 0.0)
+#define OutlineThickness OutlineThicknessData.x
+#define OutlineColor OutlineColorData
+
+
 in vec2 TexCoord;
 in vec4 FragColor;
 
 uniform sampler2D Sampler0;
-uniform float Range; // distance field range of the msdf font texture
-uniform float Thickness; // text thickness
-uniform float Smoothness; // edge smoothness
-uniform bool Outline; // if false, outline computation will be ignored
-uniform float OutlineThickness;
-uniform vec4 OutlineColor;
+
+
+
+
+
+
 
 out vec4 OutColor;
 

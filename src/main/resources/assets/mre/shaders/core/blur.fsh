@@ -1,5 +1,17 @@
 #version 150
 
+layout(std140) uniform EffectData {
+    vec4 SizeData;
+    vec4 RadiusData;
+    vec4 SmoothnessData;
+    vec4 BlurRadiusData;
+};
+#define Size SizeData.xy
+#define Radius RadiusData
+#define Smoothness SmoothnessData.x
+#define BlurRadius BlurRadiusData.x
+
+
 #moj_import <mre:common.glsl>
 
 in vec2 FragCoord; // normalized fragment coord relative to the primitive
@@ -7,10 +19,10 @@ in vec2 TexCoord;
 in vec4 FragColor;
 
 uniform sampler2D Sampler0;
-uniform vec2 Size; // rectangle size
-uniform vec4 Radius; // radius for each vertex
-uniform float Smoothness; // edge smoothness
-uniform float BlurRadius;
+
+
+
+
 
 out vec4 OutColor;
 
@@ -21,12 +33,14 @@ void main() {
     vec2 multiplier = BlurRadius / textureSize(Sampler0, 0);
     
     vec3 average = texture(Sampler0, TexCoord).rgb;
-    for (float d = 0.0; d < DPI; d += STEP) {
-        for (float i = 0.2; i <= 1.0; i += 0.2) {
+    for (int direction = 0; direction < 16; ++direction) {
+        float d = float(direction) * STEP;
+        for (int sampleIndex = 1; sampleIndex <= 5; ++sampleIndex) {
+            float i = float(sampleIndex) / 5.0;
             average += texture(Sampler0, TexCoord + vec2(cos(d), sin(d)) * multiplier * i).rgb;
         }
     }
-    average /= 80.0;
+    average /= 81.0;
 
     vec4 color = vec4(average, 1.0) * FragColor;
     color.a *= ralpha(Size, FragCoord, Radius, Smoothness);

@@ -4,50 +4,50 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1297;
+import net.minecraft.entity.Entity;
 import xyz.angames.astolfoclient.client.util.TargetUtils;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class CircleEspManager {
-   public static final long LIFESPAN = 450L;
-   private final Map<class_1297, CircleEspManager.CircleEspEffect> effects = new ConcurrentHashMap<>();
+    public static final long LIFESPAN = 450L;
+    private final Map<Entity, CircleEspEffect> effects = new ConcurrentHashMap<Entity, CircleEspEffect>();
 
-   public void addEffect(class_1297 target) {
-      if (target != null && !TargetUtils.isInvisible(target)) {
-         this.effects.compute(target, (k, existing) -> {
+    public void addEffect(Entity target) {
+        if (target == null || TargetUtils.isInvisible(target)) {
+            return;
+        }
+        this.effects.compute(target, (k, existing) -> {
             if (existing == null) {
-               return new CircleEspManager.CircleEspEffect(target);
+                return new CircleEspEffect(target);
             }
-
             existing.updateHit();
-            return (CircleEspManager.CircleEspEffect)existing;
-         });
-      }
-   }
+            return existing;
+        });
+    }
 
-   public void tick() {
-      long now = System.currentTimeMillis();
-      this.effects.values().removeIf(effect -> now - effect.lastHitTime > 450L || !effect.target.method_5805() || TargetUtils.isInvisible(effect.target));
-   }
+    public void tick() {
+        long now = System.currentTimeMillis();
+        this.effects.values().removeIf(effect -> now - effect.lastHitTime > 450L || !effect.target.isAlive() || TargetUtils.isInvisible(effect.target));
+    }
 
-   public Map<class_1297, CircleEspManager.CircleEspEffect> getEffects() {
-      return this.effects;
-   }
+    public Map<Entity, CircleEspEffect> getEffects() {
+        return this.effects;
+    }
 
-   @Environment(EnvType.CLIENT)
-   public static class CircleEspEffect {
-      public final long startTime;
-      public long lastHitTime;
-      public final class_1297 target;
+    @Environment(value=EnvType.CLIENT)
+    public static class CircleEspEffect {
+        public final long startTime;
+        public long lastHitTime;
+        public final Entity target;
 
-      public CircleEspEffect(class_1297 target) {
-         this.target = target;
-         this.startTime = System.currentTimeMillis();
-         this.lastHitTime = this.startTime;
-      }
+        public CircleEspEffect(Entity target) {
+            this.target = target;
+            this.lastHitTime = this.startTime = System.currentTimeMillis();
+        }
 
-      public void updateHit() {
-         this.lastHitTime = System.currentTimeMillis();
-      }
-   }
+        public void updateHit() {
+            this.lastHitTime = System.currentTimeMillis();
+        }
+    }
 }
+

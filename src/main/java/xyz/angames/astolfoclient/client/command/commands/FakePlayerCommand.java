@@ -4,71 +4,73 @@ import com.mojang.authlib.GameProfile;
 import java.util.UUID;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_124;
-import net.minecraft.class_1297.class_5529;
+import net.minecraft.entity.Entity;
+import net.minecraft.util.Formatting;
 import xyz.angames.astolfoclient.client.command.Command;
 import xyz.angames.astolfoclient.client.util.FakePlayerEntity;
 
-@Environment(EnvType.CLIENT)
-public class FakePlayerCommand extends Command {
-   public FakePlayerCommand() {
-      super("fakeplayer", "Spawns/Despawns a client-side fake player for module testing", "$fakeplayer [spawn <name> | despawn]");
-   }
+@Environment(value=EnvType.CLIENT)
+public class FakePlayerCommand
+extends Command {
+    public FakePlayerCommand() {
+        super("fakeplayer", "Spawns/Despawns a client-side fake player for module testing", "$fakeplayer [spawn <name> | despawn]", new String[0]);
+    }
 
-   @Override
-   public void execute(String[] args) {
-      if (this.mc.field_1724 == null || this.mc.field_1687 == null) {
-         this.sendError("You must be in-game to use this command.");
-      } else if (args.length == 0) {
-         if (FakePlayerEntity.instance != null) {
-            this.despawn();
-         } else {
-            this.spawn("FakePlayer");
-         }
-      } else {
-         String action = args[0].toLowerCase();
-         if (action.equals("spawn")) {
+    @Override
+    public void execute(String[] args) {
+        if (this.mc.player == null || this.mc.world == null) {
+            this.sendError("You must be in-game to use this command.");
+            return;
+        }
+        if (args.length == 0) {
+            if (FakePlayerEntity.instance != null) {
+                this.despawn();
+            } else {
+                this.spawn("FakePlayer");
+            }
+            return;
+        }
+        String action = args[0].toLowerCase();
+        if (action.equals("spawn")) {
             String name = "FakePlayer";
             if (args.length > 1 && !args[1].trim().isEmpty()) {
-               name = args[1];
+                name = args[1];
             }
-
             this.spawn(name);
-         } else if (!action.equals("despawn") && !action.equals("remove") && !action.equals("clear") && !action.equals("off")) {
-            this.sendError("Unknown action. Usage: " + this.getSyntax());
-         } else {
+        } else if (action.equals("despawn") || action.equals("remove") || action.equals("clear") || action.equals("off")) {
             this.despawn();
-         }
-      }
-   }
+        } else {
+            this.sendError("Unknown action. Usage: " + this.getSyntax());
+        }
+    }
 
-   private void spawn(String name) {
-      if (FakePlayerEntity.instance != null) {
-         this.despawn();
-      }
+    private void spawn(String name) {
+        if (FakePlayerEntity.instance != null) {
+            this.despawn();
+        }
+        GameProfile profile = new GameProfile(UUID.randomUUID(), name);
+        FakePlayerEntity fakePlayer = new FakePlayerEntity(this.mc.world, profile);
+        fakePlayer.copyPositionAndRotation((Entity)this.mc.player);
+        fakePlayer.headYaw = this.mc.player.headYaw;
+        fakePlayer.bodyYaw = this.mc.player.bodyYaw;
+        fakePlayer.getInventory().clone(this.mc.player.getInventory());
+        int fakeId = -987654;
+        fakePlayer.setId(fakeId);
+        this.mc.world.addEntity((Entity)fakePlayer);
+        FakePlayerEntity.instance = fakePlayer;
+        FakePlayerCommand.sendMessage("Spawned fake player: " + String.valueOf(Formatting.AQUA) + name + String.valueOf(Formatting.GRAY) + " (ID: " + fakeId + ")");
+    }
 
-      GameProfile profile = new GameProfile(UUID.randomUUID(), name);
-      FakePlayerEntity fakePlayer = new FakePlayerEntity(this.mc.field_1687, profile);
-      fakePlayer.method_5719(this.mc.field_1724);
-      fakePlayer.field_6241 = this.mc.field_1724.field_6241;
-      fakePlayer.field_6283 = this.mc.field_1724.field_6283;
-      fakePlayer.method_31548().method_7377(this.mc.field_1724.method_31548());
-      int fakeId = -987654;
-      fakePlayer.method_5838(fakeId);
-      this.mc.field_1687.method_53875(fakePlayer);
-      FakePlayerEntity.instance = fakePlayer;
-      sendMessage("Spawned fake player: " + class_124.field_1075 + name + class_124.field_1080 + " (ID: " + fakeId + ")");
-   }
-
-   private void despawn() {
-      if (FakePlayerEntity.instance != null) {
-         int id = FakePlayerEntity.instance.method_5628();
-         FakePlayerEntity.instance.method_31472();
-         this.mc.field_1687.method_2945(id, class_5529.field_26999);
-         FakePlayerEntity.instance = null;
-         sendMessage("Despawned fake player.");
-      } else {
-         this.sendError("No fake player currently spawned.");
-      }
-   }
+    private void despawn() {
+        if (FakePlayerEntity.instance != null) {
+            int id = FakePlayerEntity.instance.getId();
+            FakePlayerEntity.instance.discard();
+            this.mc.world.removeEntity(id, Entity.RemovalReason.DISCARDED);
+            FakePlayerEntity.instance = null;
+            FakePlayerCommand.sendMessage("Despawned fake player.");
+        } else {
+            this.sendError("No fake player currently spawned.");
+        }
+    }
 }
+

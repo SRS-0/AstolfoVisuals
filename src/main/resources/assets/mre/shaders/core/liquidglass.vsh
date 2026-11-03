@@ -6,8 +6,8 @@ in vec3 Position; // POSITION_TEXTURE_COLOR vertex attributes
 in vec2 UV0;
 in vec4 Color;
 
-uniform mat4 ModelViewMat;
-uniform mat4 ProjMat;
+#moj_import <minecraft:dynamictransforms.glsl>
+#moj_import <minecraft:projection.glsl>
 
 out vec2 FragCoord;
 out vec2 TexCoord;

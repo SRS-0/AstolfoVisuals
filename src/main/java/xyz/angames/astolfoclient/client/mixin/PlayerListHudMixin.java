@@ -2,29 +2,30 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_355;
-import net.minecraft.class_640;
+import net.minecraft.client.gui.hud.PlayerListHud;
+import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.angames.astolfoclient.client.module.modules.misc.NameProtectModule;
 
-@Environment(EnvType.CLIENT)
-@Mixin(class_355.class)
+@Environment(value=EnvType.CLIENT)
+@Mixin(value={PlayerListHud.class})
 public class PlayerListHudMixin {
-   @Inject(method = "getPlayerName", at = @At("RETURN"), cancellable = true)
-   public void onGetPlayerName(class_640 entry, CallbackInfoReturnable<class_2561> cir) {
-      class_2561 originalText = (class_2561)cir.getReturnValue();
-      if (originalText != null) {
-         cir.setReturnValue(NameProtectModule.getProtectedText(originalText));
-      } else {
-         String originalStr = entry.method_2966().getName();
-         String protectedStr = NameProtectModule.getProtectedName(originalStr);
-         if (!originalStr.equals(protectedStr)) {
-            cir.setReturnValue(class_2561.method_43470(protectedStr));
-         }
-      }
-   }
+    @Inject(method={"getPlayerName"}, at={@At(value="RETURN")}, cancellable=true)
+    public void onGetPlayerName(PlayerListEntry entry, CallbackInfoReturnable<Text> cir) {
+        Text originalText = (Text)cir.getReturnValue();
+        if (originalText != null) {
+            cir.setReturnValue(NameProtectModule.getProtectedText(originalText));
+        } else {
+            String protectedStr;
+            String originalStr = entry.getProfile().name();
+            if (!originalStr.equals(protectedStr = NameProtectModule.getProtectedName(originalStr))) {
+                cir.setReturnValue(Text.literal((String)protectedStr));
+            }
+        }
+    }
 }
+

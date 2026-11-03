@@ -4,9 +4,11 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import xyz.angames.astolfoclient.client.module.Module;
 
-@Environment(EnvType.CLIENT)
-public class TrailsModule extends Module {
-   public TrailsModule() {
-      super("Trails", Module.Category.RENDER);
-   }
+@Environment(value=EnvType.CLIENT)
+public class TrailsModule
+extends Module {
+    public TrailsModule() {
+        super("Trails", Module.Category.RENDER);
+    }
 }
+

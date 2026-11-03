@@ -2,30 +2,31 @@ package xyz.angames.astolfoclient.client.hud;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
+import xyz.angames.astolfoclient.client.hud.LogoRenderer;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class HudRenderer {
-   private final LogoRenderer logoRenderer = new LogoRenderer();
+    private final LogoRenderer logoRenderer = new LogoRenderer();
 
-   public LogoRenderer getLogoRenderer() {
-      return this.logoRenderer;
-   }
+    public LogoRenderer getLogoRenderer() {
+        return this.logoRenderer;
+    }
 
-   public void render(class_332 context, float tickDelta) {
-      InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
-      if (interfaceMod != null && interfaceMod.isEnabled() && interfaceMod.logo.get()) {
-         this.logoRenderer.render(context);
-      }
-
-      class_310 client = class_310.method_1551();
-      Module boyKisserModule = AstolfoclientClient.moduleManager.getModuleByName("BoyKisser");
-      if (boyKisserModule != null && boyKisserModule.isEnabled() && client.field_1755 == null) {
-         AstolfoclientClient.boyKisserManager.render(context, tickDelta);
-      }
-   }
+    public void render(DrawContext context, float tickDelta) {
+        InterfaceModule interfaceMod = (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
+        if (interfaceMod != null && interfaceMod.isEnabled() && interfaceMod.logo.get()) {
+            this.logoRenderer.render(context);
+        }
+        MinecraftClient client = MinecraftClient.getInstance();
+        Module boyKisserModule = AstolfoclientClient.moduleManager.getModuleByName("BoyKisser");
+        if (boyKisserModule != null && boyKisserModule.isEnabled() && client.currentScreen == null) {
+            AstolfoclientClient.boyKisserManager.render(context, tickDelta);
+        }
+    }
 }
+

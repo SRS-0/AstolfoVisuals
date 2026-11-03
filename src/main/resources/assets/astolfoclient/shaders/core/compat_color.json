@@ -1,0 +1,16 @@
+{
+  "uniforms": [
+    {
+      "name": "ColorModulator",
+      "type": "float",
+      "count": 4,
+      "values": [
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "samplers": []
+}

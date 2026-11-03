@@ -6,343 +6,226 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_10182;
-import net.minecraft.class_10264;
-import net.minecraft.class_243;
-import net.minecraft.class_2561;
-import net.minecraft.class_2596;
-import net.minecraft.class_2604;
-import net.minecraft.class_2664;
-import net.minecraft.class_2675;
-import net.minecraft.class_2692;
-import net.minecraft.class_2708;
-import net.minecraft.class_2743;
-import net.minecraft.class_2767;
-import net.minecraft.class_2777;
-import net.minecraft.class_2779;
-import net.minecraft.class_2793;
-import net.minecraft.class_310;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.entity.EntityPosition;
+import net.minecraft.network.listener.PacketListener;
+import net.minecraft.network.packet.Packet;
+import net.minecraft.network.packet.c2s.play.TeleportConfirmC2SPacket;
+import net.minecraft.network.packet.s2c.play.AdvancementUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntityPositionS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntityPositionSyncS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
+import net.minecraft.network.packet.s2c.play.EntityVelocityUpdateS2CPacket;
+import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
+import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
+import net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket;
+import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
+import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
+import net.minecraft.text.Text;
+import net.minecraft.util.math.Vec3d;
 import xyz.angames.astolfoclient.client.util.ModSounds;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class ClientProtectionManager {
-   private static final ClientProtectionManager INSTANCE = new ClientProtectionManager();
-   private final List<ClientProtectionManager.CrashAlert> activeAlerts = new CopyOnWriteArrayList<>();
-   private long lastSoundTime = 0L;
-   private static final int ADVANCEMENT_QUEUE_LIMIT = 1600;
-   private static final long ADVANCEMENT_QUIET_PERIOD_MS = 3000L;
-   private final Queue<class_2596<?>> pendingAdvancements = new ConcurrentLinkedQueue<>();
-   private volatile long lastAdvancementPacketTime = 0L;
+    private static final ClientProtectionManager INSTANCE = new ClientProtectionManager();
+    private final List<CrashAlert> activeAlerts = new CopyOnWriteArrayList<CrashAlert>();
+    private long lastSoundTime = 0L;
+    private static final int ADVANCEMENT_QUEUE_LIMIT = 1600;
+    private static final long ADVANCEMENT_QUIET_PERIOD_MS = 3000L;
+    private final Queue<Packet<?>> pendingAdvancements = new ConcurrentLinkedQueue();
+    private volatile long lastAdvancementPacketTime = 0L;
 
-   public static ClientProtectionManager getInstance() {
-      return INSTANCE;
-   }
+    public static ClientProtectionManager getInstance() {
+        return INSTANCE;
+    }
 
-   public static void init() {
-   }
+    public static void init() {
+    }
 
-   public List<ClientProtectionManager.CrashAlert> getActiveAlerts() {
-      return this.activeAlerts;
-   }
+    public List<CrashAlert> getActiveAlerts() {
+        return this.activeAlerts;
+    }
 
-   public void onCrashBlocked(String title, String details) {
-      long now = System.currentTimeMillis();
-      if (now - this.lastSoundTime > 400L) {
-         this.lastSoundTime = now;
-         ModSounds.playCrashDetectionSound();
-      }
-
-      boolean hasDuplicate = false;
-
-      for (ClientProtectionManager.CrashAlert alert : this.activeAlerts) {
-         if (alert.title.equalsIgnoreCase(title) && now - alert.timestamp < 1500L) {
+    public void onCrashBlocked(String title, String details) {
+        MinecraftClient mc;
+        long now = System.currentTimeMillis();
+        if (now - this.lastSoundTime > 400L) {
+            this.lastSoundTime = now;
+            ModSounds.playCrashDetectionSound();
+        }
+        boolean hasDuplicate = false;
+        for (CrashAlert alert : this.activeAlerts) {
+            if (!alert.title.equalsIgnoreCase(title) || now - alert.timestamp >= 1500L) continue;
             hasDuplicate = true;
             break;
-         }
-      }
+        }
+        if (!hasDuplicate) {
+            this.activeAlerts.add(new CrashAlert(title, details, now));
+            while (this.activeAlerts.size() > 3) {
+                this.activeAlerts.remove(0);
+            }
+        }
+        if ((mc = MinecraftClient.getInstance()) != null && mc.inGameHud != null && mc.inGameHud.getChatHud() != null) {
+            mc.inGameHud.getChatHud().addMessage((Text)Text.literal((String)("\u00a7c[Protection] \u00a7fBlocked crash exploit: \u00a7e" + title + " \u00a77(" + details + ")")));
+        }
+    }
 
-      if (!hasDuplicate) {
-         this.activeAlerts.add(new ClientProtectionManager.CrashAlert(title, details, now));
-
-         while (this.activeAlerts.size() > 3) {
-            this.activeAlerts.remove(0);
-         }
-      }
-
-      class_310 mc = class_310.method_1551();
-      if (mc != null && mc.field_1705 != null && mc.field_1705.method_1743() != null) {
-         mc.field_1705.method_1743().method_1812(class_2561.method_43470("§c[Protection] §fBlocked crash exploit: §e" + title + " §7(" + details + ")"));
-      }
-   }
-
-   public boolean isMaliciousPacket(class_2596<?> packet) {
-      if (packet == null) {
-         return false;
-      }
-
-      if (packet instanceof class_2664 explosion) {
-         class_243 center = explosion.comp_2883();
-         if (center == null
-            || isInvalidDouble(center.field_1352)
-            || isInvalidDouble(center.field_1351)
-            || isInvalidDouble(center.field_1350)
-            || Math.abs(center.field_1352) > 3.0E7
-            || Math.abs(center.field_1351) > 3.0E7
-            || Math.abs(center.field_1350) > 3.0E7) {
-            this.onCrashBlocked("Explosion Crash", "Center coordinates outside world boundary");
+    public boolean isMaliciousPacket(Packet<?> packet) {
+        EntityPositionSyncS2CPacket entitySync;
+        EntityPosition values;
+        EntityPositionS2CPacket entityPos;
+        VehicleMoveS2CPacket vehicleMove;
+        Vec3d pos;
+        Vec3d pos2;
+        PlayerPositionLookS2CPacket teleport;
+        EntityPosition change;
+        if (packet == null) {
+            return false;
+        }
+        if (packet instanceof ExplosionS2CPacket) {
+            Vec3d kb;
+            ExplosionS2CPacket explosion = (ExplosionS2CPacket)packet;
+            Vec3d center = explosion.center();
+            if (center == null || ClientProtectionManager.isInvalidDouble(center.x) || ClientProtectionManager.isInvalidDouble(center.y) || ClientProtectionManager.isInvalidDouble(center.z) || Math.abs(center.x) > 3.0E7 || Math.abs(center.y) > 3.0E7 || Math.abs(center.z) > 3.0E7) {
+                this.onCrashBlocked("Explosion Crash", "Center coordinates outside world boundary");
+                return true;
+            }
+            if (explosion.playerKnockback().isPresent() && ((kb = (Vec3d)explosion.playerKnockback().get()) == null || ClientProtectionManager.isInvalidDouble(kb.x) || ClientProtectionManager.isInvalidDouble(kb.y) || ClientProtectionManager.isInvalidDouble(kb.z) || Math.abs(kb.x) > 1000000.0 || Math.abs(kb.y) > 1000000.0 || Math.abs(kb.z) > 1000000.0)) {
+                this.onCrashBlocked("Explosion Crash", "Malformed knockback vector");
+                return true;
+            }
+        }
+        if (packet instanceof ParticleS2CPacket) {
+            ParticleS2CPacket particle = (ParticleS2CPacket)packet;
+            if (ClientProtectionManager.isInvalidDouble(particle.getX()) || ClientProtectionManager.isInvalidDouble(particle.getY()) || ClientProtectionManager.isInvalidDouble(particle.getZ()) || Math.abs(particle.getX()) > 3.0E7 || Math.abs(particle.getY()) > 3.0E7 || Math.abs(particle.getZ()) > 3.0E7) {
+                this.onCrashBlocked("Particle Exploit", "Coordinates out of bounds");
+                return true;
+            }
+            if (particle.getCount() > 1000 || particle.getCount() < 0) {
+                this.onCrashBlocked("Particle Exploit", "Invalid count: " + particle.getCount());
+                return true;
+            }
+            if (Float.isNaN(particle.getSpeed()) || Float.isInfinite(particle.getSpeed()) || Math.abs(particle.getSpeed()) > 1000.0f) {
+                this.onCrashBlocked("Particle Exploit", "Malformed particle speed");
+                return true;
+            }
+            if (Float.isNaN(particle.getOffsetX()) || Float.isNaN(particle.getOffsetY()) || Float.isNaN(particle.getOffsetZ()) || Math.abs(particle.getOffsetX()) > 1000.0f || Math.abs(particle.getOffsetY()) > 1000.0f || Math.abs(particle.getOffsetZ()) > 1000.0f) {
+                this.onCrashBlocked("Particle Exploit", "Malformed particle offset");
+                return true;
+            }
+        }
+        if (packet instanceof AdvancementUpdateS2CPacket) {
+            if (this.pendingAdvancements.size() >= 1600) {
+                this.pendingAdvancements.poll();
+                this.onCrashBlocked("Advancement Flood", "Queue exceeded limit (1600)");
+            }
+            this.pendingAdvancements.add(packet);
+            this.lastAdvancementPacketTime = System.currentTimeMillis();
             return true;
-         }
-
-         if (explosion.comp_2884().isPresent()) {
-            class_243 kb = (class_243)explosion.comp_2884().get();
-            if (kb == null
-               || isInvalidDouble(kb.field_1352)
-               || isInvalidDouble(kb.field_1351)
-               || isInvalidDouble(kb.field_1350)
-               || Math.abs(kb.field_1352) > 1000000.0
-               || Math.abs(kb.field_1351) > 1000000.0
-               || Math.abs(kb.field_1350) > 1000000.0) {
-               this.onCrashBlocked("Explosion Crash", "Malformed knockback vector");
-               return true;
+        }
+        if (packet instanceof EntityVelocityUpdateS2CPacket) {
+            EntityVelocityUpdateS2CPacket vel = (EntityVelocityUpdateS2CPacket)packet;
+            double vx = Math.abs(vel.getVelocity().x);
+            double vy = Math.abs(vel.getVelocity().y);
+            double vz = Math.abs(vel.getVelocity().z);
+            if (ClientProtectionManager.isInvalidDouble(vx) || ClientProtectionManager.isInvalidDouble(vy) || ClientProtectionManager.isInvalidDouble(vz) || vx > 100000.0 || vy > 100000.0 || vz > 100000.0) {
+                this.onCrashBlocked("Velocity Exploit", "Extreme entity velocity values");
+                return true;
             }
-         }
-      }
-
-      if (packet instanceof class_2675 particle) {
-         if (isInvalidDouble(particle.method_11544())
-            || isInvalidDouble(particle.method_11547())
-            || isInvalidDouble(particle.method_11546())
-            || Math.abs(particle.method_11544()) > 3.0E7
-            || Math.abs(particle.method_11547()) > 3.0E7
-            || Math.abs(particle.method_11546()) > 3.0E7) {
-            this.onCrashBlocked("Particle Exploit", "Coordinates out of bounds");
+        }
+        if (packet instanceof PlaySoundS2CPacket) {
+            PlaySoundS2CPacket sound = (PlaySoundS2CPacket)packet;
+            if (ClientProtectionManager.isInvalidDouble(sound.getX()) || ClientProtectionManager.isInvalidDouble(sound.getY()) || ClientProtectionManager.isInvalidDouble(sound.getZ()) || Math.abs(sound.getX()) > 3.0E7 || Math.abs(sound.getY()) > 3.0E7 || Math.abs(sound.getZ()) > 3.0E7) {
+                this.onCrashBlocked("Sound Exploit", "Coordinates out of bounds");
+                return true;
+            }
+            if (Float.isNaN(sound.getVolume()) || Float.isNaN(sound.getPitch()) || sound.getVolume() < 0.0f || sound.getVolume() > 100.0f || sound.getPitch() < 0.0f || sound.getPitch() > 100.0f) {
+                this.onCrashBlocked("Sound Exploit", "Invalid sound volume/pitch");
+                return true;
+            }
+        }
+        if (packet instanceof EntitySpawnS2CPacket) {
+            EntitySpawnS2CPacket spawn = (EntitySpawnS2CPacket)packet;
+            if (ClientProtectionManager.isInvalidDouble(spawn.getX()) || ClientProtectionManager.isInvalidDouble(spawn.getY()) || ClientProtectionManager.isInvalidDouble(spawn.getZ()) || Math.abs(spawn.getX()) > 3.0E7 || Math.abs(spawn.getY()) > 3.0E7 || Math.abs(spawn.getZ()) > 3.0E7) {
+                this.onCrashBlocked("Spawn Exploit", "Entity coordinates out of bounds");
+                return true;
+            }
+            if (ClientProtectionManager.isInvalidDouble(spawn.getVelocity().x) || ClientProtectionManager.isInvalidDouble(spawn.getVelocity().y) || ClientProtectionManager.isInvalidDouble(spawn.getVelocity().z) || Math.abs(spawn.getVelocity().x) > 100000.0 || Math.abs(spawn.getVelocity().y) > 100000.0 || Math.abs(spawn.getVelocity().z) > 100000.0) {
+                this.onCrashBlocked("Spawn Exploit", "Entity spawned with extreme velocity");
+                return true;
+            }
+        }
+        if (packet instanceof PlayerPositionLookS2CPacket && (change = (teleport = (PlayerPositionLookS2CPacket)packet).change()) != null) {
+            pos2 = change.position();
+            Vec3d delta = change.deltaMovement();
+            if (pos2 == null || ClientProtectionManager.isInvalidDouble(pos2.x) || ClientProtectionManager.isInvalidDouble(pos2.y) || ClientProtectionManager.isInvalidDouble(pos2.z) || Math.abs(pos2.x) > 3.0E7 || Math.abs(pos2.y) > 3.0E7 || Math.abs(pos2.z) > 3.0E7 || delta != null && (ClientProtectionManager.isInvalidDouble(delta.x) || ClientProtectionManager.isInvalidDouble(delta.y) || ClientProtectionManager.isInvalidDouble(delta.z) || Math.abs(delta.x) > 1000000.0 || Math.abs(delta.y) > 1000000.0 || Math.abs(delta.z) > 1000000.0) || Float.isNaN(change.yaw()) || Float.isInfinite(change.yaw()) || Float.isNaN(change.pitch()) || Float.isInfinite(change.pitch())) {
+                String coordsStr = pos2 != null ? String.format("X: %.1f, Y: %.1f, Z: %.1f", pos2.x, pos2.y, pos2.z) : "null";
+                this.onCrashBlocked("Teleport Crash", "Invalid Coordinates (" + coordsStr + ")");
+                try {
+                    MinecraftClient mc = MinecraftClient.getInstance();
+                    if (mc != null && mc.getNetworkHandler() != null) {
+                        mc.getNetworkHandler().sendPacket((Packet)new TeleportConfirmC2SPacket(teleport.teleportId()));
+                    }
+                }
+                catch (Exception exception) {
+                    // empty catch block
+                }
+                return true;
+            }
+        }
+        if (packet instanceof VehicleMoveS2CPacket && ((pos = (vehicleMove = (VehicleMoveS2CPacket)packet).position()) == null || ClientProtectionManager.isInvalidDouble(pos.x) || ClientProtectionManager.isInvalidDouble(pos.y) || ClientProtectionManager.isInvalidDouble(pos.z) || Math.abs(pos.x) > 3.0E7 || Math.abs(pos.y) > 3.0E7 || Math.abs(pos.z) > 3.0E7 || Float.isNaN(vehicleMove.yaw()) || Float.isInfinite(vehicleMove.yaw()) || Float.isNaN(vehicleMove.pitch()) || Float.isInfinite(vehicleMove.pitch()))) {
+            this.onCrashBlocked("Vehicle Crash", "Invalid vehicle coordinates or rotation");
             return true;
-         }
-
-         if (particle.method_11545() > 1000 || particle.method_11545() < 0) {
-            this.onCrashBlocked("Particle Exploit", "Invalid count: " + particle.method_11545());
+        }
+        if (packet instanceof EntityPositionS2CPacket && (change = (entityPos = (EntityPositionS2CPacket)packet).change()) != null && ((pos2 = change.position()) == null || ClientProtectionManager.isInvalidDouble(pos2.x) || ClientProtectionManager.isInvalidDouble(pos2.y) || ClientProtectionManager.isInvalidDouble(pos2.z) || Math.abs(pos2.x) > 3.0E7 || Math.abs(pos2.y) > 3.0E7 || Math.abs(pos2.z) > 3.0E7)) {
+            this.onCrashBlocked("Entity Position Exploit", "Invalid coordinates for entity");
             return true;
-         }
-
-         if (Float.isNaN(particle.method_11543()) || Float.isInfinite(particle.method_11543()) || Math.abs(particle.method_11543()) > 1000.0F) {
-            this.onCrashBlocked("Particle Exploit", "Malformed particle speed");
+        }
+        if (packet instanceof EntityPositionSyncS2CPacket && (values = (entitySync = (EntityPositionSyncS2CPacket)packet).values()) != null && ((pos2 = values.position()) == null || ClientProtectionManager.isInvalidDouble(pos2.x) || ClientProtectionManager.isInvalidDouble(pos2.y) || ClientProtectionManager.isInvalidDouble(pos2.z) || Math.abs(pos2.x) > 3.0E7 || Math.abs(pos2.y) > 3.0E7 || Math.abs(pos2.z) > 3.0E7)) {
+            this.onCrashBlocked("Entity Sync Exploit", "Invalid sync coordinates for entity");
             return true;
-         }
+        }
+        return false;
+    }
 
-         if (Float.isNaN(particle.method_11548())
-            || Float.isNaN(particle.method_11549())
-            || Float.isNaN(particle.method_11550())
-            || Math.abs(particle.method_11548()) > 1000.0F
-            || Math.abs(particle.method_11549()) > 1000.0F
-            || Math.abs(particle.method_11550()) > 1000.0F) {
-            this.onCrashBlocked("Particle Exploit", "Malformed particle offset");
-            return true;
-         }
-      }
-
-      if (packet instanceof class_2779) {
-         if (this.pendingAdvancements.size() >= 1600) {
-            this.pendingAdvancements.poll();
-            this.onCrashBlocked("Advancement Flood", "Queue exceeded limit (1600)");
-         }
-
-         this.pendingAdvancements.add(packet);
-         this.lastAdvancementPacketTime = System.currentTimeMillis();
-         return true;
-      } else {
-         if (packet instanceof class_2743 vel) {
-            double vx = Math.abs(vel.method_11815() / 8000.0);
-            double vy = Math.abs(vel.method_11816() / 8000.0);
-            double vz = Math.abs(vel.method_11819() / 8000.0);
-            if (isInvalidDouble(vx) || isInvalidDouble(vy) || isInvalidDouble(vz) || vx > 100000.0 || vy > 100000.0 || vz > 100000.0) {
-               this.onCrashBlocked("Velocity Exploit", "Extreme entity velocity values");
-               return true;
-            }
-         }
-
-         if (packet instanceof class_2767 sound) {
-            if (isInvalidDouble(sound.method_11890())
-               || isInvalidDouble(sound.method_11889())
-               || isInvalidDouble(sound.method_11893())
-               || Math.abs(sound.method_11890()) > 3.0E7
-               || Math.abs(sound.method_11889()) > 3.0E7
-               || Math.abs(sound.method_11893()) > 3.0E7) {
-               this.onCrashBlocked("Sound Exploit", "Coordinates out of bounds");
-               return true;
-            }
-
-            if (Float.isNaN(sound.method_11891())
-               || Float.isNaN(sound.method_11892())
-               || sound.method_11891() < 0.0F
-               || sound.method_11891() > 100.0F
-               || sound.method_11892() < 0.0F
-               || sound.method_11892() > 100.0F) {
-               this.onCrashBlocked("Sound Exploit", "Invalid sound volume/pitch");
-               return true;
-            }
-         }
-
-         if (packet instanceof class_2604 spawn) {
-            if (isInvalidDouble(spawn.method_11175())
-               || isInvalidDouble(spawn.method_11174())
-               || isInvalidDouble(spawn.method_11176())
-               || Math.abs(spawn.method_11175()) > 3.0E7
-               || Math.abs(spawn.method_11174()) > 3.0E7
-               || Math.abs(spawn.method_11176()) > 3.0E7) {
-               this.onCrashBlocked("Spawn Exploit", "Entity coordinates out of bounds");
-               return true;
-            }
-
-            if (isInvalidDouble(spawn.method_11170())
-               || isInvalidDouble(spawn.method_11172())
-               || isInvalidDouble(spawn.method_11173())
-               || Math.abs(spawn.method_11170()) > 100000.0
-               || Math.abs(spawn.method_11172()) > 100000.0
-               || Math.abs(spawn.method_11173()) > 100000.0) {
-               this.onCrashBlocked("Spawn Exploit", "Entity spawned with extreme velocity");
-               return true;
-            }
-         }
-
-         if (packet instanceof class_2708 teleport) {
-            class_10182 change = teleport.comp_3228();
-            if (change != null) {
-               class_243 pos = change.comp_3148();
-               class_243 delta = change.comp_3149();
-               if (pos == null
-                  || isInvalidDouble(pos.field_1352)
-                  || isInvalidDouble(pos.field_1351)
-                  || isInvalidDouble(pos.field_1350)
-                  || Math.abs(pos.field_1352) > 3.0E7
-                  || Math.abs(pos.field_1351) > 3.0E7
-                  || Math.abs(pos.field_1350) > 3.0E7
-                  || delta != null
-                     && (
-                        isInvalidDouble(delta.field_1352)
-                           || isInvalidDouble(delta.field_1351)
-                           || isInvalidDouble(delta.field_1350)
-                           || Math.abs(delta.field_1352) > 1000000.0
-                           || Math.abs(delta.field_1351) > 1000000.0
-                           || Math.abs(delta.field_1350) > 1000000.0
-                     )
-                  || Float.isNaN(change.comp_3150())
-                  || Float.isInfinite(change.comp_3150())
-                  || Float.isNaN(change.comp_3151())
-                  || Float.isInfinite(change.comp_3151())) {
-                  String coordsStr = pos != null ? String.format("X: %.1f, Y: %.1f, Z: %.1f", pos.field_1352, pos.field_1351, pos.field_1350) : "null";
-                  this.onCrashBlocked("Teleport Crash", "Invalid Coordinates (" + coordsStr + ")");
-
-                  try {
-                     class_310 mc = class_310.method_1551();
-                     if (mc != null && mc.method_1562() != null) {
-                        mc.method_1562().method_52787(new class_2793(teleport.comp_3133()));
-                     }
-                  } catch (Exception var9) {
-                  }
-
-                  return true;
-               }
-            }
-         }
-
-         if (packet instanceof class_2692 vehicleMove) {
-            class_243 pos = vehicleMove.comp_3347();
-            if (pos == null
-               || isInvalidDouble(pos.field_1352)
-               || isInvalidDouble(pos.field_1351)
-               || isInvalidDouble(pos.field_1350)
-               || Math.abs(pos.field_1352) > 3.0E7
-               || Math.abs(pos.field_1351) > 3.0E7
-               || Math.abs(pos.field_1350) > 3.0E7
-               || Float.isNaN(vehicleMove.comp_3348())
-               || Float.isInfinite(vehicleMove.comp_3348())
-               || Float.isNaN(vehicleMove.comp_3349())
-               || Float.isInfinite(vehicleMove.comp_3349())) {
-               this.onCrashBlocked("Vehicle Crash", "Invalid vehicle coordinates or rotation");
-               return true;
-            }
-         }
-
-         if (packet instanceof class_2777 entityPos) {
-            class_10182 change = entityPos.comp_3238();
-            if (change != null) {
-               class_243 pos = change.comp_3148();
-               if (pos == null
-                  || isInvalidDouble(pos.field_1352)
-                  || isInvalidDouble(pos.field_1351)
-                  || isInvalidDouble(pos.field_1350)
-                  || Math.abs(pos.field_1352) > 3.0E7
-                  || Math.abs(pos.field_1351) > 3.0E7
-                  || Math.abs(pos.field_1350) > 3.0E7) {
-                  this.onCrashBlocked("Entity Position Exploit", "Invalid coordinates for entity");
-                  return true;
-               }
-            }
-         }
-
-         if (packet instanceof class_10264 entitySync) {
-            class_10182 values = entitySync.comp_3224();
-            if (values != null) {
-               class_243 pos = values.comp_3148();
-               if (pos == null
-                  || isInvalidDouble(pos.field_1352)
-                  || isInvalidDouble(pos.field_1351)
-                  || isInvalidDouble(pos.field_1350)
-                  || Math.abs(pos.field_1352) > 3.0E7
-                  || Math.abs(pos.field_1351) > 3.0E7
-                  || Math.abs(pos.field_1350) > 3.0E7) {
-                  this.onCrashBlocked("Entity Sync Exploit", "Invalid sync coordinates for entity");
-                  return true;
-               }
-            }
-         }
-
-         return false;
-      }
-   }
-
-   public void tick() {
-      for (ClientProtectionManager.CrashAlert alert : this.activeAlerts) {
-         if (alert.isExpired()) {
+    public void tick() {
+        MinecraftClient mc;
+        for (CrashAlert alert : this.activeAlerts) {
+            if (!alert.isExpired()) continue;
             this.activeAlerts.remove(alert);
-         }
-      }
-
-      if (!this.pendingAdvancements.isEmpty() && System.currentTimeMillis() - this.lastAdvancementPacketTime >= 3000L) {
-         class_310 mc = class_310.method_1551();
-         if (mc.method_1562() != null) {
+        }
+        if (!this.pendingAdvancements.isEmpty() && System.currentTimeMillis() - this.lastAdvancementPacketTime >= 3000L && (mc = MinecraftClient.getInstance()).getNetworkHandler() != null) {
             while (!this.pendingAdvancements.isEmpty()) {
-               class_2596<?> p = this.pendingAdvancements.poll();
-               if (p != null) {
-                  try {
-                     p.method_65081(mc.method_1562());
-                  } catch (Exception var5) {
-                  }
-               }
+                Packet<?> p = this.pendingAdvancements.poll();
+                if (p == null) continue;
+                try {
+                    ((Packet)p).apply(mc.getNetworkHandler());
+                }
+                catch (Exception exception) {}
             }
-         }
-      }
-   }
+        }
+    }
 
-   private static boolean isInvalidDouble(double val) {
-      return Double.isNaN(val) || Double.isInfinite(val);
-   }
+    private static boolean isInvalidDouble(double val) {
+        return Double.isNaN(val) || Double.isInfinite(val);
+    }
 
-   @Environment(EnvType.CLIENT)
-   public static class CrashAlert {
-      public final String title;
-      public final String details;
-      public final long timestamp;
-      public float anim = 0.0F;
+    @Environment(value=EnvType.CLIENT)
+    public static class CrashAlert {
+        public final String title;
+        public final String details;
+        public final long timestamp;
+        public float anim = 0.0f;
 
-      public CrashAlert(String title, String details, long timestamp) {
-         this.title = title;
-         this.details = details;
-         this.timestamp = timestamp;
-      }
+        public CrashAlert(String title, String details, long timestamp) {
+            this.title = title;
+            this.details = details;
+            this.timestamp = timestamp;
+        }
 
-      public boolean isExpired() {
-         return System.currentTimeMillis() - this.timestamp > 4500L;
-      }
-   }
+        public boolean isExpired() {
+            return System.currentTimeMillis() - this.timestamp > 4500L;
+        }
+    }
 }
+

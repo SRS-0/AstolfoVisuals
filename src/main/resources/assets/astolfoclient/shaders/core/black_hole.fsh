@@ -1,12 +1,34 @@
 #version 150
+layout(std140) uniform EffectData {
+    vec4 uAlphaData;
+    vec4 ColorModulatorData;
+    vec4 uResolutionData;
+    vec4 uCenterData;
+    vec4 uTimeData;
+    vec4 uProgressData;
+    vec4 uThemeColorData;
+    vec4 uDistortionData;
+    vec4 uShapeData;
+};
+#define uAlpha uAlphaData.x
+#define ColorModulator ColorModulatorData
+#define uResolution uResolutionData.xy
+#define uCenter uCenterData.xy
+#define uTime uTimeData.x
+#define uProgress uProgressData.x
+#define uThemeColor uThemeColorData.xyz
+#define uDistortion uDistortionData.x
+#define uShape uShapeData.x
+layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
+#moj_import <minecraft:projection.glsl>
 
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
-uniform vec2 uResolution;
-uniform float uDistortion;
-uniform float uProgress;
-uniform float uAlpha;
-uniform vec3 uThemeColor;
+
+
+
+
+
 
 in vec2 texCoord;
 in vec2 vCenterScreen;

@@ -2,23 +2,24 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
+import net.minecraft.client.MinecraftClient;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-@Environment(EnvType.CLIENT)
-@Mixin(class_310.class)
+@Environment(value=EnvType.CLIENT)
+@Mixin(value={MinecraftClient.class})
 public interface MinecraftClientAccessor {
-   @Accessor("itemUseCooldown")
-   int getItemUseCooldown();
+    @Accessor(value="itemUseCooldown")
+    public int getItemUseCooldown();
 
-   @Accessor("itemUseCooldown")
-   void setItemUseCooldown(int var1);
+    @Accessor(value="itemUseCooldown")
+    public void setItemUseCooldown(int var1);
 
-   @Invoker("doAttack")
-   boolean invokeDoAttack();
+    @Invoker(value="doAttack")
+    public boolean invokeDoAttack();
 
-   @Invoker("doItemUse")
-   void invokeDoItemUse();
+    @Invoker(value="doItemUse")
+    public void invokeDoItemUse();
 }
+

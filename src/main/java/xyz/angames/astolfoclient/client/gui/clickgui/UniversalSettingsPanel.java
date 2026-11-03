@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_332;
-import net.minecraft.class_3532;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -81,20 +81,20 @@ public class UniversalSettingsPanel {
    public float getTotalHeight() {
       if (this.rows.isEmpty()) {
          return 0.0F;
+      } else {
+         float h = 4.0F;
+
+         for (Object r : this.rows) {
+            h += this.rowH(r);
+         }
+
+         return h + 4.0F;
       }
-
-      float h = 4.0F;
-
-      for (Object r : this.rows) {
-         h += this.rowH(r);
-      }
-
-      return h + 4.0F;
    }
 
-   public void render(class_332 context, float x, float y, float width, float alpha, int mouseX, int mouseY, float deltaTime) {
+   public void render(DrawContext context, float x, float y, float width, float alpha, int mouseX, int mouseY, float deltaTime) {
       if (!(alpha <= 0.05F) && !this.rows.isEmpty()) {
-         Matrix4f mx = context.method_51448().method_23760().method_23761();
+         Matrix4f mx = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
          Color themeColor = new Color(ThemeManager.getThemedColor(0L));
 
          for (Object row : this.rows) {
@@ -113,21 +113,21 @@ public class UniversalSettingsPanel {
          float rowY = y + 5.0F;
 
          for (int i = 0; i < this.rows.size(); i++) {
-            Object row = this.rows.get(i);
-            if (row instanceof NumberSetting ns) {
+            Object rowx = this.rows.get(i);
+            if (rowx instanceof NumberSetting ns) {
                this.renderSlider(mx, rowY, ns, themeColor, x, width, alpha, mouseX, mouseY, deltaTime, i == this.draggingSlider);
-            } else if (row instanceof BooleanSetting bs) {
+            } else if (rowx instanceof BooleanSetting bs) {
                this.renderBool(mx, rowY, bs, themeColor, x, width, alpha, mouseX, mouseY, deltaTime);
-            } else if (row instanceof ModeSetting ms) {
+            } else if (rowx instanceof ModeSetting ms) {
                this.renderMode(mx, rowY, ms, ms.getName(), ms.get(), ms.getModes(), themeColor, x, width, alpha, mouseX, mouseY, deltaTime);
-            } else if (!(row instanceof EnumSetting<?> es)) {
-               if (row instanceof KeybindSetting ks) {
+            } else if (!(rowx instanceof EnumSetting<?> es)) {
+               if (rowx instanceof KeybindSetting ks) {
                   this.renderKeybind(mx, rowY, ks, themeColor, x, width, alpha, mouseX, mouseY);
-               } else if (row instanceof ActionSetting as) {
+               } else if (rowx instanceof ActionSetting as) {
                   this.renderAction(mx, rowY, as, themeColor, x, width, alpha, mouseX, mouseY, deltaTime);
-               } else if (row instanceof ConfigureSetting cs) {
+               } else if (rowx instanceof ConfigureSetting cs) {
                   this.renderConfigure(mx, rowY, cs, themeColor, x, width, alpha, mouseX, mouseY, deltaTime);
-               } else if (row instanceof MultiSelectSetting mss) {
+               } else if (rowx instanceof MultiSelectSetting mss) {
                   this.renderMultiSelect(mx, rowY, mss, themeColor, x, width, alpha, mouseX, mouseY, deltaTime);
                }
             } else {
@@ -140,7 +140,7 @@ public class UniversalSettingsPanel {
                this.renderMode(mx, rowY, es, es.getName(), es.getValue().name(), enumModes, themeColor, x, width, alpha, mouseX, mouseY, deltaTime);
             }
 
-            rowY += this.rowH(row);
+            rowY += this.rowH(rowx);
          }
       }
    }
@@ -151,7 +151,7 @@ public class UniversalSettingsPanel {
       float sx = x + 10.0F;
       float sw = w - 20.0F;
       float val = (float)ns.get();
-      float targetRatio = class_3532.method_15363((val - (float)ns.getMin()) / ((float)ns.getMax() - (float)ns.getMin()), 0.0F, 1.0F);
+      float targetRatio = MathHelper.clamp((val - (float)ns.getMin()) / ((float)ns.getMax() - (float)ns.getMin()), 0.0F, 1.0F);
       float animRatio = this.sliderRatioAnimMap.getOrDefault(ns, targetRatio);
       animRatio = GuiUtils.animate(animRatio, targetRatio, 20.0F, deltaTime);
       this.sliderRatioAnimMap.put(ns, animRatio);
@@ -521,7 +521,7 @@ public class UniversalSettingsPanel {
 
    private void applySlider(double mx, float startX, float w, NumberSetting ns) {
       float sw = w - 20.0F;
-      float ratio = (float)class_3532.method_15350((mx - (startX + 10.0F)) / sw, 0.0, 1.0);
+      float ratio = (float)MathHelper.clamp((mx - (startX + 10.0F)) / sw, 0.0, 1.0);
       double range = ns.getMax() - ns.getMin();
       double rawVal = ns.getMin() + ratio * range;
       double inc = ns.getIncrement();
@@ -530,7 +530,7 @@ public class UniversalSettingsPanel {
       }
 
       double oldVal = ns.get();
-      double newVal = class_3532.method_15350(rawVal, ns.getMin(), ns.getMax());
+      double newVal = MathHelper.clamp(rawVal, ns.getMin(), ns.getMax());
       if (Double.compare(oldVal, newVal) != 0) {
          ns.set(newVal);
          ModSounds.playSliderMove();

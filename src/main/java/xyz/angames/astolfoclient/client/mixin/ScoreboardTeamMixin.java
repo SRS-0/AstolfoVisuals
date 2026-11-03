@@ -2,33 +2,34 @@ package xyz.angames.astolfoclient.client.mixin;
 
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_268;
-import net.minecraft.class_5250;
+import net.minecraft.scoreboard.Team;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import xyz.angames.astolfoclient.client.module.modules.misc.NameProtectModule;
 
-@Environment(EnvType.CLIENT)
-@Mixin(class_268.class)
+@Environment(value=EnvType.CLIENT)
+@Mixin(value={Team.class})
 public class ScoreboardTeamMixin {
-   @Inject(method = "getPrefix", at = @At("RETURN"), cancellable = true)
-   public void onGetPrefix(CallbackInfoReturnable<class_2561> cir) {
-      cir.setReturnValue(NameProtectModule.getProtectedText((class_2561)cir.getReturnValue()));
-   }
+    @Inject(method={"getPrefix"}, at={@At(value="RETURN")}, cancellable=true)
+    public void onGetPrefix(CallbackInfoReturnable<Text> cir) {
+        cir.setReturnValue(NameProtectModule.getProtectedText((Text)cir.getReturnValue()));
+    }
 
-   @Inject(method = "getSuffix", at = @At("RETURN"), cancellable = true)
-   public void onGetSuffix(CallbackInfoReturnable<class_2561> cir) {
-      cir.setReturnValue(NameProtectModule.getProtectedText((class_2561)cir.getReturnValue()));
-   }
+    @Inject(method={"getSuffix"}, at={@At(value="RETURN")}, cancellable=true)
+    public void onGetSuffix(CallbackInfoReturnable<Text> cir) {
+        cir.setReturnValue(NameProtectModule.getProtectedText((Text)cir.getReturnValue()));
+    }
 
-   @Inject(method = "decorateName", at = @At("RETURN"), cancellable = true)
-   public void onDecorateName(CallbackInfoReturnable<class_5250> cir) {
-      class_2561 protectedText = NameProtectModule.getProtectedText((class_2561)cir.getReturnValue());
-      if (protectedText != null) {
-         cir.setReturnValue(protectedText.method_27661());
-      }
-   }
+    @Inject(method={"decorateName"}, at={@At(value="RETURN")}, cancellable=true)
+    public void onDecorateName(CallbackInfoReturnable<MutableText> cir) {
+        Text protectedText = NameProtectModule.getProtectedText((Text)cir.getReturnValue());
+        if (protectedText != null) {
+            cir.setReturnValue(protectedText.copy());
+        }
+    }
 }
+

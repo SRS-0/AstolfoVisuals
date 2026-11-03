@@ -5,31 +5,32 @@ import java.net.URI;
 import java.nio.file.Path;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_156.class_158;
+import net.minecraft.util.Util;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-@Environment(EnvType.CLIENT)
-@Mixin(class_158.class)
+@Environment(value=EnvType.CLIENT)
+@Mixin(value={Util.OperatingSystem.class})
 public class UtilOperatingSystemMixin {
-   @ModifyVariable(method = "open(Ljava/io/File;)V", at = @At("HEAD"), argsOnly = true)
-   private File modifyOpenParam(File file) {
-      return file;
-   }
+    @ModifyVariable(method={"open(Ljava/io/File;)V"}, at=@At(value="HEAD"), argsOnly=true)
+    private File modifyOpenParam(File file) {
+        return file;
+    }
 
-   @ModifyVariable(method = "open(Ljava/nio/file/Path;)V", at = @At("HEAD"), argsOnly = true)
-   private Path modifyOpenParamPath(Path path) {
-      return path;
-   }
+    @ModifyVariable(method={"open(Ljava/nio/file/Path;)V"}, at=@At(value="HEAD"), argsOnly=true)
+    private Path modifyOpenParamPath(Path path) {
+        return path;
+    }
 
-   @ModifyVariable(method = "open(Ljava/net/URI;)V", at = @At("HEAD"), argsOnly = true)
-   private URI modifyOpenParamURI(URI uri) {
-      return uri;
-   }
+    @ModifyVariable(method={"open(Ljava/net/URI;)V"}, at=@At(value="HEAD"), argsOnly=true)
+    private URI modifyOpenParamURI(URI uri) {
+        return uri;
+    }
 
-   @ModifyVariable(method = "open(Ljava/lang/String;)V", at = @At("HEAD"), argsOnly = true)
-   private String modifyOpenParamString(String str) {
-      return str;
-   }
+    @ModifyVariable(method={"open(Ljava/lang/String;)V"}, at=@At(value="HEAD"), argsOnly=true)
+    private String modifyOpenParamString(String str) {
+        return str;
+    }
 }
+

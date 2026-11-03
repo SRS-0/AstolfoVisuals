@@ -4,9 +4,11 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import xyz.angames.astolfoclient.client.module.Module;
 
-@Environment(EnvType.CLIENT)
-public class ChinaHatModule extends Module {
-   public ChinaHatModule() {
-      super("ChinaHat", Module.Category.RENDER);
-   }
+@Environment(value=EnvType.CLIENT)
+public class ChinaHatModule
+extends Module {
+    public ChinaHatModule() {
+        super("ChinaHat", Module.Category.RENDER);
+    }
 }
+

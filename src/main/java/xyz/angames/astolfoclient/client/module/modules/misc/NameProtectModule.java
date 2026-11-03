@@ -5,303 +5,271 @@ import java.util.List;
 import java.util.Locale;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_2588;
-import net.minecraft.class_310;
-import net.minecraft.class_5250;
-import net.minecraft.class_7417;
-import net.minecraft.class_8828.class_2585;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.PlainTextContent;
+import net.minecraft.text.Text;
+import net.minecraft.text.TextContent;
+import net.minecraft.text.TranslatableTextContent;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.module.Module;
 import xyz.angames.astolfoclient.client.util.FriendManager;
 
-@Environment(EnvType.CLIENT)
-public class NameProtectModule extends Module {
-   public static final String REPLACEMENT = "astolfoclient.top";
-   public static final String FRIEND_REPLACEMENT = "astolfoclient.top";
+@Environment(value=EnvType.CLIENT)
+public class NameProtectModule
+extends Module {
+    public static final String REPLACEMENT = "astolfoclient.top";
+    public static final String FRIEND_REPLACEMENT = "astolfoclient.top";
 
-   public NameProtectModule() {
-      super("NameProtect", "Replaces your name and friends' names", Module.Category.MISC);
-   }
+    public NameProtectModule() {
+        super("NameProtect", "Replaces your name and friends' names", Module.Category.MISC);
+    }
 
-   public static String getProtectedName(String text) {
-      if (text == null || text.isEmpty()) {
-         return text;
-      }
-
-      if (AstolfoclientClient.moduleManager == null) {
-         return text;
-      }
-
-      Module module = AstolfoclientClient.moduleManager.getModuleByName("NameProtect");
-      if (module != null && module.isEnabled()) {
-         try {
-            return replaceTargets(text);
-         } catch (Exception e) {
+    public static String getProtectedName(String text) {
+        if (text == null || text.isEmpty()) {
             return text;
-         }
-      } else {
-         return text;
-      }
-   }
+        }
+        if (AstolfoclientClient.moduleManager == null) {
+            return text;
+        }
+        Module module = AstolfoclientClient.moduleManager.getModuleByName("NameProtect");
+        if (module == null || !module.isEnabled()) {
+            return text;
+        }
+        try {
+            return NameProtectModule.replaceTargets(text);
+        }
+        catch (Exception e) {
+            return text;
+        }
+    }
 
-   public static class_2561 getProtectedText(class_2561 original) {
-      if (original == null) {
-         return null;
-      }
-
-      if (AstolfoclientClient.moduleManager == null) {
-         return original;
-      }
-
-      Module module = AstolfoclientClient.moduleManager.getModuleByName("NameProtect");
-      if (module != null && module.isEnabled()) {
-         try {
-            return protectTree(original);
-         } catch (Exception e) {
+    public static Text getProtectedText(Text original) {
+        if (original == null) {
+            return null;
+        }
+        if (AstolfoclientClient.moduleManager == null) {
             return original;
-         }
-      } else {
-         return original;
-      }
-   }
+        }
+        Module module = AstolfoclientClient.moduleManager.getModuleByName("NameProtect");
+        if (module == null || !module.isEnabled()) {
+            return original;
+        }
+        try {
+            return NameProtectModule.protectTree(original);
+        }
+        catch (Exception e) {
+            return original;
+        }
+    }
 
-   private static class_2561 protectTree(class_2561 text) {
-      if (text == null) {
-         return null;
-      }
-
-      class_7417 content = text.method_10851();
-      class_7417 newContent = content;
-      boolean contentChanged = false;
-      if (content instanceof class_2585 literal) {
-         String str = literal.comp_737();
-         String replaced = replaceTargets(str);
-         if (!replaced.equals(str)) {
-            newContent = class_2561.method_43470(replaced).method_10851();
-            contentChanged = true;
-         }
-      } else if (content instanceof class_2588 translatableContent) {
-         Object[] args = translatableContent.method_11023();
-         Object[] newArgs = new Object[args.length];
-         boolean argsChanged = false;
-
-         for (int i = 0; i < args.length; i++) {
-            Object arg = args[i];
-            if (arg instanceof class_2561 argText) {
-               class_2561 protectedArg = protectTree(argText);
-               newArgs[i] = protectedArg;
-               if (protectedArg != argText) {
-                  argsChanged = true;
-               }
-            } else if (arg instanceof String argStr) {
-               String protectedArg = replaceTargets(argStr);
-               newArgs[i] = protectedArg;
-               if (!protectedArg.equals(argStr)) {
-                  argsChanged = true;
-               }
-            } else {
-               newArgs[i] = arg;
+    private static Text protectTree(Text text) {
+        TextContent content;
+        if (text == null) {
+            return null;
+        }
+        TextContent newContent = content = text.getContent();
+        boolean contentChanged = false;
+        if (content instanceof PlainTextContent.Literal) {
+            PlainTextContent.Literal literal = (PlainTextContent.Literal)content;
+            String str = literal.string();
+            String replaced = NameProtectModule.replaceTargets(str);
+            if (!replaced.equals(str)) {
+                newContent = Text.literal((String)replaced).getContent();
+                contentChanged = true;
             }
-         }
-
-         if (argsChanged) {
-            newContent = new class_2588(translatableContent.method_11022(), translatableContent.method_48323(), newArgs);
-            contentChanged = true;
-         }
-      }
-
-      List<class_2561> siblings = text.method_10855();
-      List<class_2561> newSiblings = new ArrayList<>(siblings.size());
-      boolean siblingsChanged = false;
-
-      for (class_2561 sibling : siblings) {
-         class_2561 protectedSibling = protectTree(sibling);
-         newSiblings.add(protectedSibling);
-         if (protectedSibling != sibling) {
+        } else if (content instanceof TranslatableTextContent) {
+            TranslatableTextContent translatableContent = (TranslatableTextContent)content;
+            Object[] args = translatableContent.getArgs();
+            Object[] newArgs = new Object[args.length];
+            boolean argsChanged = false;
+            for (int i = 0; i < args.length; ++i) {
+                Object protectedArg;
+                Object arg = args[i];
+                if (arg instanceof Text) {
+                    Text argText = (Text)arg;
+                    newArgs[i] = protectedArg = NameProtectModule.protectTree(argText);
+                    if (protectedArg == argText) continue;
+                    argsChanged = true;
+                    continue;
+                }
+                if (arg instanceof String) {
+                    String argStr = (String)arg;
+                    newArgs[i] = protectedArg = NameProtectModule.replaceTargets(argStr);
+                    if (((String)protectedArg).equals(argStr)) continue;
+                    argsChanged = true;
+                    continue;
+                }
+                newArgs[i] = arg;
+            }
+            if (argsChanged) {
+                newContent = new TranslatableTextContent(translatableContent.getKey(), translatableContent.getFallback(), newArgs);
+                contentChanged = true;
+            }
+        }
+        List<Text> siblings = text.getSiblings();
+        ArrayList<Text> newSiblings = new ArrayList<Text>(siblings.size());
+        boolean siblingsChanged = false;
+        for (Text sibling : siblings) {
+            Text protectedSibling = NameProtectModule.protectTree(sibling);
+            newSiblings.add(protectedSibling);
+            if (protectedSibling == sibling) continue;
             siblingsChanged = true;
-         }
-      }
+        }
+        if (!contentChanged && !siblingsChanged) {
+            return text;
+        }
+        MutableText result = MutableText.of((TextContent)newContent).setStyle(text.getStyle());
+        for (Text sibling : newSiblings) {
+            result.append(sibling);
+        }
+        return result;
+    }
 
-      if (!contentChanged && !siblingsChanged) {
-         return text;
-      }
-
-      class_5250 result = class_5250.method_43477(newContent).method_10862(text.method_10866());
-
-      for (class_2561 sibling : newSiblings) {
-         result.method_10852(sibling);
-      }
-
-      return result;
-   }
-
-   private static List<NameProtectModule.TargetEntry> getActiveTargets() {
-      List<NameProtectModule.TargetEntry> targets = new ArrayList<>();
-      class_310 client = class_310.method_1551();
-      if (client.method_1548() != null && client.method_1548().method_1676() != null) {
-         String myName = client.method_1548().method_1676().trim();
-         if (!myName.isEmpty() && !myName.equalsIgnoreCase("astolfoclient.top")) {
-            targets.add(new NameProtectModule.TargetEntry(myName, "astolfoclient.top"));
-         }
-      }
-
-      for (String friend : FriendManager.getFriends()) {
-         if (friend != null) {
-            String f = friend.trim();
-            if (!f.isEmpty() && !f.equalsIgnoreCase("astolfoclient.top")) {
-               boolean duplicate = false;
-
-               for (NameProtectModule.TargetEntry existing : targets) {
-                  if (existing.target.equalsIgnoreCase(f)) {
-                     duplicate = true;
-                     break;
-                  }
-               }
-
-               if (!duplicate) {
-                  targets.add(new NameProtectModule.TargetEntry(f, "astolfoclient.top"));
-               }
+    private static List<TargetEntry> getActiveTargets() {
+        String myName;
+        ArrayList<TargetEntry> targets = new ArrayList<TargetEntry>();
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.getSession() != null && client.getSession().getUsername() != null && !(myName = client.getSession().getUsername().trim()).isEmpty() && !myName.equalsIgnoreCase("astolfoclient.top")) {
+            targets.add(new TargetEntry(myName, "astolfoclient.top"));
+        }
+        for (String friend : FriendManager.getFriends()) {
+            String f;
+            if (friend == null || (f = friend.trim()).isEmpty() || f.equalsIgnoreCase("astolfoclient.top")) continue;
+            boolean duplicate = false;
+            for (TargetEntry existing : targets) {
+                if (!existing.target.equalsIgnoreCase(f)) continue;
+                duplicate = true;
+                break;
             }
-         }
-      }
+            if (duplicate) continue;
+            targets.add(new TargetEntry(f, "astolfoclient.top"));
+        }
+        targets.sort((a, b) -> Integer.compare(b.target.length(), a.target.length()));
+        return targets;
+    }
 
-      targets.sort((a, b) -> Integer.compare(b.target.length(), a.target.length()));
-      return targets;
-   }
-
-   private static void findProtectedRanges(String text, String token, List<int[]> ranges) {
-      if (token != null && !token.isEmpty()) {
-         String lowerText = text.toLowerCase(Locale.ROOT);
-         String lowerToken = token.toLowerCase(Locale.ROOT);
-         int pos = 0;
-
-         while ((pos = lowerText.indexOf(lowerToken, pos)) != -1) {
+    private static void findProtectedRanges(String text, String token, List<int[]> ranges) {
+        if (token == null || token.isEmpty()) {
+            return;
+        }
+        String lowerText = text.toLowerCase(Locale.ROOT);
+        String lowerToken = token.toLowerCase(Locale.ROOT);
+        int pos = 0;
+        while ((pos = lowerText.indexOf(lowerToken, pos)) != -1) {
             ranges.add(new int[]{pos, pos + token.length()});
             pos += token.length();
-         }
-      }
-   }
+        }
+    }
 
-   private static boolean overlapsProtected(int start, int end, List<int[]> protectedRanges) {
-      for (int[] r : protectedRanges) {
-         if (start < r[1] && end > r[0]) {
+    private static boolean overlapsProtected(int start, int end, List<int[]> protectedRanges) {
+        for (int[] r : protectedRanges) {
+            if (start >= r[1] || end <= r[0]) continue;
             return true;
-         }
-      }
+        }
+        return false;
+    }
 
-      return false;
-   }
+    private static boolean isWordChar(char c) {
+        return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_';
+    }
 
-   private static boolean isWordChar(char c) {
-      return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '_';
-   }
+    private static boolean isBoundaryBefore(String s, int index) {
+        if (index <= 0) {
+            return true;
+        }
+        char prev = s.charAt(index - 1);
+        if (!NameProtectModule.isWordChar(prev)) {
+            return true;
+        }
+        return index >= 2 && s.charAt(index - 2) == '\u00a7';
+    }
 
-   private static boolean isBoundaryBefore(String s, int index) {
-      if (index <= 0) {
-         return true;
-      }
+    private static boolean isBoundaryAfter(String s, int index) {
+        if (index >= s.length()) {
+            return true;
+        }
+        char next = s.charAt(index);
+        if (next == '\u00a7') {
+            return true;
+        }
+        return !NameProtectModule.isWordChar(next);
+    }
 
-      char prev = s.charAt(index - 1);
-      return !isWordChar(prev) ? true : index >= 2 && s.charAt(index - 2) == 167;
-   }
-
-   private static boolean isBoundaryAfter(String s, int index) {
-      if (index >= s.length()) {
-         return true;
-      }
-
-      char next = s.charAt(index);
-      return next == 167 ? true : !isWordChar(next);
-   }
-
-   public static String replaceTargets(String text) {
-      if (text != null && !text.isEmpty()) {
-         List<NameProtectModule.TargetEntry> targets = getActiveTargets();
-         if (targets.isEmpty()) {
+    public static String replaceTargets(String text) {
+        if (text == null || text.isEmpty()) {
             return text;
-         }
-
-         List<int[]> protectedRanges = new ArrayList<>();
-         findProtectedRanges(text, "astolfoclient.top", protectedRanges);
-         if (!"astolfoclient.top".equalsIgnoreCase("astolfoclient.top")) {
-            findProtectedRanges(text, "astolfoclient.top", protectedRanges);
-         }
-
-         String lowerText = text.toLowerCase(Locale.ROOT);
-         List<NameProtectModule.FoundMatch> matches = new ArrayList<>();
-         int searchPos = 0;
-
-         while (searchPos < text.length()) {
+        }
+        List<TargetEntry> targets = NameProtectModule.getActiveTargets();
+        if (targets.isEmpty()) {
+            return text;
+        }
+        ArrayList<int[]> protectedRanges = new ArrayList<int[]>();
+        NameProtectModule.findProtectedRanges(text, "astolfoclient.top", protectedRanges);
+        if (!"astolfoclient.top".equalsIgnoreCase("astolfoclient.top")) {
+            NameProtectModule.findProtectedRanges(text, "astolfoclient.top", protectedRanges);
+        }
+        String lowerText = text.toLowerCase(Locale.ROOT);
+        ArrayList<FoundMatch> matches = new ArrayList<FoundMatch>();
+        int searchPos = 0;
+        while (searchPos < text.length()) {
             int earliestStart = -1;
             int earliestEnd = -1;
-            NameProtectModule.TargetEntry bestTarget = null;
-
-            for (NameProtectModule.TargetEntry entry : targets) {
-               int idx = lowerText.indexOf(entry.lowerTarget, searchPos);
-               if (idx != -1) {
-                  int end = idx + entry.target.length();
-                  boolean validBefore = !isWordChar(entry.target.charAt(0)) || isBoundaryBefore(text, idx);
-                  boolean validAfter = !isWordChar(entry.target.charAt(entry.target.length() - 1)) || isBoundaryAfter(text, end);
-                  if (validBefore && validAfter && !overlapsProtected(idx, end, protectedRanges) && (earliestStart == -1 || idx < earliestStart)) {
-                     earliestStart = idx;
-                     earliestEnd = end;
-                     bestTarget = entry;
-                  }
-               }
+            TargetEntry bestTarget = null;
+            for (TargetEntry entry : targets) {
+                boolean validAfter;
+                int idx = lowerText.indexOf(entry.lowerTarget, searchPos);
+                if (idx == -1) continue;
+                int end = idx + entry.target.length();
+                boolean validBefore = !NameProtectModule.isWordChar(entry.target.charAt(0)) || NameProtectModule.isBoundaryBefore(text, idx);
+                boolean bl = validAfter = !NameProtectModule.isWordChar(entry.target.charAt(entry.target.length() - 1)) || NameProtectModule.isBoundaryAfter(text, end);
+                if (!validBefore || !validAfter || NameProtectModule.overlapsProtected(idx, end, protectedRanges) || earliestStart != -1 && idx >= earliestStart) continue;
+                earliestStart = idx;
+                earliestEnd = end;
+                bestTarget = entry;
             }
-
-            if (earliestStart == -1 || bestTarget == null) {
-               break;
-            }
-
-            matches.add(new NameProtectModule.FoundMatch(earliestStart, earliestEnd, bestTarget.replacement));
+            if (earliestStart == -1 || bestTarget == null) break;
+            matches.add(new FoundMatch(earliestStart, earliestEnd, bestTarget.replacement));
             searchPos = earliestEnd;
-         }
-
-         if (matches.isEmpty()) {
+        }
+        if (matches.isEmpty()) {
             return text;
-         }
-
-         StringBuilder sb = new StringBuilder(text.length() + matches.size() * 16);
-         int lastPos = 0;
-
-         for (NameProtectModule.FoundMatch m : matches) {
+        }
+        StringBuilder sb = new StringBuilder(text.length() + matches.size() * 16);
+        int lastPos = 0;
+        for (FoundMatch m : matches) {
             sb.append(text, lastPos, m.start);
             sb.append(m.replacement);
             lastPos = m.end;
-         }
+        }
+        sb.append(text, lastPos, text.length());
+        return sb.toString();
+    }
 
-         sb.append(text, lastPos, text.length());
-         return sb.toString();
-      } else {
-         return text;
-      }
-   }
+    @Environment(value=EnvType.CLIENT)
+    private static class TargetEntry {
+        final String target;
+        final String replacement;
+        final String lowerTarget;
 
-   @Environment(EnvType.CLIENT)
-   private static class FoundMatch {
-      final int start;
-      final int end;
-      final String replacement;
+        TargetEntry(String target, String replacement) {
+            this.target = target;
+            this.replacement = replacement;
+            this.lowerTarget = target.toLowerCase(Locale.ROOT);
+        }
+    }
 
-      FoundMatch(int start, int end, String replacement) {
-         this.start = start;
-         this.end = end;
-         this.replacement = replacement;
-      }
-   }
+    @Environment(value=EnvType.CLIENT)
+    private static class FoundMatch {
+        final int start;
+        final int end;
+        final String replacement;
 
-   @Environment(EnvType.CLIENT)
-   private static class TargetEntry {
-      final String target;
-      final String replacement;
-      final String lowerTarget;
-
-      TargetEntry(String target, String replacement) {
-         this.target = target;
-         this.replacement = replacement;
-         this.lowerTarget = target.toLowerCase(Locale.ROOT);
-      }
-   }
+        FoundMatch(int start, int end, String replacement) {
+            this.start = start;
+            this.end = end;
+            this.replacement = replacement;
+        }
+    }
 }
+

@@ -5,117 +5,120 @@ import java.util.ArrayList;
 import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_310;
+import net.minecraft.client.MinecraftClient;
 import xyz.angames.astolfoclient.client.module.setting.Setting;
 import xyz.angames.astolfoclient.client.util.ModSounds;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public abstract class Module {
-   private String name;
-   private String description;
-   private boolean enabled;
-   private int keyCode = -1;
-   private final Module.Category category;
-   private final List<Setting> settings = new ArrayList<>();
+    private String name;
+    private String description;
+    private boolean enabled;
+    private int keyCode = -1;
+    private final Category category;
+    private final List<Setting> settings = new ArrayList<Setting>();
 
-   public Module(String name, Module.Category category) {
-      this(name, "", category);
-   }
+    public Module(String name, Category category) {
+        this(name, "", category);
+    }
 
-   public Module(String name, String description, Module.Category category) {
-      this.name = name;
-      this.description = description;
-      this.category = category;
-      this.registerSettings();
-   }
+    public Module(String name, String description, Category category) {
+        this.name = name;
+        this.description = description;
+        this.category = category;
+        this.registerSettings();
+    }
 
-   protected void registerSettings() {
-      for (Field field : this.getClass().getDeclaredFields()) {
-         try {
-            field.setAccessible(true);
-            Object obj = field.get(this);
-            if (obj instanceof Setting) {
-               this.addSetting((Setting)obj);
+    protected void registerSettings() {
+        for (Field field : this.getClass().getDeclaredFields()) {
+            try {
+                field.setAccessible(true);
+                Object obj = field.get(this);
+                if (!(obj instanceof Setting)) continue;
+                this.addSetting((Setting)obj);
             }
-         } catch (Exception var6) {
-         }
-      }
-   }
+            catch (Exception exception) {
+                // empty catch block
+            }
+        }
+    }
 
-   public void addSetting(Setting setting) {
-      if (setting != null && !this.settings.contains(setting)) {
-         this.settings.add(setting);
-      }
-   }
+    public void addSetting(Setting setting) {
+        if (setting != null && !this.settings.contains(setting)) {
+            this.settings.add(setting);
+        }
+    }
 
-   public void addSettings(Setting... settings) {
-      for (Setting s : settings) {
-         this.addSetting(s);
-      }
-   }
+    public void addSettings(Setting ... settings) {
+        for (Setting s : settings) {
+            this.addSetting(s);
+        }
+    }
 
-   public List<Setting> getSettings() {
-      this.registerSettings();
-      return this.settings;
-   }
+    public List<Setting> getSettings() {
+        this.registerSettings();
+        return this.settings;
+    }
 
-   public String getName() {
-      return this.name;
-   }
+    public String getName() {
+        return this.name;
+    }
 
-   public String getDescription() {
-      return this.description;
-   }
+    public String getDescription() {
+        return this.description;
+    }
 
-   public Module.Category getCategory() {
-      return this.category;
-   }
+    public Category getCategory() {
+        return this.category;
+    }
 
-   public boolean isEnabled() {
-      return this.enabled;
-   }
+    public boolean isEnabled() {
+        return this.enabled;
+    }
 
-   public void setEnabled(boolean enabled) {
-      if (this.enabled != enabled) {
-         this.enabled = enabled;
-         class_310 mc = class_310.method_1551();
-         if (this.enabled) {
-            this.onEnable();
-            ModSounds.playEnable();
-         } else {
-            this.onDisable();
-            ModSounds.playDisable();
-         }
-      }
-   }
+    public void setEnabled(boolean enabled) {
+        if (this.enabled != enabled) {
+            this.enabled = enabled;
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (this.enabled) {
+                this.onEnable();
+                ModSounds.playEnable();
+            } else {
+                this.onDisable();
+                ModSounds.playDisable();
+            }
+        }
+    }
 
-   public void toggle() {
-      this.setEnabled(!this.enabled);
-   }
+    public void toggle() {
+        this.setEnabled(!this.enabled);
+    }
 
-   public void onEnable() {
-   }
+    public void onEnable() {
+    }
 
-   public void onDisable() {
-   }
+    public void onDisable() {
+    }
 
-   public void onTick() {
-   }
+    public void onTick() {
+    }
 
-   public void onRender() {
-   }
+    public void onRender() {
+    }
 
-   public int getKeyCode() {
-      return this.keyCode;
-   }
+    public int getKeyCode() {
+        return this.keyCode;
+    }
 
-   public void setKeyCode(int keyCode) {
-      this.keyCode = keyCode;
-   }
+    public void setKeyCode(int keyCode) {
+        this.keyCode = keyCode;
+    }
 
-   @Environment(EnvType.CLIENT)
-   public enum Category {
-      RENDER,
-      MISC;
-   }
+    @Environment(value=EnvType.CLIENT)
+    public static enum Category {
+        RENDER,
+        MISC;
+
+    }
 }
+

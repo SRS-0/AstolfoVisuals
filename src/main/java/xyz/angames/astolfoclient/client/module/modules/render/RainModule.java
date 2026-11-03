@@ -1,8 +1,7 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.platform.GlStateManager.class_4534;
-import com.mojang.blaze3d.platform.GlStateManager.class_4535;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.opengl.GlStateManager;
+import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -10,24 +9,26 @@ import java.util.Map;
 import java.util.Random;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.minecraft.class_10142;
-import net.minecraft.class_243;
-import net.minecraft.class_2680;
-import net.minecraft.class_286;
-import net.minecraft.class_287;
-import net.minecraft.class_289;
-import net.minecraft.class_290;
-import net.minecraft.class_310;
-import net.minecraft.class_3532;
-import net.minecraft.class_4184;
-import net.minecraft.class_4587;
-import net.minecraft.class_7833;
-import net.minecraft.class_9801;
-import net.minecraft.class_2338.class_2339;
-import net.minecraft.class_2902.class_2903;
-import net.minecraft.class_293.class_5596;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.block.BlockState;
+import net.minecraft.client.MinecraftClient;
+import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKey;
+import xyz.angames.astolfoclient.client.render.compat.ShaderProgramKeys;
+import net.minecraft.client.render.BufferBuilder;
+import xyz.angames.astolfoclient.client.render.compat.BufferRenderer;
+import net.minecraft.client.render.BuiltBuffer;
+import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.Tessellator;
+import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.render.VertexFormats;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.BlockView;
+import net.minecraft.world.Heightmap;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -37,901 +38,879 @@ import xyz.angames.astolfoclient.client.module.setting.ModeSetting;
 import xyz.angames.astolfoclient.client.module.setting.NumberSetting;
 import xyz.angames.astolfoclient.client.render.WetSurfaceRenderer;
 
-@Environment(EnvType.CLIENT)
-public class RainModule extends Module {
-   private final class_310 mc = class_310.method_1551();
-   public final ModeSetting preset = new ModeSetting("Preset", "Rain", "Drizzle", "Rain", "Downpour", "Storm");
-   public final NumberSetting density = new NumberSetting("Density", 1.0, 0.1, 3.0, 0.1);
-   public final NumberSetting radius = new NumberSetting("Radius", 26.0, 8.0, 64.0, 1.0);
-   public final NumberSetting altitude = new NumberSetting("Altitude", 16.0, 6.0, 40.0, 1.0);
-   public final NumberSetting dropSize = new NumberSetting("Drop Size", 1.0, 0.3, 2.5, 0.1);
-   public final NumberSetting fallSpeed = new NumberSetting("Fall Speed", 1.0, 0.3, 2.5, 0.1);
-   public final NumberSetting wind = new NumberSetting("Wind", 1.0, 0.0, 3.0, 0.1);
-   public final NumberSetting opacity = new NumberSetting("Opacity", 1.0, 0.1, 2.0, 0.05);
-   public final BooleanSetting splashes = new BooleanSetting("Splashes", true);
-   public final BooleanSetting droplets = new BooleanSetting("Splash Droplets", true) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.splashes.get();
-      }
-   };
-   public final BooleanSetting groundMist = new BooleanSetting("Ground Mist", true);
-   public final BooleanSetting lightning = new BooleanSetting("Lightning", false);
-   public final BooleanSetting skyCheck = new BooleanSetting("Sky Check", true);
-   public final BooleanSetting onlyWhenRaining = new BooleanSetting("Only When Raining", false);
-   public final ModeSetting colorMode = new ModeSetting("Color Mode", "Theme", "Theme", "Realistic", "Custom");
-   public final NumberSetting customRed = new NumberSetting("Custom Red", 191.0, 0.0, 255.0, 1.0) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.colorMode.is("Custom");
-      }
-   };
-   public final NumberSetting customGreen = new NumberSetting("Custom Green", 216.0, 0.0, 255.0, 1.0) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.colorMode.is("Custom");
-      }
-   };
-   public final NumberSetting customBlue = new NumberSetting("Custom Blue", 230.0, 0.0, 255.0, 1.0) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.colorMode.is("Custom");
-      }
-   };
-   public final BooleanSetting wetGround = new BooleanSetting("Wet Ground", true);
-   public final NumberSetting wetness = new NumberSetting("Wetness", 1.25, 0.1, 2.0, 0.05) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get();
-      }
-   };
-   public final NumberSetting puddleCoverage = new NumberSetting("Puddle Coverage", 0.9, 0.05, 1.0, 0.05) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get();
-      }
-   };
-   public final NumberSetting reflectionStrength = new NumberSetting("Reflections", 1.55, 0.1, 2.0, 0.05) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get();
-      }
-   };
-   public final NumberSetting reflectionDistance = new NumberSetting("Reflection Distance", 56.0, 12.0, 96.0, 1.0) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get();
-      }
-   };
-   public final ModeSetting reflectionQuality = new ModeSetting("Reflection Quality", "Balanced", "Performance", "Balanced", "High") {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get();
-      }
-   };
-   public final BooleanSetting puddleRipples = new BooleanSetting("Puddle Ripples", true) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get();
-      }
-   };
-   public final NumberSetting rippleStrength = new NumberSetting("Ripple Strength", 0.8, 0.0, 1.6, 0.05) {
-      @Override
-      public boolean isVisible() {
-         return RainModule.this.wetGround.get() && RainModule.this.puddleRipples.get();
-      }
-   };
-   private static final double GRAVITY = 22.0;
-   private static final double TERMINAL_VELOCITY = 34.0;
-   private static final int RIPPLE_SEGMENTS = 16;
-   private static final int MAX_DROPS = 4500;
-   private static final int MAX_MIST = 100;
-   private final List<RainModule.Drop> drops = new ArrayList<>();
-   private final List<RainModule.Splash> splashList = new ArrayList<>();
-   private final List<RainModule.Droplet> dropletList = new ArrayList<>();
-   private final List<RainModule.Mist> mistList = new ArrayList<>();
-   private final Map<Long, Integer> groundCache = new HashMap<>();
-   private final class_2339 scratchPos = new class_2339();
-   private final Random random = new Random();
-   private long lastFrameNanos;
-   private float clock;
-   private float flash;
-   private float nextFlashIn = 9.0F;
-   private int cacheTicks;
+@Environment(value=EnvType.CLIENT)
+public class RainModule
+extends Module {
+    private final MinecraftClient mc = MinecraftClient.getInstance();
+    public final ModeSetting preset = new ModeSetting("Preset", "Rain", "Drizzle", "Rain", "Downpour", "Storm");
+    public final NumberSetting density = new NumberSetting("Density", 1.0, 0.1, 3.0, 0.1);
+    public final NumberSetting radius = new NumberSetting("Radius", 26.0, 8.0, 64.0, 1.0);
+    public final NumberSetting altitude = new NumberSetting("Altitude", 16.0, 6.0, 40.0, 1.0);
+    public final NumberSetting dropSize = new NumberSetting("Drop Size", 1.0, 0.3, 2.5, 0.1);
+    public final NumberSetting fallSpeed = new NumberSetting("Fall Speed", 1.0, 0.3, 2.5, 0.1);
+    public final NumberSetting wind = new NumberSetting("Wind", 1.0, 0.0, 3.0, 0.1);
+    public final NumberSetting opacity = new NumberSetting("Opacity", 1.0, 0.1, 2.0, 0.05);
+    public final BooleanSetting splashes = new BooleanSetting("Splashes", true);
+    public final BooleanSetting droplets = new BooleanSetting("Splash Droplets", true){
 
-   public static RainModule getInstance() {
-      return (RainModule)ModuleManager.getModule(RainModule.class);
-   }
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.splashes.get();
+        }
+    };
+    public final BooleanSetting groundMist = new BooleanSetting("Ground Mist", true);
+    public final BooleanSetting lightning = new BooleanSetting("Lightning", false);
+    public final BooleanSetting skyCheck = new BooleanSetting("Sky Check", true);
+    public final BooleanSetting onlyWhenRaining = new BooleanSetting("Only When Raining", false);
+    public final ModeSetting colorMode = new ModeSetting("Color Mode", "Theme", "Theme", "Realistic", "Custom");
+    public final NumberSetting customRed = new NumberSetting("Custom Red", 191.0, 0.0, 255.0, 1.0){
 
-   public RainModule() {
-      super("Rain", "Realistic volumetric rain with wet ground & reflections", Module.Category.RENDER);
-      this.addSettings(
-         this.preset,
-         this.density,
-         this.radius,
-         this.altitude,
-         this.dropSize,
-         this.fallSpeed,
-         this.wind,
-         this.opacity,
-         this.splashes,
-         this.droplets,
-         this.groundMist,
-         this.wetGround,
-         this.wetness,
-         this.puddleCoverage,
-         this.reflectionStrength,
-         this.reflectionDistance,
-         this.reflectionQuality,
-         this.puddleRipples,
-         this.rippleStrength,
-         this.lightning,
-         this.skyCheck,
-         this.onlyWhenRaining,
-         this.colorMode,
-         this.customRed,
-         this.customGreen,
-         this.customBlue
-      );
-      WorldRenderEvents.LAST.register(this::onWorldRender);
-   }
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.colorMode.is("Custom");
+        }
+    };
+    public final NumberSetting customGreen = new NumberSetting("Custom Green", 216.0, 0.0, 255.0, 1.0){
 
-   @Override
-   public void onEnable() {
-      this.lastFrameNanos = 0L;
-      WetSurfaceRenderer.getInstance().reset();
-      this.clearAll();
-   }
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.colorMode.is("Custom");
+        }
+    };
+    public final NumberSetting customBlue = new NumberSetting("Custom Blue", 230.0, 0.0, 255.0, 1.0){
 
-   @Override
-   public void onDisable() {
-      WetSurfaceRenderer.getInstance().reset();
-      this.clearAll();
-   }
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.colorMode.is("Custom");
+        }
+    };
+    public final BooleanSetting wetGround = new BooleanSetting("Wet Ground", true);
+    public final NumberSetting wetness = new NumberSetting("Wetness", 1.25, 0.1, 2.0, 0.05){
 
-   private void clearAll() {
-      synchronized (this.drops) {
-         this.drops.clear();
-      }
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get();
+        }
+    };
+    public final NumberSetting puddleCoverage = new NumberSetting("Puddle Coverage", 0.9, 0.05, 1.0, 0.05){
 
-      this.splashList.clear();
-      this.dropletList.clear();
-      this.mistList.clear();
-      this.groundCache.clear();
-      this.flash = 0.0F;
-   }
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get();
+        }
+    };
+    public final NumberSetting reflectionStrength = new NumberSetting("Reflections", 1.55, 0.1, 2.0, 0.05){
 
-   @Override
-   public void onTick() {
-      if (this.mc.field_1724 != null && this.mc.field_1687 != null) {
-         if (++this.cacheTicks > 30) {
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get();
+        }
+    };
+    public final NumberSetting reflectionDistance = new NumberSetting("Reflection Distance", 56.0, 12.0, 96.0, 1.0){
+
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get();
+        }
+    };
+    public final ModeSetting reflectionQuality = new ModeSetting("Reflection Quality", "Balanced", new String[]{"Performance", "Balanced", "High"}){
+
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get();
+        }
+    };
+    public final BooleanSetting puddleRipples = new BooleanSetting("Puddle Ripples", true){
+
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get();
+        }
+    };
+    public final NumberSetting rippleStrength = new NumberSetting("Ripple Strength", 0.8, 0.0, 1.6, 0.05){
+
+        @Override
+        public boolean isVisible() {
+            return RainModule.this.wetGround.get() && RainModule.this.puddleRipples.get();
+        }
+    };
+    private static final double GRAVITY = 22.0;
+    private static final double TERMINAL_VELOCITY = 34.0;
+    private static final int RIPPLE_SEGMENTS = 16;
+    private static final int MAX_DROPS = 4500;
+    private static final int MAX_MIST = 100;
+    private final List<Drop> drops = new ArrayList<Drop>();
+    private final List<Splash> splashList = new ArrayList<Splash>();
+    private final List<Droplet> dropletList = new ArrayList<Droplet>();
+    private final List<Mist> mistList = new ArrayList<Mist>();
+    private final Map<Long, Integer> groundCache = new HashMap<Long, Integer>();
+    private final BlockPos.Mutable scratchPos = new BlockPos.Mutable();
+    private final Random random = new Random();
+    private long lastFrameNanos;
+    private float clock;
+    private float flash;
+    private float nextFlashIn = 9.0f;
+    private int cacheTicks;
+
+    public static RainModule getInstance() {
+        return (RainModule)ModuleManager.getModule(RainModule.class);
+    }
+
+    public RainModule() {
+        super("Rain", "Realistic volumetric rain with wet ground & reflections", Module.Category.RENDER);
+        this.addSettings(this.preset, this.density, this.radius, this.altitude, this.dropSize, this.fallSpeed, this.wind, this.opacity, this.splashes, this.droplets, this.groundMist, this.wetGround, this.wetness, this.puddleCoverage, this.reflectionStrength, this.reflectionDistance, this.reflectionQuality, this.puddleRipples, this.rippleStrength, this.lightning, this.skyCheck, this.onlyWhenRaining, this.colorMode, this.customRed, this.customGreen, this.customBlue);
+        WorldRenderEvents.END_MAIN.register(this::onWorldRender);
+    }
+
+    @Override
+    public void onEnable() {
+        this.lastFrameNanos = 0L;
+        WetSurfaceRenderer.getInstance().reset();
+        this.clearAll();
+    }
+
+    @Override
+    public void onDisable() {
+        WetSurfaceRenderer.getInstance().reset();
+        this.clearAll();
+    }
+
+    /*
+     * WARNING - Removed try catching itself - possible behaviour change.
+     */
+    private void clearAll() {
+        List<Drop> list = this.drops;
+        synchronized (list) {
+            this.drops.clear();
+        }
+        this.splashList.clear();
+        this.dropletList.clear();
+        this.mistList.clear();
+        this.groundCache.clear();
+        this.flash = 0.0f;
+    }
+
+    @Override
+    public void onTick() {
+        if (this.mc.player == null || this.mc.world == null) {
+            this.clearAll();
+            return;
+        }
+        if (++this.cacheTicks > 30) {
             this.cacheTicks = 0;
             this.groundCache.clear();
-         }
-      } else {
-         this.clearAll();
-      }
-   }
+        }
+    }
 
-   private float presetDensity() {
-      if (this.preset.is("Drizzle")) {
-         return 0.45F;
-      } else if (this.preset.is("Downpour")) {
-         return 1.9F;
-      } else {
-         return this.preset.is("Storm") ? 2.8F : 1.0F;
-      }
-   }
+    private float presetDensity() {
+        if (this.preset.is("Drizzle")) {
+            return 0.45f;
+        }
+        if (this.preset.is("Downpour")) {
+            return 1.9f;
+        }
+        if (this.preset.is("Storm")) {
+            return 2.8f;
+        }
+        return 1.0f;
+    }
 
-   private float presetWind() {
-      if (this.preset.is("Drizzle")) {
-         return 0.5F;
-      } else if (this.preset.is("Downpour")) {
-         return 1.35F;
-      } else {
-         return this.preset.is("Storm") ? 2.4F : 1.0F;
-      }
-   }
+    private float presetWind() {
+        if (this.preset.is("Drizzle")) {
+            return 0.5f;
+        }
+        if (this.preset.is("Downpour")) {
+            return 1.35f;
+        }
+        if (this.preset.is("Storm")) {
+            return 2.4f;
+        }
+        return 1.0f;
+    }
 
-   private float presetMass() {
-      if (this.preset.is("Drizzle")) {
-         return 0.55F;
-      } else if (this.preset.is("Downpour")) {
-         return 1.25F;
-      } else {
-         return this.preset.is("Storm") ? 1.5F : 1.0F;
-      }
-   }
+    private float presetMass() {
+        if (this.preset.is("Drizzle")) {
+            return 0.55f;
+        }
+        if (this.preset.is("Downpour")) {
+            return 1.25f;
+        }
+        if (this.preset.is("Storm")) {
+            return 1.5f;
+        }
+        return 1.0f;
+    }
 
-   private int targetDropCount() {
-      float r = (float)this.radius.get();
-      float area = r * r * 0.0155F;
-      int count = (int)(area * (float)this.density.get() * this.presetDensity() * 26.0F);
-      return class_3532.method_15340(count, 40, 4500);
-   }
+    private int targetDropCount() {
+        float r = (float)this.radius.get();
+        float area = r * r * 0.0155f;
+        int count = (int)(area * (float)this.density.get() * this.presetDensity() * 26.0f);
+        return MathHelper.clamp((int)count, (int)40, (int)4500);
+    }
 
-   private float[] resolveColor() {
-      int color;
-      if (this.colorMode.is("Custom")) {
-         int r = (int)class_3532.method_15363((float)this.customRed.get(), 0.0F, 255.0F);
-         int g = (int)class_3532.method_15363((float)this.customGreen.get(), 0.0F, 255.0F);
-         int b = (int)class_3532.method_15363((float)this.customBlue.get(), 0.0F, 255.0F);
-         color = r << 16 | g << 8 | b;
-      } else if (this.colorMode.is("Theme")) {
-         color = ThemeManager.getThemedColor(0L);
-      } else {
-         color = -3613464;
-      }
+    private float[] resolveColor() {
+        int color;
+        if (this.colorMode.is("Custom")) {
+            int r = (int)MathHelper.clamp((float)((float)this.customRed.get()), (float)0.0f, (float)255.0f);
+            int g = (int)MathHelper.clamp((float)((float)this.customGreen.get()), (float)0.0f, (float)255.0f);
+            int b = (int)MathHelper.clamp((float)((float)this.customBlue.get()), (float)0.0f, (float)255.0f);
+            color = r << 16 | g << 8 | b;
+        } else {
+            color = this.colorMode.is("Theme") ? ThemeManager.getThemedColor(0L) : -3613464;
+        }
+        float r = (float)(color >> 16 & 0xFF) / 255.0f;
+        float g = (float)(color >> 8 & 0xFF) / 255.0f;
+        float b = (float)(color & 0xFF) / 255.0f;
+        return new float[]{r, g, b};
+    }
 
-      float r = (color >> 16 & 0xFF) / 255.0F;
-      float g = (color >> 8 & 0xFF) / 255.0F;
-      float b = (color & 0xFF) / 255.0F;
-      return new float[]{r, g, b};
-   }
+    private float random(float min, float max) {
+        return min + this.random.nextFloat() * (max - min);
+    }
 
-   private float random(float min, float max) {
-      return min + this.random.nextFloat() * (max - min);
-   }
+    private int surfaceY(int x, int z) {
+        int top;
+        long key = (long)x << 32 ^ (long)z & 0xFFFFFFFFL;
+        Integer cached = this.groundCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            top = this.mc.world.getTopY(Heightmap.Type.WORLD_SURFACE, x, z);
+        }
+        catch (Throwable ignored) {
+            top = this.mc.world.getBottomY();
+        }
+        if (this.groundCache.size() < 20000) {
+            this.groundCache.put(key, top);
+        }
+        return top;
+    }
 
-   private int surfaceY(int x, int z) {
-      long key = (long)x << 32 ^ z & 4294967295L;
-      Integer cached = this.groundCache.get(key);
-      if (cached != null) {
-         return cached;
-      }
-
-      int top;
-      try {
-         top = this.mc.field_1687.method_8624(class_2903.field_13202, x, z);
-      } catch (Throwable ignored) {
-         top = this.mc.field_1687.method_31607();
-      }
-
-      if (this.groundCache.size() < 20000) {
-         this.groundCache.put(key, top);
-      }
-
-      return top;
-   }
-
-   private boolean isBlocking(double x, double y, double z) {
-      if (this.mc.field_1687 == null) {
-         return false;
-      }
-
-      this.scratchPos.method_10103(class_3532.method_15357(x), class_3532.method_15357(y), class_3532.method_15357(z));
-      if (!this.mc.field_1687.method_2935().method_12123(this.scratchPos.method_10263() >> 4, this.scratchPos.method_10260() >> 4)) {
-         return false;
-      }
-
-      class_2680 state = this.mc.field_1687.method_8320(this.scratchPos);
-      if (!state.method_26227().method_15769()) {
-         return true;
-      }
-
-      if (state.method_26215()) {
-         return false;
-      }
-
-      try {
-         return !state.method_26220(this.mc.field_1687, this.scratchPos).method_1110();
-      } catch (Throwable ignored) {
-         return true;
-      }
-   }
-
-   private boolean isWater(double x, double y, double z) {
-      if (this.mc.field_1687 == null) {
-         return false;
-      }
-
-      this.scratchPos.method_10103(class_3532.method_15357(x), class_3532.method_15357(y), class_3532.method_15357(z));
-
-      try {
-         return !this.mc.field_1687.method_8320(this.scratchPos).method_26227().method_15769();
-      } catch (Throwable ignored) {
-         return false;
-      }
-   }
-
-   private boolean skyVisible(double x, double y, double z) {
-      if (this.skyCheck.get() && this.mc.field_1687 != null) {
-         this.scratchPos.method_10103(class_3532.method_15357(x), class_3532.method_15357(y), class_3532.method_15357(z));
-
-         try {
-            return this.mc.field_1687.method_8311(this.scratchPos);
-         } catch (Throwable ignored) {
+    private boolean isBlocking(double x, double y, double z) {
+        if (this.mc.world == null) {
+            return false;
+        }
+        this.scratchPos.set(MathHelper.floor((double)x), MathHelper.floor((double)y), MathHelper.floor((double)z));
+        if (!this.mc.world.getChunkManager().isChunkLoaded(this.scratchPos.getX() >> 4, this.scratchPos.getZ() >> 4)) {
+            return false;
+        }
+        BlockState state = this.mc.world.getBlockState((BlockPos)this.scratchPos);
+        if (!state.getFluidState().isEmpty()) {
             return true;
-         }
-      } else {
-         return true;
-      }
-   }
+        }
+        if (state.isAir()) {
+            return false;
+        }
+        try {
+            return !state.getCollisionShape((BlockView)this.mc.world, (BlockPos)this.scratchPos).isEmpty();
+        }
+        catch (Throwable ignored) {
+            return true;
+        }
+    }
 
-   private void spawnDrop(class_243 center, boolean fromTop) {
-      float r = (float)this.radius.get();
-      double angle = this.random.nextDouble() * Math.PI * 2.0;
-      double dist = Math.sqrt(this.random.nextDouble()) * r;
-      double x = center.field_1352 + Math.cos(angle) * dist;
-      double z = center.field_1350 + Math.sin(angle) * dist;
-      double y = fromTop
-         ? center.field_1351 + (float)this.altitude.get() * this.random(0.75F, 1.0F)
-         : center.field_1351 + this.random(-4.0F, (float)this.altitude.get());
-      if (this.skyVisible(x, y, z)) {
-         RainModule.Drop drop = new RainModule.Drop();
-         drop.x = x;
-         drop.y = y;
-         drop.z = z;
-         drop.mass = this.random(0.6F, 1.4F) * this.presetMass();
-         drop.vy = -this.random(6.0F, 11.0F) * drop.mass;
-         drop.phase = this.random(0.0F, 62.8F);
-         drop.brightness = this.random(0.6F, 1.0F);
-         drop.ground = this.surfaceY(class_3532.method_15357(x), class_3532.method_15357(z));
-         this.drops.add(drop);
-      }
-   }
+    private boolean isWater(double x, double y, double z) {
+        if (this.mc.world == null) {
+            return false;
+        }
+        this.scratchPos.set(MathHelper.floor((double)x), MathHelper.floor((double)y), MathHelper.floor((double)z));
+        try {
+            return !this.mc.world.getBlockState((BlockPos)this.scratchPos).getFluidState().isEmpty();
+        }
+        catch (Throwable ignored) {
+            return false;
+        }
+    }
 
-   private void updateDrops(class_243 center, float dt) {
-      int target = this.targetDropCount();
-      this.drops.removeIf(dx -> {
-         double dxx = dx.x - center.field_1352;
-         double dz = dx.z - center.field_1350;
-         float r = (float)this.radius.get() + 6.0F;
-         return dx.dead || dxx * dxx + dz * dz > r * r || dx.y < center.field_1351 - (float)this.altitude.get() - 12.0;
-      });
-      boolean fill = this.drops.size() < target / 2;
-      int spawnBudget = fill ? Math.min(target - this.drops.size(), 900) : Math.min(target - this.drops.size(), 260);
+    private boolean skyVisible(double x, double y, double z) {
+        if (!this.skyCheck.get() || this.mc.world == null) {
+            return true;
+        }
+        this.scratchPos.set(MathHelper.floor((double)x), MathHelper.floor((double)y), MathHelper.floor((double)z));
+        try {
+            return this.mc.world.isSkyVisible((BlockPos)this.scratchPos);
+        }
+        catch (Throwable ignored) {
+            return true;
+        }
+    }
 
-      for (int i = 0; i < spawnBudget; i++) {
-         this.spawnDrop(center, !fill);
-      }
+    private void spawnDrop(Vec3d center, boolean fromTop) {
+        double y;
+        float r = (float)this.radius.get();
+        double angle = this.random.nextDouble() * Math.PI * 2.0;
+        double dist = Math.sqrt(this.random.nextDouble()) * (double)r;
+        double x = center.x + Math.cos(angle) * dist;
+        double z = center.z + Math.sin(angle) * dist;
+        double d = y = fromTop ? center.y + (double)((float)this.altitude.get() * this.random(0.75f, 1.0f)) : center.y + (double)this.random(-4.0f, (float)this.altitude.get());
+        if (!this.skyVisible(x, y, z)) {
+            return;
+        }
+        Drop drop = new Drop();
+        drop.x = x;
+        drop.y = y;
+        drop.z = z;
+        drop.mass = this.random(0.6f, 1.4f) * this.presetMass();
+        drop.vy = (double)(-this.random(6.0f, 11.0f)) * drop.mass;
+        drop.phase = this.random(0.0f, 62.8f);
+        drop.brightness = this.random(0.6f, 1.0f);
+        drop.ground = this.surfaceY(MathHelper.floor((double)x), MathHelper.floor((double)z));
+        this.drops.add(drop);
+    }
 
-      float speedMul = (float)this.fallSpeed.get();
-      float windMul = (float)this.wind.get() * this.presetWind();
-      int i = 0;
-
-      for (int size = this.drops.size(); i < size; i++) {
-         RainModule.Drop d = this.drops.get(i);
-         double gust = 0.65 + 0.35 * Math.sin(this.clock * 0.55 + d.phase * 0.15) + 0.18 * Math.sin(this.clock * 1.7 + d.phase);
-         double windX = windMul * 3.1 * gust;
-         double windZ = windMul * 1.7 * Math.sin(this.clock * 0.31 + d.phase * 0.05) * gust;
-         double drag = 1.0 - Math.min(0.92, Math.abs(d.vy) / (34.0 * d.mass));
-         d.vy = d.vy - 22.0 * d.mass * drag * dt;
-         if (d.vy < -34.0 * d.mass) {
-            d.vy = -34.0 * d.mass;
-         }
-
-         d.vx = d.vx + (windX - d.vx) * Math.min(1.0, dt * 3.2);
-         d.vz = d.vz + (windZ - d.vz) * Math.min(1.0, dt * 3.2);
-         double nx = d.x + d.vx * dt * speedMul;
-         double ny = d.y + d.vy * dt * speedMul;
-         double nz = d.z + d.vz * dt * speedMul;
-         d.prevX = d.x;
-         d.prevY = d.y;
-         d.prevZ = d.z;
-         boolean hit = false;
-         if (ny <= d.ground + 2.5) {
-            if (this.isBlocking(nx, ny, nz)) {
-               hit = true;
-            } else if (ny <= d.ground - 3.0) {
-               d.dead = true;
+    private void updateDrops(Vec3d center, float dt) {
+        int target = this.targetDropCount();
+        this.drops.removeIf(d -> {
+            double dx = d.x - center.x;
+            double dz = d.z - center.z;
+            float r = (float)this.radius.get() + 6.0f;
+            return d.dead || dx * dx + dz * dz > (double)(r * r) || d.y < center.y - (double)((float)this.altitude.get()) - 12.0;
+        });
+        boolean fill = this.drops.size() < target / 2;
+        int spawnBudget = fill ? Math.min(target - this.drops.size(), 900) : Math.min(target - this.drops.size(), 260);
+        for (int i = 0; i < spawnBudget; ++i) {
+            this.spawnDrop(center, !fill);
+        }
+        float speedMul = (float)this.fallSpeed.get();
+        float windMul = (float)this.wind.get() * this.presetWind();
+        int size = this.drops.size();
+        for (int i = 0; i < size; ++i) {
+            Drop d2 = this.drops.get(i);
+            double gust = 0.65 + 0.35 * Math.sin((double)this.clock * 0.55 + (double)d2.phase * 0.15) + 0.18 * Math.sin((double)this.clock * 1.7 + (double)d2.phase);
+            double windX = (double)windMul * 3.1 * gust;
+            double windZ = (double)windMul * 1.7 * Math.sin((double)this.clock * 0.31 + (double)d2.phase * 0.05) * gust;
+            double drag = 1.0 - Math.min(0.92, Math.abs(d2.vy) / (34.0 * d2.mass));
+            d2.vy -= 22.0 * d2.mass * drag * (double)dt;
+            if (d2.vy < -34.0 * d2.mass) {
+                d2.vy = -34.0 * d2.mass;
             }
-         }
-
-         if (hit) {
-            if (this.splashes.get()) {
-               this.addSplash(nx, ny, nz, d);
+            d2.vx += (windX - d2.vx) * Math.min(1.0, (double)dt * 3.2);
+            d2.vz += (windZ - d2.vz) * Math.min(1.0, (double)dt * 3.2);
+            double nx = d2.x + d2.vx * (double)dt * (double)speedMul;
+            double ny = d2.y + d2.vy * (double)dt * (double)speedMul;
+            double nz = d2.z + d2.vz * (double)dt * (double)speedMul;
+            d2.lastX = d2.x;
+            d2.lastY = d2.y;
+            d2.lastZ = d2.z;
+            boolean hit = false;
+            if (ny <= d2.ground + 2.5) {
+                if (this.isBlocking(nx, ny, nz)) {
+                    hit = true;
+                } else if (ny <= d2.ground - 3.0) {
+                    d2.dead = true;
+                }
             }
-
-            d.dead = true;
-         } else {
-            d.x = nx;
-            d.y = ny;
-            d.z = nz;
-         }
-      }
-   }
-
-   private void addSplash(double x, double y, double z, RainModule.Drop d) {
-      if (this.splashList.size() <= 700) {
-         double impactY = Math.floor(y) + 1.0005;
-         RainModule.Splash splash = new RainModule.Splash();
-         splash.x = x;
-         splash.y = impactY;
-         splash.z = z;
-         splash.life = 0.0F;
-         splash.maxLife = this.random(0.3F, 0.52F);
-         splash.scale = (float)(0.32 + 0.22 * d.mass);
-         splash.water = this.isWater(x, y - 0.15, z);
-         this.splashList.add(splash);
-         if (this.droplets.get() && this.dropletList.size() <= 1400) {
-            int shards = splash.water ? 4 : 3;
-
-            for (int i = 0; i < shards; i++) {
-               double a = this.random.nextDouble() * Math.PI * 2.0;
-               double sp = this.random(1.1F, 2.6F) * d.mass;
-               RainModule.Droplet drop = new RainModule.Droplet();
-               drop.x = x;
-               drop.y = impactY + 0.02;
-               drop.z = z;
-               drop.vx = Math.cos(a) * sp * 0.45 + d.vx * 0.08;
-               drop.vz = Math.sin(a) * sp * 0.45 + d.vz * 0.08;
-               drop.vy = this.random(1.9F, 4.1F);
-               drop.maxLife = this.random(0.28F, 0.5F);
-               this.dropletList.add(drop);
+            if (hit) {
+                if (this.splashes.get()) {
+                    this.addSplash(nx, ny, nz, d2);
+                }
+                d2.dead = true;
+                continue;
             }
-         }
-      }
-   }
+            d2.x = nx;
+            d2.y = ny;
+            d2.z = nz;
+        }
+    }
 
-   private void updateDroplets(float dt) {
-      for (int i = this.dropletList.size() - 1; i >= 0; i--) {
-         RainModule.Droplet dr = this.dropletList.get(i);
-         dr.life += dt;
-         if (dr.life >= dr.maxLife) {
-            this.dropletList.remove(i);
-         } else {
-            dr.prevX = dr.x;
-            dr.prevY = dr.y;
-            dr.prevZ = dr.z;
-            dr.vy -= 12.100000000000001 * dt;
-            dr.x = dr.x + dr.vx * dt;
-            dr.y = dr.y + dr.vy * dt;
-            dr.z = dr.z + dr.vz * dt;
-         }
-      }
-   }
+    private void addSplash(double x, double y, double z, Drop d) {
+        if (this.splashList.size() > 700) {
+            return;
+        }
+        double impactY = Math.floor(y) + 1.0005;
+        Splash splash = new Splash();
+        splash.x = x;
+        splash.y = impactY;
+        splash.z = z;
+        splash.life = 0.0f;
+        splash.maxLife = this.random(0.3f, 0.52f);
+        splash.scale = (float)(0.32 + 0.22 * d.mass);
+        splash.water = this.isWater(x, y - 0.15, z);
+        this.splashList.add(splash);
+        if (!this.droplets.get() || this.dropletList.size() > 1400) {
+            return;
+        }
+        int shards = splash.water ? 4 : 3;
+        for (int i = 0; i < shards; ++i) {
+            double a = this.random.nextDouble() * Math.PI * 2.0;
+            double sp = (double)this.random(1.1f, 2.6f) * d.mass;
+            Droplet drop = new Droplet();
+            drop.x = x;
+            drop.y = impactY + 0.02;
+            drop.z = z;
+            drop.vx = Math.cos(a) * sp * 0.45 + d.vx * 0.08;
+            drop.vz = Math.sin(a) * sp * 0.45 + d.vz * 0.08;
+            drop.vy = this.random(1.9f, 4.1f);
+            drop.maxLife = this.random(0.28f, 0.5f);
+            this.dropletList.add(drop);
+        }
+    }
 
-   private void updateSplashes(float dt) {
-      for (int i = this.splashList.size() - 1; i >= 0; i--) {
-         RainModule.Splash s = this.splashList.get(i);
-         s.life += dt;
-         if (s.life >= s.maxLife) {
+    private void updateDroplets(float dt) {
+        for (int i = this.dropletList.size() - 1; i >= 0; --i) {
+            Droplet dr = this.dropletList.get(i);
+            dr.life += dt;
+            if (dr.life >= dr.maxLife) {
+                this.dropletList.remove(i);
+                continue;
+            }
+            dr.lastX = dr.x;
+            dr.lastY = dr.y;
+            dr.lastZ = dr.z;
+            dr.vy -= 12.100000000000001 * (double)dt;
+            dr.x += dr.vx * (double)dt;
+            dr.y += dr.vy * (double)dt;
+            dr.z += dr.vz * (double)dt;
+        }
+    }
+
+    private void updateSplashes(float dt) {
+        for (int i = this.splashList.size() - 1; i >= 0; --i) {
+            Splash s = this.splashList.get(i);
+            s.life += dt;
+            if (!(s.life >= s.maxLife)) continue;
             this.splashList.remove(i);
-         }
-      }
-   }
+        }
+    }
 
-   private void updateMist(class_243 center, float dt) {
-      if (!this.groundMist.get()) {
-         this.mistList.clear();
-      } else {
-         int target = (int)class_3532.method_15363(22.0F * (float)this.density.get() * this.presetDensity(), 6.0F, 100.0F);
-         this.mistList.removeIf(mx -> {
-            mx.life += dt;
-            double dx = mx.x - center.field_1352;
-            double dz = mx.z - center.field_1350;
+    private void updateMist(Vec3d center, float dt) {
+        if (!this.groundMist.get()) {
+            this.mistList.clear();
+            return;
+        }
+        int target = (int)MathHelper.clamp((float)(22.0f * (float)this.density.get() * this.presetDensity()), (float)6.0f, (float)100.0f);
+        this.mistList.removeIf(m -> {
+            m.life += dt;
+            double dx = m.x - center.x;
+            double dz = m.z - center.z;
             float r = (float)this.radius.get();
-            mx.x = mx.x + mx.vx * dt;
-            mx.z = mx.z + mx.vz * dt;
-            return mx.life > mx.maxLife || dx * dx + dz * dz > r * r;
-         });
-
-         while (this.mistList.size() < target) {
+            m.x += m.vx * (double)dt;
+            m.z += m.vz * (double)dt;
+            return m.life > m.maxLife || dx * dx + dz * dz > (double)(r * r);
+        });
+        while (this.mistList.size() < target) {
             double angle = this.random.nextDouble() * Math.PI * 2.0;
-            double dist = Math.sqrt(this.random.nextDouble()) * (float)this.radius.get() * 0.85;
-            double x = center.field_1352 + Math.cos(angle) * dist;
-            double z = center.field_1350 + Math.sin(angle) * dist;
-            int ground = this.surfaceY(class_3532.method_15357(x), class_3532.method_15357(z));
-            RainModule.Mist m = new RainModule.Mist();
-            m.x = x;
-            m.z = z;
-            m.y = ground + this.random(0.05F, 0.9F);
-            m.size = this.random(2.2F, 5.6F);
-            m.maxLife = this.random(2.4F, 5.5F);
-            m.life = this.random(0.0F, 1.0F);
-            m.vx = this.random(-0.35F, 0.35F) * (float)this.wind.get();
-            m.vz = this.random(-0.35F, 0.35F) * (float)this.wind.get();
-            this.mistList.add(m);
-         }
-      }
-   }
+            double dist = Math.sqrt(this.random.nextDouble()) * (double)((float)this.radius.get()) * 0.85;
+            double x = center.x + Math.cos(angle) * dist;
+            double z = center.z + Math.sin(angle) * dist;
+            int ground = this.surfaceY(MathHelper.floor((double)x), MathHelper.floor((double)z));
+            Mist m2 = new Mist();
+            m2.x = x;
+            m2.z = z;
+            m2.y = (float)ground + this.random(0.05f, 0.9f);
+            m2.size = this.random(2.2f, 5.6f);
+            m2.maxLife = this.random(2.4f, 5.5f);
+            m2.life = this.random(0.0f, 1.0f);
+            m2.vx = this.random(-0.35f, 0.35f) * (float)this.wind.get();
+            m2.vz = this.random(-0.35f, 0.35f) * (float)this.wind.get();
+            this.mistList.add(m2);
+        }
+    }
 
-   private void updateLightning(float dt) {
-      if (!this.lightning.get()) {
-         this.flash = 0.0F;
-      } else {
-         this.flash = Math.max(0.0F, this.flash - dt * 3.4F);
-         this.nextFlashIn -= dt;
-         if (this.nextFlashIn <= 0.0F) {
-            this.flash = this.random(0.65F, 1.25F);
-            this.nextFlashIn = this.random(6.0F, 16.0F);
-         }
-      }
-   }
+    private void updateLightning(float dt) {
+        if (!this.lightning.get()) {
+            this.flash = 0.0f;
+            return;
+        }
+        this.flash = Math.max(0.0f, this.flash - dt * 3.4f);
+        this.nextFlashIn -= dt;
+        if (this.nextFlashIn <= 0.0f) {
+            this.flash = this.random(0.65f, 1.25f);
+            this.nextFlashIn = this.random(6.0f, 16.0f);
+        }
+    }
 
-   public void renderWetSurfaceFrame(class_4184 camera, Matrix4f viewMatrix, Matrix4f projectionMatrix, float tickDelta) {
-      if (this.isEnabled() && this.wetGround.get() && this.mc.field_1724 != null && this.mc.field_1687 != null) {
-         if (!this.onlyWhenRaining.get() || this.mc.field_1687.method_8419()) {
-            float[] rgb = this.resolveColor();
-            WetSurfaceRenderer.Parameters parameters = new WetSurfaceRenderer.Parameters();
-            parameters.wetness = (float)this.wetness.get();
-            parameters.puddleCoverage = (float)this.puddleCoverage.get();
-            parameters.reflectionStrength = (float)this.reflectionStrength.get();
-            parameters.maxDistance = (float)this.reflectionDistance.get();
-            parameters.rippleStrength = (float)this.rippleStrength.get();
-            parameters.rainAmount = class_3532.method_15363(0.55F + (float)this.density.get() * this.presetDensity() * 0.28F, 0.55F, 1.45F);
-            parameters.ripples = this.puddleRipples.get();
-            parameters.reflectionSteps = this.reflectionQuality.is("High") ? 16 : (this.reflectionQuality.is("Performance") ? 6 : 10);
-            parameters.themeR = rgb[0];
-            parameters.themeG = rgb[1];
-            parameters.themeB = rgb[2];
-            parameters.useThemeColor = this.colorMode.is("Theme") || this.colorMode.is("Custom");
-            float skyAngle = this.mc.field_1687.method_30274(tickDelta);
-            float radians = skyAngle * (float) (Math.PI * 2);
-            parameters.sunDirX = -((float)Math.sin(radians));
-            parameters.sunDirY = (float)Math.cos(radians);
-            parameters.sunDirZ = 0.0F;
-            parameters.ambientLight = this.ambientLight(camera);
-            parameters.lightningFlash = this.flash;
-            WetSurfaceRenderer.getInstance().apply(this.mc, camera, viewMatrix, projectionMatrix, parameters);
-         }
-      }
-   }
+    public void renderWetSurfaceFrame(Camera camera, Matrix4f viewMatrix, Matrix4f projectionMatrix, float tickDelta) {
+        if (!this.isEnabled() || !this.wetGround.get() || this.mc.player == null || this.mc.world == null) {
+            return;
+        }
+        if (this.onlyWhenRaining.get() && !this.mc.world.isRaining()) {
+            return;
+        }
+        float[] rgb = this.resolveColor();
+        WetSurfaceRenderer.Parameters parameters = new WetSurfaceRenderer.Parameters();
+        parameters.wetness = (float)this.wetness.get();
+        parameters.puddleCoverage = (float)this.puddleCoverage.get();
+        parameters.reflectionStrength = (float)this.reflectionStrength.get();
+        parameters.maxDistance = (float)this.reflectionDistance.get();
+        parameters.rippleStrength = (float)this.rippleStrength.get();
+        parameters.rainAmount = MathHelper.clamp((float)(0.55f + (float)this.density.get() * this.presetDensity() * 0.28f), (float)0.55f, (float)1.45f);
+        parameters.ripples = this.puddleRipples.get();
+        parameters.reflectionSteps = this.reflectionQuality.is("High") ? 16 : (this.reflectionQuality.is("Performance") ? 6 : 10);
+        parameters.themeR = rgb[0];
+        parameters.themeG = rgb[1];
+        parameters.themeB = rgb[2];
+        parameters.useThemeColor = this.colorMode.is("Theme") || this.colorMode.is("Custom");
+        float skyAngle = (float)((this.mc.world.getTimeOfDay()%24000L)/24000.0);
+        float radians = skyAngle * ((float)Math.PI * 2);
+        parameters.sunDirX = -((float)Math.sin(radians));
+        parameters.sunDirY = (float)Math.cos(radians);
+        parameters.sunDirZ = 0.0f;
+        parameters.ambientLight = this.ambientLight(camera);
+        parameters.lightningFlash = this.flash;
+        WetSurfaceRenderer.getInstance().apply(this.mc, camera, viewMatrix, projectionMatrix, parameters);
+    }
 
-   public void onWorldRender(WorldRenderContext context) {
-      if (this.isEnabled() && this.mc.field_1724 != null && this.mc.field_1687 != null && this.mc.field_1773 != null) {
-         if (this.onlyWhenRaining.get() && !this.mc.field_1687.method_8419()) {
+    public void onWorldRender(WorldRenderContext context) {
+        if (!this.isEnabled() || this.mc.player == null || this.mc.world == null || this.mc.gameRenderer == null) {
+            return;
+        }
+        if (this.onlyWhenRaining.get() && !this.mc.world.isRaining()) {
             this.clearAll();
-         } else {
-            class_4184 camera = context.camera();
-            if (camera != null) {
-               float tickDelta = context.tickCounter().method_60637(false);
-               if (this.wetGround.get()) {
-                  class_4587 viewStack = new class_4587();
-                  viewStack.method_22907(class_7833.field_40714.rotationDegrees(camera.method_19329()));
-                  viewStack.method_22907(class_7833.field_40716.rotationDegrees(camera.method_19330() + 180.0F));
-                  Matrix4f viewMatrix = viewStack.method_23760().method_23761();
-                  Matrix4f projectionMatrix = context.projectionMatrix();
-                  this.renderWetSurfaceFrame(camera, viewMatrix, projectionMatrix, tickDelta);
-               }
-
-               long now = System.nanoTime();
-               if (this.lastFrameNanos == 0L) {
-                  this.lastFrameNanos = now;
-               }
-
-               float dt = (float)((now - this.lastFrameNanos) / 1.0E9);
-               this.lastFrameNanos = now;
-               dt = class_3532.method_15363(dt, 0.0F, 0.05F);
-               this.clock += dt;
-               class_243 cam = camera.method_19326();
-               this.updateDrops(cam, dt);
-               this.updateSplashes(dt);
-               this.updateDroplets(dt);
-               this.updateMist(cam, dt);
-               this.updateLightning(dt);
-               if (!this.drops.isEmpty() || !this.splashList.isEmpty() || !this.dropletList.isEmpty() || !this.mistList.isEmpty()) {
-                  float[] rgb = this.resolveColor();
-                  float ambient = this.ambientLight(camera);
-                  float brightnessMul = class_3532.method_15363(ambient + this.flash * 0.95F, 0.0F, 1.75F);
-                  float alphaMul = (float)this.opacity.get() * brightnessMul;
-                  class_4587 matrices = context.matrixStack();
-                  RenderSystem.enableBlend();
-                  RenderSystem.enableDepthTest();
-                  RenderSystem.depthMask(false);
-                  RenderSystem.disableCull();
-                  RenderSystem.setShader(class_10142.field_53876);
-                  RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE_MINUS_SRC_ALPHA);
-                  if (this.groundMist.get()) {
-                     this.drawMist(matrices, camera, cam, rgb, alphaMul);
-                  }
-
-                  this.drawStreaks(matrices, camera, cam, rgb, alphaMul, false);
-                  if (this.splashes.get()) {
-                     this.drawRipples(matrices, cam, rgb, alphaMul);
-                  }
-
-                  RenderSystem.blendFunc(class_4535.SRC_ALPHA, class_4534.ONE);
-                  this.drawStreaks(matrices, camera, cam, rgb, alphaMul, true);
-                  if (this.splashes.get()) {
-                     this.drawCrowns(matrices, camera, cam, rgb, alphaMul);
-                     if (this.droplets.get()) {
-                        this.drawDroplets(matrices, camera, cam, rgb, alphaMul);
-                     }
-                  }
-
-                  RenderSystem.depthMask(true);
-                  RenderSystem.enableCull();
-                  RenderSystem.defaultBlendFunc();
-                  RenderSystem.disableBlend();
-               }
+            return;
+        }
+        Camera camera = context.gameRenderer().getCamera();
+        if (camera == null) {
+            return;
+        }
+        float tickDelta = MinecraftClient.getInstance().getRenderTickCounter().getTickProgress(false);
+        if (this.wetGround.get()) {
+            MatrixStack viewStack = new MatrixStack();
+            viewStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
+            viewStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw() + 180.0f));
+            Matrix4f viewMatrix = viewStack.peek().getPositionMatrix();
+            Matrix4f projectionMatrix = RenderSystem.getProjectionMatrix();
+            this.renderWetSurfaceFrame(camera, viewMatrix, projectionMatrix, tickDelta);
+        }
+        long now = System.nanoTime();
+        if (this.lastFrameNanos == 0L) {
+            this.lastFrameNanos = now;
+        }
+        float dt = (float)((double)(now - this.lastFrameNanos) / 1.0E9);
+        this.lastFrameNanos = now;
+        dt = MathHelper.clamp((float)dt, (float)0.0f, (float)0.05f);
+        this.clock += dt;
+        Vec3d cam = camera.getCameraPos();
+        this.updateDrops(cam, dt);
+        this.updateSplashes(dt);
+        this.updateDroplets(dt);
+        this.updateMist(cam, dt);
+        this.updateLightning(dt);
+        if (this.drops.isEmpty() && this.splashList.isEmpty() && this.dropletList.isEmpty() && this.mistList.isEmpty()) {
+            return;
+        }
+        float[] rgb = this.resolveColor();
+        float ambient = this.ambientLight(camera);
+        float brightnessMul = MathHelper.clamp((float)(ambient + this.flash * 0.95f), (float)0.0f, (float)1.75f);
+        float alphaMul = (float)this.opacity.get() * brightnessMul;
+        MatrixStack matrices = context.matrices();
+        RenderSystem.enableBlend();
+        RenderSystem.enableDepthTest();
+        RenderSystem.depthMask((boolean)false);
+        RenderSystem.disableCull();
+        RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE_MINUS_SRC_ALPHA);
+        if (this.groundMist.get()) {
+            this.drawMist(matrices, camera, cam, rgb, alphaMul);
+        }
+        this.drawStreaks(matrices, camera, cam, rgb, alphaMul, false);
+        if (this.splashes.get()) {
+            this.drawRipples(matrices, cam, rgb, alphaMul);
+        }
+        RenderSystem.blendFunc((com.mojang.blaze3d.platform.SourceFactor)com.mojang.blaze3d.platform.SourceFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.DestFactor)com.mojang.blaze3d.platform.DestFactor.ONE);
+        this.drawStreaks(matrices, camera, cam, rgb, alphaMul, true);
+        if (this.splashes.get()) {
+            this.drawCrowns(matrices, camera, cam, rgb, alphaMul);
+            if (this.droplets.get()) {
+                this.drawDroplets(matrices, camera, cam, rgb, alphaMul);
             }
-         }
-      }
-   }
+        }
+        RenderSystem.depthMask((boolean)true);
+        RenderSystem.enableCull();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.disableBlend();
+    }
 
-   private void drawStreaks(class_4587 ms, class_4184 camera, class_243 cam, float[] rgb, float alphaMul, boolean highlight) {
-      if (!this.drops.isEmpty()) {
-         class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27382, class_290.field_1576);
-         float sizeMul = (float)this.dropSize.get();
-         float r = (float)this.radius.get();
-         float fadeStart = r * 0.62F;
-         int i = 0;
-
-         for (int size = this.drops.size(); i < size; i++) {
-            RainModule.Drop d = this.drops.get(i);
-            double dx = d.x - cam.field_1352;
-            double dy = d.y - cam.field_1351;
-            double dz = d.z - cam.field_1350;
+    private void drawStreaks(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul, boolean highlight) {
+        if (this.drops.isEmpty()) {
+            return;
+        }
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        float sizeMul = (float)this.dropSize.get();
+        float r = (float)this.radius.get();
+        float fadeStart = r * 0.62f;
+        int size = this.drops.size();
+        for (int i = 0; i < size; ++i) {
+            float distanceFade;
+            Drop d = this.drops.get(i);
+            double dx = d.x - cam.x;
+            double dy = d.y - cam.y;
+            double dz = d.z - cam.z;
             double distSq = dx * dx + dy * dy + dz * dz;
             double dist = Math.sqrt(distSq);
-            if (!(dist > r + 4.0)) {
-               float distanceFade = dist <= fadeStart ? 1.0F : 1.0F - class_3532.method_15363((float)((dist - fadeStart) / (r - fadeStart + 1.0F)), 0.0F, 1.0F);
-               if (!(distanceFade <= 0.02F)) {
-                  float nearFade = dist < 0.7 ? (float)(dist / 0.7) : 1.0F;
-                  double speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
-                  if (!(speed < 1.0E-4)) {
-                     float length = (float)class_3532.method_15350(speed * 0.055 * sizeMul, 0.16, 2.6);
-                     float width = (float)(0.014 + 0.019 * d.mass) * sizeMul * (highlight ? 0.45F : 1.0F);
-                     float alpha = alphaMul * d.brightness * distanceFade * nearFade * (highlight ? 0.35F : 0.45F);
-                     if (!(alpha <= 0.006F)) {
-                        alpha = Math.min(alpha, 0.95F);
-                        float yawRad = (float)Math.toRadians(camera.method_19330());
-                        double rightX = Math.cos(yawRad);
-                        double rightZ = Math.sin(yawRad);
-                        double horizontal = d.vx * rightX + d.vz * rightZ;
-                        float tilt = (float)Math.toDegrees(Math.atan2(horizontal, Math.abs(d.vy) + 1.0E-4));
-                        tilt = class_3532.method_15363(tilt, -55.0F, 55.0F);
-                        ms.method_22903();
-                        ms.method_22904(dx, dy, dz);
-                        ms.method_22907(class_7833.field_40716.rotationDegrees(180.0F - camera.method_19330()));
-                        ms.method_22907(class_7833.field_40718.rotationDegrees(-tilt));
-                        Matrix4f m = ms.method_23760().method_23761();
-                        float half = width * 0.5F;
-                        float top = length * 0.5F;
-                        float bottom = -length * 0.5F;
-                        float headAlpha = alpha;
-                        float tailAlpha = 0.0F;
-                        float headWidth = half;
-                        float tailWidth = half * 0.35F;
-                        buffer.method_22918(m, -tailWidth, top, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], tailAlpha);
-                        buffer.method_22918(m, tailWidth, top, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], tailAlpha);
-                        buffer.method_22918(m, headWidth, bottom, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], headAlpha);
-                        buffer.method_22918(m, -headWidth, bottom, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], headAlpha);
-                        if (!highlight) {
-                           float halo = half * 2.6F;
-                           float haloAlpha = alpha * 0.24F;
-                           buffer.method_22918(m, -halo * 0.5F, top, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-                           buffer.method_22918(m, halo * 0.5F, top, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-                           buffer.method_22918(m, halo, bottom, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], haloAlpha);
-                           buffer.method_22918(m, -halo, bottom, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], haloAlpha);
-                        } else {
-                           float lensTop = bottom + length * 0.34F;
-                           float lensWidth = half * 1.25F;
-                           buffer.method_22918(m, -lensWidth, lensTop, 0.0F).method_22915(1.0F, 1.0F, 1.0F, 0.0F);
-                           buffer.method_22918(m, lensWidth, lensTop, 0.0F).method_22915(1.0F, 1.0F, 1.0F, 0.0F);
-                           buffer.method_22918(m, lensWidth, bottom, 0.0F).method_22915(1.0F, 1.0F, 1.0F, alpha * 0.9F);
-                           buffer.method_22918(m, -lensWidth, bottom, 0.0F).method_22915(1.0F, 1.0F, 1.0F, alpha * 0.9F);
-                        }
-
-                        ms.method_22909();
-                     }
-                  }
-               }
+            if (dist > (double)r + 4.0) continue;
+            float f = distanceFade = dist <= (double)fadeStart ? 1.0f : 1.0f - MathHelper.clamp((float)((float)((dist - (double)fadeStart) / (double)(r - fadeStart + 1.0f))), (float)0.0f, (float)1.0f);
+            if (distanceFade <= 0.02f) continue;
+            float nearFade = dist < 0.7 ? (float)(dist / 0.7) : 1.0f;
+            double speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
+            if (speed < 1.0E-4) continue;
+            float length = (float)MathHelper.clamp((double)(speed * 0.055 * (double)sizeMul), (double)0.16, (double)2.6);
+            float width = (float)(0.014 + 0.019 * d.mass) * sizeMul * (highlight ? 0.45f : 1.0f);
+            float alpha = alphaMul * d.brightness * distanceFade * nearFade * (highlight ? 0.35f : 0.45f);
+            if (alpha <= 0.006f) continue;
+            alpha = Math.min(alpha, 0.95f);
+            float yawRad = (float)Math.toRadians(camera.getYaw());
+            double rightX = Math.cos(yawRad);
+            double rightZ = Math.sin(yawRad);
+            double horizontal = d.vx * rightX + d.vz * rightZ;
+            float tilt = (float)Math.toDegrees(Math.atan2(horizontal, Math.abs(d.vy) + 1.0E-4));
+            tilt = MathHelper.clamp((float)tilt, (float)-55.0f, (float)55.0f);
+            ms.push();
+            ms.translate(dx, dy, dz);
+            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
+            ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-tilt));
+            Matrix4f m = ms.peek().getPositionMatrix();
+            float half = width * 0.5f;
+            float top = length * 0.5f;
+            float bottom = -length * 0.5f;
+            float headAlpha = alpha;
+            float tailAlpha = 0.0f;
+            float headWidth = half;
+            float tailWidth = half * 0.35f;
+            buffer.vertex(m, -tailWidth, top, 0.0f).color(rgb[0], rgb[1], rgb[2], tailAlpha);
+            buffer.vertex(m, tailWidth, top, 0.0f).color(rgb[0], rgb[1], rgb[2], tailAlpha);
+            buffer.vertex(m, headWidth, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], headAlpha);
+            buffer.vertex(m, -headWidth, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], headAlpha);
+            if (!highlight) {
+                float halo = half * 2.6f;
+                float haloAlpha = alpha * 0.24f;
+                buffer.vertex(m, -halo * 0.5f, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.vertex(m, halo * 0.5f, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.vertex(m, halo, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], haloAlpha);
+                buffer.vertex(m, -halo, bottom, 0.0f).color(rgb[0], rgb[1], rgb[2], haloAlpha);
+            } else {
+                float lensTop = bottom + length * 0.34f;
+                float lensWidth = half * 1.25f;
+                buffer.vertex(m, -lensWidth, lensTop, 0.0f).color(1.0f, 1.0f, 1.0f, 0.0f);
+                buffer.vertex(m, lensWidth, lensTop, 0.0f).color(1.0f, 1.0f, 1.0f, 0.0f);
+                buffer.vertex(m, lensWidth, bottom, 0.0f).color(1.0f, 1.0f, 1.0f, alpha * 0.9f);
+                buffer.vertex(m, -lensWidth, bottom, 0.0f).color(1.0f, 1.0f, 1.0f, alpha * 0.9f);
             }
-         }
+            ms.pop();
+        }
+        BuiltBuffer built = buffer.endNullable();
+        if (built != null) {
+            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+        }
+    }
 
-         class_9801 built = buffer.method_60794();
-         if (built != null) {
-            class_286.method_43433(built);
-         }
-      }
-   }
-
-   private void drawRipples(class_4587 ms, class_243 cam, float[] rgb, float alphaMul) {
-      if (!this.splashList.isEmpty()) {
-         class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27382, class_290.field_1576);
-         int i = 0;
-
-         for (int size = this.splashList.size(); i < size; i++) {
-            RainModule.Splash s = this.splashList.get(i);
-            float progress = class_3532.method_15363(s.life / s.maxLife, 0.0F, 1.0F);
-            float eased = 1.0F - (1.0F - progress) * (1.0F - progress);
-            float outer = s.scale * (0.18F + eased * (s.water ? 1.35F : 0.85F));
-            float inner = outer * (0.55F + 0.35F * eased);
-            float alpha = alphaMul * (1.0F - progress) * (s.water ? 0.55F : 0.42F);
-            if (!(alpha <= 0.01F)) {
-               double dx = s.x - cam.field_1352;
-               double dy = s.y - cam.field_1351 + 0.015;
-               double dz = s.z - cam.field_1350;
-               ms.method_22903();
-               ms.method_22904(dx, dy, dz);
-               Matrix4f m = ms.method_23760().method_23761();
-
-               for (int seg = 0; seg < 16; seg++) {
-                  double a0 = (Math.PI / 8) * seg;
-                  double a1 = (Math.PI / 8) * (seg + 1);
-                  float ix0 = (float)(Math.cos(a0) * inner);
-                  float iz0 = (float)(Math.sin(a0) * inner);
-                  float ix1 = (float)(Math.cos(a1) * inner);
-                  float iz1 = (float)(Math.sin(a1) * inner);
-                  float ox0 = (float)(Math.cos(a0) * outer);
-                  float oz0 = (float)(Math.sin(a0) * outer);
-                  float ox1 = (float)(Math.cos(a1) * outer);
-                  float oz1 = (float)(Math.sin(a1) * outer);
-                  buffer.method_22918(m, ix0, 0.0F, iz0).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-                  buffer.method_22918(m, ix1, 0.0F, iz1).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-                  buffer.method_22918(m, ox1, 0.0F, oz1).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-                  buffer.method_22918(m, ox0, 0.0F, oz0).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-               }
-
-               ms.method_22909();
+    private void drawRipples(MatrixStack ms, Vec3d cam, float[] rgb, float alphaMul) {
+        if (this.splashList.isEmpty()) {
+            return;
+        }
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        int size = this.splashList.size();
+        for (int i = 0; i < size; ++i) {
+            Splash s = this.splashList.get(i);
+            float progress = MathHelper.clamp((float)(s.life / s.maxLife), (float)0.0f, (float)1.0f);
+            float eased = 1.0f - (1.0f - progress) * (1.0f - progress);
+            float outer = s.scale * (0.18f + eased * (s.water ? 1.35f : 0.85f));
+            float inner = outer * (0.55f + 0.35f * eased);
+            float alpha = alphaMul * (1.0f - progress) * (s.water ? 0.55f : 0.42f);
+            if (alpha <= 0.01f) continue;
+            double dx = s.x - cam.x;
+            double dy = s.y - cam.y + 0.015;
+            double dz = s.z - cam.z;
+            ms.push();
+            ms.translate(dx, dy, dz);
+            Matrix4f m = ms.peek().getPositionMatrix();
+            for (int seg = 0; seg < 16; ++seg) {
+                double a0 = 0.39269908169872414 * (double)seg;
+                double a1 = 0.39269908169872414 * (double)(seg + 1);
+                float ix0 = (float)(Math.cos(a0) * (double)inner);
+                float iz0 = (float)(Math.sin(a0) * (double)inner);
+                float ix1 = (float)(Math.cos(a1) * (double)inner);
+                float iz1 = (float)(Math.sin(a1) * (double)inner);
+                float ox0 = (float)(Math.cos(a0) * (double)outer);
+                float oz0 = (float)(Math.sin(a0) * (double)outer);
+                float ox1 = (float)(Math.cos(a1) * (double)outer);
+                float oz1 = (float)(Math.sin(a1) * (double)outer);
+                buffer.vertex(m, ix0, 0.0f, iz0).color(rgb[0], rgb[1], rgb[2], alpha);
+                buffer.vertex(m, ix1, 0.0f, iz1).color(rgb[0], rgb[1], rgb[2], alpha);
+                buffer.vertex(m, ox1, 0.0f, oz1).color(rgb[0], rgb[1], rgb[2], 0.0f);
+                buffer.vertex(m, ox0, 0.0f, oz0).color(rgb[0], rgb[1], rgb[2], 0.0f);
             }
-         }
+            ms.pop();
+        }
+        BuiltBuffer built = buffer.endNullable();
+        if (built != null) {
+            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+        }
+    }
 
-         class_9801 built = buffer.method_60794();
-         if (built != null) {
-            class_286.method_43433(built);
-         }
-      }
-   }
+    private void drawCrowns(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul) {
+        if (this.splashList.isEmpty()) {
+            return;
+        }
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        int size = this.splashList.size();
+        for (int i = 0; i < size; ++i) {
+            Splash s = this.splashList.get(i);
+            float progress = MathHelper.clamp((float)(s.life / s.maxLife), (float)0.0f, (float)1.0f);
+            if (progress > 0.55f) continue;
+            float local = progress / 0.55f;
+            float height = s.scale * (0.55f * (float)Math.sin((double)local * Math.PI));
+            float alpha = alphaMul * (1.0f - local) * 0.35f;
+            if (alpha <= 0.01f || height <= 0.005f) continue;
+            ms.push();
+            ms.translate(s.x - cam.x, s.y - cam.y + 0.02, s.z - cam.z);
+            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
+            Matrix4f m = ms.peek().getPositionMatrix();
+            float base = s.scale * 0.16f;
+            buffer.vertex(m, -base * 0.25f, height, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.vertex(m, base * 0.25f, height, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.vertex(m, base, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
+            buffer.vertex(m, -base, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
+            ms.pop();
+        }
+        BuiltBuffer built = buffer.endNullable();
+        if (built != null) {
+            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+        }
+    }
 
-   private void drawCrowns(class_4587 ms, class_4184 camera, class_243 cam, float[] rgb, float alphaMul) {
-      if (!this.splashList.isEmpty()) {
-         class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27382, class_290.field_1576);
-         int i = 0;
+    private void drawDroplets(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul) {
+        if (this.dropletList.isEmpty()) {
+            return;
+        }
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        float sizeMul = (float)this.dropSize.get();
+        int size = this.dropletList.size();
+        for (int i = 0; i < size; ++i) {
+            Droplet d = this.dropletList.get(i);
+            float progress = MathHelper.clamp((float)(d.life / d.maxLife), (float)0.0f, (float)1.0f);
+            float alpha = alphaMul * (1.0f - progress) * 0.55f;
+            if (alpha <= 0.01f) continue;
+            double speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
+            float length = (float)MathHelper.clamp((double)(speed * 0.03 * (double)sizeMul), (double)0.04, (double)0.4);
+            float width = 0.016f * sizeMul;
+            float yawRad = (float)Math.toRadians(camera.getYaw());
+            double horizontal = d.vx * Math.cos(yawRad) + d.vz * Math.sin(yawRad);
+            float tilt = (float)Math.toDegrees(Math.atan2(horizontal, -d.vy + 1.0E-4));
+            ms.push();
+            ms.translate(d.x - cam.x, d.y - cam.y, d.z - cam.z);
+            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
+            ms.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(-tilt));
+            Matrix4f m = ms.peek().getPositionMatrix();
+            buffer.vertex(m, -width * 0.4f, length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.vertex(m, width * 0.4f, length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.vertex(m, width, -length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
+            buffer.vertex(m, -width, -length * 0.5f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
+            ms.pop();
+        }
+        BuiltBuffer built = buffer.endNullable();
+        if (built != null) {
+            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+        }
+    }
 
-         for (int size = this.splashList.size(); i < size; i++) {
-            RainModule.Splash s = this.splashList.get(i);
-            float progress = class_3532.method_15363(s.life / s.maxLife, 0.0F, 1.0F);
-            if (!(progress > 0.55F)) {
-               float local = progress / 0.55F;
-               float height = s.scale * (0.55F * (float)Math.sin(local * Math.PI));
-               float alpha = alphaMul * (1.0F - local) * 0.35F;
-               if (!(alpha <= 0.01F) && !(height <= 0.005F)) {
-                  ms.method_22903();
-                  ms.method_22904(s.x - cam.field_1352, s.y - cam.field_1351 + 0.02, s.z - cam.field_1350);
-                  ms.method_22907(class_7833.field_40716.rotationDegrees(180.0F - camera.method_19330()));
-                  Matrix4f m = ms.method_23760().method_23761();
-                  float base = s.scale * 0.16F;
-                  buffer.method_22918(m, -base * 0.25F, height, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-                  buffer.method_22918(m, base * 0.25F, height, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-                  buffer.method_22918(m, base, 0.0F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-                  buffer.method_22918(m, -base, 0.0F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-                  ms.method_22909();
-               }
-            }
-         }
+    private void drawMist(MatrixStack ms, Camera camera, Vec3d cam, float[] rgb, float alphaMul) {
+        if (this.mistList.isEmpty()) {
+            return;
+        }
+        BufferBuilder buffer = Tessellator.getInstance().begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        int size = this.mistList.size();
+        for (int i = 0; i < size; ++i) {
+            Mist mist = this.mistList.get(i);
+            float progress = MathHelper.clamp((float)(mist.life / mist.maxLife), (float)0.0f, (float)1.0f);
+            float fade = (float)Math.sin((double)progress * Math.PI);
+            float alpha = alphaMul * fade * 0.055f;
+            if (alpha <= 0.004f) continue;
+            ms.push();
+            ms.translate(mist.x - cam.x, mist.y - cam.y, mist.z - cam.z);
+            ms.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - camera.getYaw()));
+            Matrix4f m = ms.peek().getPositionMatrix();
+            float half = mist.size * 0.5f;
+            float top = mist.size * 0.42f;
+            buffer.vertex(m, -half, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.vertex(m, half, top, 0.0f).color(rgb[0], rgb[1], rgb[2], 0.0f);
+            buffer.vertex(m, half, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
+            buffer.vertex(m, -half, 0.0f, 0.0f).color(rgb[0], rgb[1], rgb[2], alpha);
+            ms.pop();
+        }
+        BuiltBuffer built = buffer.endNullable();
+        if (built != null) {
+            BufferRenderer.drawWithGlobalProgram((BuiltBuffer)built);
+        }
+    }
 
-         class_9801 built = buffer.method_60794();
-         if (built != null) {
-            class_286.method_43433(built);
-         }
-      }
-   }
+    private float ambientLight(Camera camera) {
+        try {
+            int light = this.mc.world.getLightLevel(camera.getBlockPos());
+            return MathHelper.clamp((float)((float)light / 15.0f), (float)0.3f, (float)1.0f);
+        }
+        catch (Throwable ignored) {
+            return 1.0f;
+        }
+    }
 
-   private void drawDroplets(class_4587 ms, class_4184 camera, class_243 cam, float[] rgb, float alphaMul) {
-      if (!this.dropletList.isEmpty()) {
-         class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27382, class_290.field_1576);
-         float sizeMul = (float)this.dropSize.get();
-         int i = 0;
+    @Environment(value=EnvType.CLIENT)
+    private static final class Drop {
+        double x;
+        double y;
+        double z;
+        double lastX;
+        double lastY;
+        double lastZ;
+        double vx;
+        double vy;
+        double vz;
+        double mass = 1.0;
+        double ground;
+        float phase;
+        float brightness = 1.0f;
+        boolean dead;
 
-         for (int size = this.dropletList.size(); i < size; i++) {
-            RainModule.Droplet d = this.dropletList.get(i);
-            float progress = class_3532.method_15363(d.life / d.maxLife, 0.0F, 1.0F);
-            float alpha = alphaMul * (1.0F - progress) * 0.55F;
-            if (!(alpha <= 0.01F)) {
-               double speed = Math.sqrt(d.vx * d.vx + d.vy * d.vy + d.vz * d.vz);
-               float length = (float)class_3532.method_15350(speed * 0.03 * sizeMul, 0.04, 0.4);
-               float width = 0.016F * sizeMul;
-               float yawRad = (float)Math.toRadians(camera.method_19330());
-               double horizontal = d.vx * Math.cos(yawRad) + d.vz * Math.sin(yawRad);
-               float tilt = (float)Math.toDegrees(Math.atan2(horizontal, -d.vy + 1.0E-4));
-               ms.method_22903();
-               ms.method_22904(d.x - cam.field_1352, d.y - cam.field_1351, d.z - cam.field_1350);
-               ms.method_22907(class_7833.field_40716.rotationDegrees(180.0F - camera.method_19330()));
-               ms.method_22907(class_7833.field_40718.rotationDegrees(-tilt));
-               Matrix4f m = ms.method_23760().method_23761();
-               buffer.method_22918(m, -width * 0.4F, length * 0.5F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-               buffer.method_22918(m, width * 0.4F, length * 0.5F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-               buffer.method_22918(m, width, -length * 0.5F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-               buffer.method_22918(m, -width, -length * 0.5F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-               ms.method_22909();
-            }
-         }
+        private Drop() {
+        }
+    }
 
-         class_9801 built = buffer.method_60794();
-         if (built != null) {
-            class_286.method_43433(built);
-         }
-      }
-   }
+    @Environment(value=EnvType.CLIENT)
+    private static final class Splash {
+        double x;
+        double y;
+        double z;
+        float life;
+        float maxLife = 0.4f;
+        float scale = 0.4f;
+        boolean water;
 
-   private void drawMist(class_4587 ms, class_4184 camera, class_243 cam, float[] rgb, float alphaMul) {
-      if (!this.mistList.isEmpty()) {
-         class_287 buffer = class_289.method_1348().method_60827(class_5596.field_27382, class_290.field_1576);
-         int i = 0;
+        private Splash() {
+        }
+    }
 
-         for (int size = this.mistList.size(); i < size; i++) {
-            RainModule.Mist mist = this.mistList.get(i);
-            float progress = class_3532.method_15363(mist.life / mist.maxLife, 0.0F, 1.0F);
-            float fade = (float)Math.sin(progress * Math.PI);
-            float alpha = alphaMul * fade * 0.055F;
-            if (!(alpha <= 0.004F)) {
-               ms.method_22903();
-               ms.method_22904(mist.x - cam.field_1352, mist.y - cam.field_1351, mist.z - cam.field_1350);
-               ms.method_22907(class_7833.field_40716.rotationDegrees(180.0F - camera.method_19330()));
-               Matrix4f m = ms.method_23760().method_23761();
-               float half = mist.size * 0.5F;
-               float top = mist.size * 0.42F;
-               buffer.method_22918(m, -half, top, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-               buffer.method_22918(m, half, top, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], 0.0F);
-               buffer.method_22918(m, half, 0.0F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-               buffer.method_22918(m, -half, 0.0F, 0.0F).method_22915(rgb[0], rgb[1], rgb[2], alpha);
-               ms.method_22909();
-            }
-         }
+    @Environment(value=EnvType.CLIENT)
+    private static final class Droplet {
+        double x;
+        double y;
+        double z;
+        double lastX;
+        double lastY;
+        double lastZ;
+        double vx;
+        double vy;
+        double vz;
+        float life;
+        float maxLife = 0.4f;
 
-         class_9801 built = buffer.method_60794();
-         if (built != null) {
-            class_286.method_43433(built);
-         }
-      }
-   }
+        private Droplet() {
+        }
+    }
 
-   private float ambientLight(class_4184 camera) {
-      try {
-         int light = this.mc.field_1687.method_22339(camera.method_19328());
-         return class_3532.method_15363(light / 15.0F, 0.3F, 1.0F);
-      } catch (Throwable ignored) {
-         return 1.0F;
-      }
-   }
+    @Environment(value=EnvType.CLIENT)
+    private static final class Mist {
+        double x;
+        double y;
+        double z;
+        double vx;
+        double vz;
+        float size = 3.0f;
+        float life;
+        float maxLife = 4.0f;
 
-   @Environment(EnvType.CLIENT)
-   private static final class Drop {
-      double x;
-      double y;
-      double z;
-      double prevX;
-      double prevY;
-      double prevZ;
-      double vx;
-      double vy;
-      double vz;
-      double mass = 1.0;
-      double ground;
-      float phase;
-      float brightness = 1.0F;
-      boolean dead;
-   }
-
-   @Environment(EnvType.CLIENT)
-   private static final class Droplet {
-      double x;
-      double y;
-      double z;
-      double prevX;
-      double prevY;
-      double prevZ;
-      double vx;
-      double vy;
-      double vz;
-      float life;
-      float maxLife = 0.4F;
-   }
-
-   @Environment(EnvType.CLIENT)
-   private static final class Mist {
-      double x;
-      double y;
-      double z;
-      double vx;
-      double vz;
-      float size = 3.0F;
-      float life;
-      float maxLife = 4.0F;
-   }
-
-   @Environment(EnvType.CLIENT)
-   private static final class Splash {
-      double x;
-      double y;
-      double z;
-      float life;
-      float maxLife = 0.4F;
-      float scale = 0.4F;
-      boolean water;
-   }
+        private Mist() {
+        }
+    }
 }
+

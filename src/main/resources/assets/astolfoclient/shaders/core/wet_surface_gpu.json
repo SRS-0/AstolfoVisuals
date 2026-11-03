@@ -1,0 +1,382 @@
+{
+  "screen": true,
+  "blockSize": 368,
+  "uniforms": [
+    {
+      "name": "u_Resolution",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec2",
+      "length": 1,
+      "components": 2,
+      "offset": 0,
+      "stride": 8
+    },
+    {
+      "name": "u_ViewMatrix",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 16,
+      "stride": 64
+    },
+    {
+      "name": "u_ProjectionMatrix",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 80,
+      "stride": 64
+    },
+    {
+      "name": "u_InverseProjectionMatrix",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 144,
+      "stride": 64
+    },
+    {
+      "name": "u_InverseViewMatrix",
+      "type": "matrix4x4",
+      "count": 16,
+      "values": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "mat4",
+      "length": 1,
+      "components": 16,
+      "offset": 208,
+      "stride": 64
+    },
+    {
+      "name": "u_SunDir",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec3",
+      "length": 1,
+      "components": 3,
+      "offset": 272,
+      "stride": 12
+    },
+    {
+      "name": "u_CameraPos",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec3",
+      "length": 1,
+      "components": 3,
+      "offset": 288,
+      "stride": 12
+    },
+    {
+      "name": "u_Time",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 300,
+      "stride": 4
+    },
+    {
+      "name": "u_Wetness",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 304,
+      "stride": 4
+    },
+    {
+      "name": "u_PuddleCoverage",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 308,
+      "stride": 4
+    },
+    {
+      "name": "u_ReflectionStrength",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 312,
+      "stride": 4
+    },
+    {
+      "name": "u_MaxDistance",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 316,
+      "stride": 4
+    },
+    {
+      "name": "u_RippleStrength",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 320,
+      "stride": 4
+    },
+    {
+      "name": "u_RainAmount",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 324,
+      "stride": 4
+    },
+    {
+      "name": "u_AmbientLight",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 328,
+      "stride": 4
+    },
+    {
+      "name": "u_LightningFlash",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "float",
+      "length": 1,
+      "components": 1,
+      "offset": 332,
+      "stride": 4
+    },
+    {
+      "name": "u_ReflectionSteps",
+      "type": "int",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "int",
+      "length": 1,
+      "components": 1,
+      "offset": 336,
+      "stride": 4
+    },
+    {
+      "name": "u_Ripples",
+      "type": "int",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "int",
+      "length": 1,
+      "components": 1,
+      "offset": 340,
+      "stride": 4
+    },
+    {
+      "name": "u_ThemeColor",
+      "type": "float",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "vec3",
+      "length": 1,
+      "components": 3,
+      "offset": 352,
+      "stride": 12
+    },
+    {
+      "name": "u_UseThemeColor",
+      "type": "int",
+      "count": 4,
+      "values": [
+        0,
+        0,
+        0,
+        0
+      ],
+      "originalType": "int",
+      "length": 1,
+      "components": 1,
+      "offset": 364,
+      "stride": 4
+    }
+  ],
+  "samplers": [
+    {
+      "name": "u_SceneTexture"
+    },
+    {
+      "name": "u_DepthTexture"
+    }
+  ]
+}

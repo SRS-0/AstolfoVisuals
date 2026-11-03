@@ -4,107 +4,98 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.List;
 import java.util.function.Consumer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_2561;
-import net.minecraft.class_339;
-import net.minecraft.class_342;
-import net.minecraft.class_364;
-import net.minecraft.class_4185;
-import net.minecraft.class_437;
-import ru.vidtu.ias.IAS;
-import ru.vidtu.ias.account.OfflineAccount;
-import ru.vidtu.ias.config.IASStorage;
+import net.minecraft.client.gui.Element;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.text.Text;
+import xyz.angames.astolfoclient.client.util.RandomNameGenerator;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class IASAccountHelper {
-   public static void onScreenInit(class_437 screen, Consumer<class_4185> buttonAdder) {
-      if (screen != null && buttonAdder != null) {
-         String className = screen.getClass().getName();
-         if (className.contains("ias") && (className.contains("Account") || className.contains("Switcher"))) {
-            rebalanceAndAddRandomButton(screen, buttonAdder);
-         }
-      }
-   }
+    public static void onScreenInit(Screen screen, Consumer<ButtonWidget> buttonAdder) {
+        if (screen == null || buttonAdder == null) {
+            return;
+        }
+        String className = screen.getClass().getName();
+        if (className.contains("ias") && (className.contains("Account") || className.contains("Switcher"))) {
+            IASAccountHelper.rebalanceAndAddRandomButton(screen, buttonAdder);
+        }
+    }
 
-   private static void rebalanceAndAddRandomButton(class_437 screen, Consumer<class_4185> buttonAdder) {
-      int targetRowY = screen.field_22790 - 48;
-      int btnHeight = 20;
-      int btnWidth = 74;
-      int gap = 4;
-      int startX = screen.field_22789 / 2 - 154;
-      List<class_339> topRowWidgets = new ArrayList<>();
-
-      try {
-         for (class_364 child : screen.method_25396()) {
-            if (child instanceof class_339 widget && widget.method_46427() >= screen.field_22790 - 60 && widget.method_46427() <= screen.field_22790 - 35) {
-               topRowWidgets.add(widget);
+    private static void rebalanceAndAddRandomButton(Screen screen, Consumer<ButtonWidget> buttonAdder) {
+        int targetRowY = screen.height - 48;
+        int btnHeight = 20;
+        int btnWidth = 74;
+        int gap = 4;
+        int startX = screen.width / 2 - 154;
+        ArrayList<ClickableWidget> topRowWidgets = new ArrayList<ClickableWidget>();
+        try {
+            for (Element child : screen.children()) {
+                ClickableWidget widget;
+                if (!(child instanceof ClickableWidget) || (widget = (ClickableWidget)child).getY() < screen.height - 60 || widget.getY() > screen.height - 35) continue;
+                topRowWidgets.add(widget);
             }
-         }
-      } catch (Throwable var11) {
-      }
+        }
+        catch (Throwable throwable) {
+            // empty catch block
+        }
+        topRowWidgets.sort(Comparator.comparingInt(ClickableWidget::getX));
+        if (topRowWidgets.size() >= 3) {
+            ClickableWidget btn0 = (ClickableWidget)topRowWidgets.get(0);
+            btn0.setX(startX);
+            btn0.setY(targetRowY);
+            btn0.setWidth(btnWidth);
+            ClickableWidget btn1 = (ClickableWidget)topRowWidgets.get(1);
+            btn1.setX(startX + (btnWidth + gap));
+            btn1.setY(targetRowY);
+            btn1.setWidth(btnWidth);
+            ClickableWidget btn2 = (ClickableWidget)topRowWidgets.get(2);
+            btn2.setX(startX + (btnWidth + gap) * 2);
+            btn2.setY(targetRowY);
+            btn2.setWidth(btnWidth);
+        }
+        int randomBtnX = startX + (btnWidth + gap) * 3;
+        int randomBtnY = targetRowY;
+        ButtonWidget randomBtn = ButtonWidget.builder((Text)Text.literal((String)"Random"), btn -> IASAccountHelper.addRandomOfflineAccount(screen)).dimensions(randomBtnX, randomBtnY, btnWidth, btnHeight).build();
+        buttonAdder.accept(randomBtn);
+    }
 
-      topRowWidgets.sort(Comparator.comparingInt(class_339::method_46426));
-      if (topRowWidgets.size() >= 3) {
-         class_339 btn0 = topRowWidgets.get(0);
-         btn0.method_46421(startX);
-         btn0.method_46419(targetRowY);
-         btn0.method_25358(btnWidth);
-         class_339 btn1 = topRowWidgets.get(1);
-         btn1.method_46421(startX + btnWidth + gap);
-         btn1.method_46419(targetRowY);
-         btn1.method_25358(btnWidth);
-         class_339 btn2 = topRowWidgets.get(2);
-         btn2.method_46421(startX + (btnWidth + gap) * 2);
-         btn2.method_46419(targetRowY);
-         btn2.method_25358(btnWidth);
-      }
-
-      int randomBtnX = startX + (btnWidth + gap) * 3;
-      int randomBtnY = targetRowY;
-      class_4185 randomBtn = class_4185.method_46430(class_2561.method_43470("Random"), btn -> addRandomOfflineAccount(screen))
-         .method_46434(randomBtnX, randomBtnY, btnWidth, btnHeight)
-         .method_46431();
-      buttonAdder.accept(randomBtn);
-   }
-
-   public static void addRandomOfflineAccount(class_437 screen) {
-      try {
-         String randomName = RandomNameGenerator.generateUniqueName();
-         OfflineAccount account = new OfflineAccount(randomName, null);
-         IASStorage.ACCOUNTS.add(account);
-         IAS.disclaimersStorage();
-         IAS.saveStorage();
-
-         for (Field field : screen.getClass().getDeclaredFields()) {
-            if (field.getType().getName().equals("ru.vidtu.ias.screen.AccountList")) {
-               field.setAccessible(true);
-               Object listObj = field.get(screen);
-               if (listObj != null) {
-                  Method updateMethod = listObj.getClass().getDeclaredMethod("update", String.class);
-                  updateMethod.setAccessible(true);
-                  String searchText = "";
-
-                  for (Field sField : screen.getClass().getDeclaredFields()) {
-                     if (class_342.class.isAssignableFrom(sField.getType())) {
+    public static void addRandomOfflineAccount(Screen screen) {
+        try {
+            String randomName = RandomNameGenerator.generateUniqueName();
+            Object account = Class.forName("ru.vidtu.ias.account.OfflineAccount").getConstructor(String.class, java.util.UUID.class).newInstance(randomName, null);
+            ((java.util.Collection<Object>)Class.forName("ru.vidtu.ias.config.IASStorage").getField("ACCOUNTS").get(null)).add(account);
+            Class.forName("ru.vidtu.ias.IAS").getMethod("disclaimersStorage").invoke(null);
+            Class.forName("ru.vidtu.ias.IAS").getMethod("saveStorage").invoke(null);
+            for (Field field : screen.getClass().getDeclaredFields()) {
+                if (!field.getType().getName().equals("ru.vidtu.ias.screen.AccountList")) continue;
+                field.setAccessible(true);
+                Object listObj = field.get(screen);
+                if (listObj != null) {
+                    Method updateMethod = listObj.getClass().getDeclaredMethod("update", String.class);
+                    updateMethod.setAccessible(true);
+                    String searchText = "";
+                    for (Field sField : screen.getClass().getDeclaredFields()) {
+                        if (!TextFieldWidget.class.isAssignableFrom(sField.getType())) continue;
                         sField.setAccessible(true);
-                        class_342 tf = (class_342)sField.get(screen);
-                        if (tf != null) {
-                           searchText = tf.method_1882();
-                           break;
-                        }
-                     }
-                  }
-
-                  updateMethod.invoke(listObj, searchText);
-               }
-               break;
+                        TextFieldWidget tf = (TextFieldWidget)sField.get(screen);
+                        if (tf == null) continue;
+                        searchText = tf.getText();
+                        break;
+                    }
+                    updateMethod.invoke(listObj, searchText);
+                }
+                break;
             }
-         }
-      } catch (Throwable t) {
-         t.printStackTrace();
-      }
-   }
+        }
+        catch (Throwable t) {
+            t.printStackTrace();
+        }
+    }
 }
+

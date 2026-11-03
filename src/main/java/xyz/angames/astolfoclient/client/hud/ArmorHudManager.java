@@ -6,696 +6,529 @@ import dev.sxmurxy.mre.builders.states.QuadColorState;
 import dev.sxmurxy.mre.builders.states.QuadRadiusState;
 import dev.sxmurxy.mre.builders.states.SizeState;
 import dev.sxmurxy.mre.msdf.MsdfFont;
+import dev.sxmurxy.mre.renderers.impl.BuiltRectangle;
+import dev.sxmurxy.mre.renderers.impl.BuiltText;
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.List;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.class_1799;
-import net.minecraft.class_1802;
-import net.minecraft.class_310;
-import net.minecraft.class_332;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.item.ItemConvertible;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import org.joml.Matrix4f;
 import org.lwjgl.glfw.GLFW;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
 import xyz.angames.astolfoclient.client.gui.clickgui.GuiUtils;
+import xyz.angames.astolfoclient.client.hud.LogoRenderer;
 import xyz.angames.astolfoclient.client.module.modules.render.InterfaceModule;
 
-@Environment(EnvType.CLIENT)
+@Environment(value=EnvType.CLIENT)
 public class ArmorHudManager {
-   private static final Supplier<MsdfFont> BOLD_FONT = LogoRenderer.BOLD_FONT;
-   private static final Supplier<MsdfFont> MEDIUM_FONT = LogoRenderer.MEDIUM_FONT;
-   private static final Supplier<MsdfFont> SP_FONT = LogoRenderer.SP_FONT;
-   private static final Supplier<MsdfFont> WATERMARK_FONT = LogoRenderer.WATERMARK_FONT;
-   public float x = 10.0F;
-   public float y = 200.0F;
-   private static final int SLOT_SIZE = 18;
-   private static final int ITEM_GAP = 2;
-   public static final float HORIZ_WIDTH = 78.0F;
-   public static final float HORIZ_HEIGHT = 18.0F;
-   public static final float VERT_WIDTH = 18.0F;
-   public static final float VERT_HEIGHT = 78.0F;
-   public static String layout = "VERTICAL";
-   public static boolean warningGlow = true;
-   private boolean dragging = false;
-   private float dragOffsetX;
-   private float dragOffsetY;
-   private boolean panelOpen = false;
-   private ArmorHudManager.SubmenuType activeSubmenu = ArmorHudManager.SubmenuType.NONE;
-   private float mainPanelAnim = 0.0F;
-   private float subPanelAnim = 0.0F;
-   private float warningGlowSwitchAnim = 1.0F;
-   private boolean wasMouseDown = false;
-   private boolean wasRightMouseDown = false;
-   private Object lastScreen = null;
-   private long lastFrameTime = System.currentTimeMillis();
-   private final class_310 client = class_310.method_1551();
+    private static final Supplier<MsdfFont> BOLD_FONT = LogoRenderer.BOLD_FONT;
+    private static final Supplier<MsdfFont> MEDIUM_FONT = LogoRenderer.MEDIUM_FONT;
+    private static final Supplier<MsdfFont> SP_FONT = LogoRenderer.SP_FONT;
+    private static final Supplier<MsdfFont> WATERMARK_FONT = LogoRenderer.WATERMARK_FONT;
+    public float x = 10.0f;
+    public float y = 200.0f;
+    private static final int SLOT_SIZE = 18;
+    private static final int ITEM_GAP = 2;
+    public static final float HORIZ_WIDTH = 78.0f;
+    public static final float HORIZ_HEIGHT = 18.0f;
+    public static final float VERT_WIDTH = 18.0f;
+    public static final float VERT_HEIGHT = 78.0f;
+    public static String layout = "VERTICAL";
+    public static boolean warningGlow = true;
+    private boolean dragging = false;
+    private float dragOffsetX;
+    private float dragOffsetY;
+    private boolean panelOpen = false;
+    private SubmenuType activeSubmenu = SubmenuType.NONE;
+    private float mainPanelAnim = 0.0f;
+    private float subPanelAnim = 0.0f;
+    private float warningGlowSwitchAnim = 1.0f;
+    private boolean wasMouseDown = false;
+    private boolean wasRightMouseDown = false;
+    private Object lastScreen = null;
+    private long lastFrameTime = System.currentTimeMillis();
+    private final MinecraftClient client = MinecraftClient.getInstance();
 
-   public static boolean isVertical() {
-      return layout != null && layout.equalsIgnoreCase("VERTICAL");
-   }
+    public static boolean isVertical() {
+        return layout != null && layout.equalsIgnoreCase("VERTICAL");
+    }
 
-   public float getWidth() {
-      return isVertical() ? 18.0F : 78.0F;
-   }
+    public float getWidth() {
+        return ArmorHudManager.isVertical() ? 18.0f : 78.0f;
+    }
 
-   public float getHeight() {
-      return isVertical() ? 78.0F : 18.0F;
-   }
+    public float getHeight() {
+        return ArmorHudManager.isVertical() ? 78.0f : 18.0f;
+    }
 
-   public void render(class_332 context) {
-      InterfaceModule interfaceMod = getInterfaceModule();
-      boolean isEditing = this.client.field_1755 instanceof HudEditorScreen;
-      boolean inScreen = this.client.field_1755 != null;
-      if (interfaceMod != null) {
-         if (isEditing || interfaceMod.isEnabled() && interfaceMod.armorHud.get()) {
-            if (this.client.field_1724 != null) {
-               long now = System.currentTimeMillis();
-               float deltaTime = (float)(now - this.lastFrameTime) / 1000.0F;
-               this.lastFrameTime = now;
-               if (deltaTime < 0.001F) {
-                  deltaTime = 0.001F;
-               }
-
-               if (deltaTime > 0.1F) {
-                  deltaTime = 0.1F;
-               }
-
-               boolean vertical = isVertical();
-               float curW = vertical ? 18.0F : 78.0F;
-               float curH = vertical ? 78.0F : 18.0F;
-               double currentGuiScale = this.client.method_22683().method_4495();
-               if (currentGuiScale <= 0.0) {
-                  currentGuiScale = 2.0;
-               }
-
-               float scaleModifier = (float)(2.0 / currentGuiScale);
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(this.x, this.y, 0.0F);
-               context.method_51448().method_22905(scaleModifier, scaleModifier, 1.0F);
-               context.method_51448().method_46416(-this.x, -this.y, 0.0F);
-               List<class_1799> armorList = new ArrayList<>();
-               boolean hasArmor = false;
-
-               for (int i = 0; i < 4; i++) {
-                  class_1799 stack = (class_1799)this.client.field_1724.method_31548().field_7548.get(i);
-                  armorList.add(stack);
-                  if (!stack.method_7960()) {
-                     hasArmor = true;
-                  }
-               }
-
-               if (isEditing && !hasArmor) {
-                  armorList.set(0, new class_1799(class_1802.field_8285));
-                  armorList.set(1, new class_1799(class_1802.field_8348));
-                  class_1799 damagedChest = new class_1799(class_1802.field_8058);
-                  damagedChest.method_7974(damagedChest.method_7936() - 10);
-                  armorList.set(2, damagedChest);
-                  armorList.set(3, new class_1799(class_1802.field_8805));
-               }
-
-               float startX = this.x;
-               float startY = this.y;
-               context.method_51448().method_22903();
-               context.method_51448().method_46416(0.0F, 0.0F, 1.0F);
-
-               for (int i = 3; i >= 0; i--) {
-                  class_1799 stack = armorList.get(i);
-                  if (!stack.method_7960()) {
-                     int index = 3 - i;
-                     float drawX = vertical ? startX : startX + index * 20;
-                     float drawY = vertical ? startY + index * 20 : startY;
-                     boolean almostBroken = false;
-                     if (warningGlow && stack.method_7963() && stack.method_7936() > 0) {
-                        float durabilityPercent = (float)(stack.method_7936() - stack.method_7919()) / stack.method_7936();
-                        if (durabilityPercent <= 0.15F) {
-                           almostBroken = true;
-                        }
-                     }
-
-                     context.method_51448().method_22903();
-                     if (almostBroken) {
-                        float pulseAlpha = (float)Math.abs(Math.sin(System.nanoTime() / 2.0E8));
-                        float bounceOffset = pulseAlpha * -3.0F;
-                        context.method_51448().method_46416(0.0F, bounceOffset, 0.0F);
-                        Matrix4f glowMat = context.method_51448().method_23760().method_23761();
-
-                        for (int j = 0; j < 4; j++) {
-                           float expand = (j + 1) * 2.0F;
-                           int alpha = (int)(255.0F * (0.3F - j * 0.07F) * (0.4F + 0.6F * pulseAlpha));
-                           if (alpha > 0) {
-                              Builder.rectangle()
-                                 .size(new SizeState(16.0F + expand, 16.0F + expand))
-                                 .radius(new QuadRadiusState(3.5F + expand / 2.0F))
-                                 .color(new QuadColorState(new Color(255, 40, 40, alpha)))
-                                 .build()
-                                 .render(glowMat, drawX - expand / 2.0F, drawY - expand / 2.0F);
-                           }
-                        }
-                     }
-
-                     context.method_51427(stack, (int)drawX, (int)drawY);
-                     context.method_51431(this.client.field_1772, stack, (int)drawX, (int)drawY);
-                     context.method_51448().method_22909();
-                  }
-               }
-
-               context.method_51448().method_22909();
-               context.method_51448().method_22909();
-               Object activeScreen = this.client.field_1755;
-               if (activeScreen != this.lastScreen) {
-                  this.wasMouseDown = false;
-                  this.wasRightMouseDown = false;
-                  this.lastScreen = activeScreen;
-               }
-
-               if (inScreen) {
-                  double mouseScaledX = -9999.0;
-                  double mouseScaledY = -9999.0;
-                  boolean isMouseDown = false;
-                  boolean isRightMouseDown = false;
-                  long win = this.client.method_22683().method_4490();
-                  if (win != 0L) {
-                     double[] mx = new double[1];
-                     double[] my = new double[1];
-                     GLFW.glfwGetCursorPos(win, mx, my);
-                     double screenWidth = this.client.method_22683().method_4489();
-                     double screenHeight = this.client.method_22683().method_4506();
-                     float guiWidth = this.client.method_22683().method_4486();
-                     float guiHeight = this.client.method_22683().method_4502();
-                     if (screenWidth > 0.0 && screenHeight > 0.0) {
-                        mouseScaledX = mx[0] / screenWidth * guiWidth;
-                        mouseScaledY = my[0] / screenHeight * guiHeight;
-                     }
-
-                     isMouseDown = GLFW.glfwGetMouseButton(win, 0) == 1;
-                     isRightMouseDown = GLFW.glfwGetMouseButton(win, 1) == 1;
-                  }
-
-                  if (isRightMouseDown && !this.wasRightMouseDown && !(this.client.field_1755 instanceof HudEditorScreen)) {
-                     float visMinX = this.x;
-                     float visMinY = this.y;
-                     float visMaxX = this.x + curW * scaleModifier;
-                     float visMaxY = this.y + curH * scaleModifier;
-                     if (mouseScaledX >= visMinX - 4.0F && mouseScaledX <= visMaxX + 4.0F && mouseScaledY >= visMinY - 4.0F && mouseScaledY <= visMaxY + 4.0F) {
-                        this.panelOpen = !this.panelOpen;
-                        if (this.panelOpen) {
-                           this.activeSubmenu = ArmorHudManager.SubmenuType.NONE;
-                        }
-                     }
-                  }
-
-                  Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
-                  this.drawAnimatedContextPanel(
-                     context,
-                     this.x,
-                     this.y,
-                     curW,
-                     curH,
-                     scaleModifier,
-                     this.client.method_22683().method_4486(),
-                     this.client.method_22683().method_4502(),
-                     themeColor,
-                     mouseScaledX,
-                     mouseScaledY,
-                     isMouseDown,
-                     this.wasMouseDown,
-                     deltaTime
-                  );
-                  this.wasMouseDown = isMouseDown;
-                  this.wasRightMouseDown = isRightMouseDown;
-               } else {
-                  this.panelOpen = false;
-                  this.activeSubmenu = ArmorHudManager.SubmenuType.NONE;
-                  this.mainPanelAnim = 0.0F;
-                  this.subPanelAnim = 0.0F;
-               }
-            }
-         } else {
+    public void render(DrawContext context) {
+        boolean vertical;
+        boolean inScreen;
+        InterfaceModule interfaceMod = ArmorHudManager.getInterfaceModule();
+        boolean isEditing = this.client.currentScreen instanceof HudEditorScreen;
+        boolean bl = inScreen = this.client.currentScreen != null;
+        if (interfaceMod == null) {
+            return;
+        }
+        if (!(isEditing || interfaceMod.isEnabled() && interfaceMod.armorHud.get())) {
             this.panelOpen = false;
-            this.activeSubmenu = ArmorHudManager.SubmenuType.NONE;
-            this.mainPanelAnim = 0.0F;
-            this.subPanelAnim = 0.0F;
-         }
-      }
-   }
-
-   private void drawAnimatedContextPanel(
-      class_332 context,
-      float aX,
-      float aY,
-      float aW,
-      float aH,
-      float scaleFactor,
-      float guiWidth,
-      float guiHeight,
-      Color themeColor,
-      double mouseX,
-      double mouseY,
-      boolean isMouseDown,
-      boolean wasMouseDown,
-      float deltaTime
-   ) {
-      float targetMain = this.panelOpen ? 1.0F : 0.0F;
-      this.mainPanelAnim = GuiUtils.animate(this.mainPanelAnim, targetMain, 16.0F, deltaTime);
-      if (!this.panelOpen && this.mainPanelAnim < 0.01F) {
-         this.mainPanelAnim = 0.0F;
-      } else {
-         boolean hasSub = this.activeSubmenu != ArmorHudManager.SubmenuType.NONE;
-         float targetSub = hasSub && this.panelOpen ? 1.0F : 0.0F;
-         this.subPanelAnim = GuiUtils.animate(this.subPanelAnim, targetSub, 16.0F, deltaTime);
-         float mainW = 110.0F;
-         float mainH = 70.0F;
-         float pX = aX;
-         float pY = aY + aH * scaleFactor + 6.0F;
-         float subW = 95.0F;
-         String[] modes = new String[]{"VERTICAL", "HORIZONTAL"};
-         String[] labels = new String[]{"Vertical", "Horizontal"};
-         float subH = modes.length * 16.0F + 8.0F;
-         if (pX + mainW + (hasSub ? subW + 5.0F : 0.0F) > guiWidth - 6.0F) {
-            pX = guiWidth - mainW - (hasSub ? subW + 5.0F : 0.0F) - 6.0F;
-         }
-
-         if (pX < 6.0F) {
-            pX = 6.0F;
-         }
-
-         float maxPanelH = hasSub ? Math.max(mainH, subH) : mainH;
-         if (pY + maxPanelH > guiHeight - 6.0F) {
-            pY = aY - maxPanelH - 6.0F;
-         }
-
-         if (pY < 6.0F) {
-            pY = 6.0F;
-         }
-
-         MsdfFont boldFont = (MsdfFont)BOLD_FONT.get();
-         MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
-         MsdfFont spFont = (MsdfFont)SP_FONT.get();
-         MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
-         float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
-         float mainScale = 0.88F + 0.12F * mainEase;
-         context.method_51448().method_22903();
-         if (mainScale < 0.999F) {
-            float cx = pX + mainW / 2.0F;
-            float cy = pY + mainH / 2.0F;
-            context.method_51448().method_46416(cx, cy, 0.0F);
-            context.method_51448().method_22905(mainScale, mainScale, 1.0F);
-            context.method_51448().method_46416(-cx, -cy, 0.0F);
-         }
-
-         Matrix4f matrix = context.method_51448().method_23760().method_23761();
-
-         for (int i = 6; i >= 0; i--) {
-            float progress = i / 6.0F;
-            float spread = progress * 4.0F;
-            int alpha = (int)(60.0F * (1.0F - progress) * (1.0F - progress) * mainEase);
-            if (alpha > 0) {
-               Builder.rectangle()
-                  .size(new SizeState(mainW + spread * 2.0F, mainH + spread * 2.0F))
-                  .radius(new QuadRadiusState(8.0F + spread))
-                  .color(new QuadColorState(new Color(0, 0, 0, alpha)))
-                  .build()
-                  .render(matrix, pX - spread, pY - spread);
-            }
-         }
-
-         Color bgMain = new Color(0, 0, 0, (int)(255.0F * mainEase));
-         Builder.rectangle()
-            .size(new SizeState(mainW, mainH))
-            .radius(new QuadRadiusState(8.0F))
-            .color(new QuadColorState(bgMain))
-            .build()
-            .render(matrix, pX, pY);
-         if (boldFont != null) {
-            Builder.text()
-               .font(boldFont)
-               .text("Armor HUD")
-               .size(7.5F)
-               .color(new Color(255, 255, 255, (int)(255.0F * mainEase)))
-               .build()
-               .render(matrix, pX + 8.0F, pY + 6.5F);
-         }
-
-         float closeX = pX + mainW - 14.0F;
-         float closeY = pY + 6.5F;
-         boolean closeHover = mouseX >= closeX - 2.0F && mouseX <= closeX + 10.0F && mouseY >= closeY - 2.0F && mouseY <= closeY + 10.0F;
-         Color closeColor = closeHover ? new Color(255, 80, 80, (int)(255.0F * mainEase)) : new Color(140, 140, 150, (int)(255.0F * mainEase));
-         if (spFont != null) {
-            Builder.text().font(spFont).text("A").size(7.0F).color(closeColor).build().render(matrix, closeX, closeY);
-         }
-
-         if (closeHover && isMouseDown && !wasMouseDown) {
-            this.panelOpen = false;
-            this.activeSubmenu = ArmorHudManager.SubmenuType.NONE;
-            context.method_51448().method_22909();
-         } else {
-            float c1X = pX + 4.0F;
-            float c1Y = pY + 20.0F;
-            float c1W = mainW - 8.0F;
-            float c1H = 20.0F;
-            Builder.rectangle()
-               .size(new SizeState(c1W, c1H))
-               .radius(new QuadRadiusState(6.0F))
-               .color(new QuadColorState(new Color(10, 10, 15, (int)(220.0F * mainEase))))
-               .build()
-               .render(matrix, c1X, c1Y);
-            float r1Y = c1Y + 2.0F;
-            float r1H = 16.0F;
-            boolean r1Hov = mouseX >= c1X && mouseX <= c1X + c1W && mouseY >= r1Y && mouseY <= r1Y + r1H;
-            boolean r1Active = this.activeSubmenu == ArmorHudManager.SubmenuType.LAYOUT;
-            if (r1Hov) {
-               Builder.rectangle()
-                  .size(new SizeState(c1W - 4.0F, r1H))
-                  .radius(new QuadRadiusState(4.0F))
-                  .color(new QuadColorState(new Color(22, 22, 32, (int)(180.0F * mainEase))))
-                  .build()
-                  .render(matrix, c1X + 2.0F, r1Y);
-            }
-
-            if (spFont != null) {
-               Builder.text()
-                  .font(spFont)
-                  .text("B")
-                  .size(7.5F)
-                  .color(new Color(170, 170, 190, (int)(255.0F * mainEase)))
-                  .build()
-                  .render(matrix, c1X + 5.0F, r1Y + 4.0F);
-            }
-
-            if (mediumFont != null) {
-               Builder.text()
-                  .font(mediumFont)
-                  .text("Layout")
-                  .size(6.5F)
-                  .color(new Color(230, 230, 245, (int)(255.0F * mainEase)))
-                  .build()
-                  .render(matrix, c1X + 16.0F, r1Y + 5.5F);
-               String currentLayoutName = (isVertical() ? "Vertical" : "Horizontal") + " >";
-               float layW = mediumFont.getWidth(currentLayoutName, 6.0F);
-               Color layCol = r1Active ? GuiUtils.withAlpha(themeColor, mainEase) : new Color(140, 140, 160, (int)(255.0F * mainEase));
-               Builder.text().font(mediumFont).text(currentLayoutName).size(6.0F).color(layCol).build().render(matrix, c1X + c1W - layW - 5.0F, r1Y + 5.5F);
-            }
-
-            if (r1Hov && isMouseDown && !wasMouseDown) {
-               this.activeSubmenu = this.activeSubmenu == ArmorHudManager.SubmenuType.LAYOUT
-                  ? ArmorHudManager.SubmenuType.NONE
-                  : ArmorHudManager.SubmenuType.LAYOUT;
-            }
-
-            float c2X = pX + 4.0F;
-            float c2Y = pY + 44.0F;
-            float c2W = mainW - 8.0F;
-            float c2H = 22.0F;
-            Builder.rectangle()
-               .size(new SizeState(c2W, c2H))
-               .radius(new QuadRadiusState(6.0F))
-               .color(new QuadColorState(new Color(10, 10, 15, (int)(220.0F * mainEase))))
-               .build()
-               .render(matrix, c2X, c2Y);
-            boolean wgVal = warningGlow;
-            float targetSwitch = wgVal ? 1.0F : 0.0F;
-            this.warningGlowSwitchAnim = GuiUtils.animate(this.warningGlowSwitchAnim, targetSwitch, 16.0F, deltaTime);
-            float wgY = c2Y + 3.0F;
-            float wgH = 16.0F;
-            boolean wgHov = mouseX >= c2X && mouseX <= c2X + c2W && mouseY >= wgY && mouseY <= wgY + wgH;
-            if (wgHov) {
-               Builder.rectangle()
-                  .size(new SizeState(c2W - 4.0F, wgH))
-                  .radius(new QuadRadiusState(4.0F))
-                  .color(new QuadColorState(new Color(22, 22, 32, (int)(180.0F * mainEase))))
-                  .build()
-                  .render(matrix, c2X + 2.0F, wgY);
-            }
-
-            if (watermarkFont != null) {
-               Builder.text()
-                  .font(watermarkFont)
-                  .text("G")
-                  .size(7.5F)
-                  .color(new Color(180, 180, 200, (int)(255.0F * mainEase)))
-                  .build()
-                  .render(matrix, c2X + 5.0F, wgY + 4.0F);
-            }
-
-            if (mediumFont != null) {
-               Builder.text()
-                  .font(mediumFont)
-                  .text("Warning Glow")
-                  .size(6.5F)
-                  .color(new Color(230, 230, 245, (int)(255.0F * mainEase)))
-                  .build()
-                  .render(matrix, c2X + 16.0F, wgY + 5.5F);
-            }
-
-            float swW = 20.0F;
-            float swH = 11.0F;
-            float swX = c2X + c2W - swW - 5.0F;
-            float swY = wgY + 2.5F;
-            Color activeThemeCol = GuiUtils.withAlpha(themeColor, mainEase);
-            Color offThemeCol = new Color(0, 0, 0, (int)(255.0F * mainEase));
-            Color swBg = GuiUtils.interpolateColor(offThemeCol, activeThemeCol, this.warningGlowSwitchAnim);
-            Builder.rectangle()
-               .size(new SizeState(swW, swH))
-               .radius(new QuadRadiusState(swH / 2.0F))
-               .color(new QuadColorState(swBg))
-               .build()
-               .render(matrix, swX, swY);
-            float baseKnobRadius = 3.8F;
-            float offKnobX = swX + baseKnobRadius + 1.8F;
-            float onKnobX = swX + swW - baseKnobRadius - 1.8F;
-            float currentKnobCX = offKnobX + (onKnobX - offKnobX) * this.warningGlowSwitchAnim;
-            float knobCY = swY + swH / 2.0F;
-            float stretch = (float)Math.sin(this.warningGlowSwitchAnim * Math.PI) * 3.2F;
-            float knobW = baseKnobRadius * 2.0F + stretch;
-            float knobH = baseKnobRadius * 2.0F - stretch * 0.35F;
-            float knobX0 = currentKnobCX - knobW / 2.0F;
-            float knobY0 = knobCY - knobH / 2.0F;
-            Builder.rectangle()
-               .size(new SizeState(knobW, knobH))
-               .radius(new QuadRadiusState(knobH / 2.0F))
-               .color(new QuadColorState(new Color(255, 255, 255, (int)(255.0F * mainEase))))
-               .build()
-               .render(matrix, knobX0, knobY0);
-            if (wgHov && isMouseDown && !wasMouseDown) {
-               warningGlow = !warningGlow;
-            }
-
-            context.method_51448().method_22909();
-            if (this.subPanelAnim > 0.005F) {
-               float subEase = 1.0F - (float)Math.pow(1.0F - this.subPanelAnim, 3.0);
-               float subScale = 0.88F + 0.12F * subEase;
-               float sX = pX + mainW + 5.0F;
-               float sY = pY;
-               context.method_51448().method_22903();
-               if (subScale < 0.999F) {
-                  float scx = sX + subW / 2.0F;
-                  float scy = sY + subH / 2.0F;
-                  context.method_51448().method_46416(scx, scy, 0.0F);
-                  context.method_51448().method_22905(subScale, subScale, 1.0F);
-                  context.method_51448().method_46416(-scx, -scy, 0.0F);
-               }
-
-               matrix = context.method_51448().method_23760().method_23761();
-
-               for (int i = 6; i >= 0; i--) {
-                  float progress = i / 6.0F;
-                  float spread = progress * 4.0F;
-                  int alpha = (int)(60.0F * (1.0F - progress) * (1.0F - progress) * subEase);
-                  if (alpha > 0) {
-                     Builder.rectangle()
-                        .size(new SizeState(subW + spread * 2.0F, subH + spread * 2.0F))
-                        .radius(new QuadRadiusState(8.0F + spread))
-                        .color(new QuadColorState(new Color(0, 0, 0, alpha)))
-                        .build()
-                        .render(matrix, sX - spread, sY - spread);
-                  }
-               }
-
-               Color bgSub = new Color(0, 0, 0, (int)(255.0F * subEase));
-               Builder.rectangle()
-                  .size(new SizeState(subW, subH))
-                  .radius(new QuadRadiusState(8.0F))
-                  .color(new QuadColorState(bgSub))
-                  .build()
-                  .render(matrix, sX, sY);
-               if (this.activeSubmenu == ArmorHudManager.SubmenuType.LAYOUT) {
-                  float rowH = 16.0F;
-                  float listStartY = sY + 4.0F;
-
-                  for (int i = 0; i < modes.length; i++) {
-                     float rY = listStartY + i * rowH;
-                     boolean isSel = layout.equalsIgnoreCase(modes[i]);
-                     boolean rHov = mouseX >= sX + 3.0F && mouseX <= sX + subW - 3.0F && mouseY >= rY && mouseY <= rY + rowH - 1.0F;
-                     if (rHov) {
-                        Builder.rectangle()
-                           .size(new SizeState(subW - 6.0F, rowH - 1.0F))
-                           .radius(new QuadRadiusState(4.0F))
-                           .color(new QuadColorState(new Color(25, 25, 36, (int)(220.0F * subEase))))
-                           .build()
-                           .render(matrix, sX + 3.0F, rY);
-                     }
-
-                     if (isSel && spFont != null) {
-                        Builder.text()
-                           .font(spFont)
-                           .text("D")
-                           .size(6.5F)
-                           .color(new Color(255, 255, 255, (int)(255.0F * subEase)))
-                           .build()
-                           .render(matrix, sX + 6.0F, rY + 4.5F);
-                     }
-
-                     if (mediumFont != null) {
-                        Color textCol = isSel
-                           ? new Color(255, 255, 255, (int)(255.0F * subEase))
-                           : (rHov ? new Color(200, 200, 220, (int)(255.0F * subEase)) : new Color(130, 130, 150, (int)(255.0F * subEase)));
-                        Builder.text().font(mediumFont).text(labels[i]).size(6.5F).color(textCol).build().render(matrix, sX + 20.0F, rY + 5.5F);
-                     }
-
-                     if (rHov && isMouseDown && !wasMouseDown) {
-                        layout = modes[i];
-                     }
-                  }
-               }
-
-               context.method_51448().method_22909();
-            }
-         }
-      }
-   }
-
-   public boolean onMouseClicked(double mouseX, double mouseY, int button) {
-      boolean isEditing = this.client.field_1755 instanceof HudEditorScreen;
-      InterfaceModule interfaceMod = getInterfaceModule();
-      if (interfaceMod == null) {
-         return false;
-      }
-
-      if (isEditing || interfaceMod.isEnabled() && interfaceMod.armorHud.get()) {
-         float w = this.getWidth();
-         float h = this.getHeight();
-         double currentGuiScale = this.client.method_22683().method_4495();
-         if (currentGuiScale <= 0.0) {
+            this.activeSubmenu = SubmenuType.NONE;
+            this.mainPanelAnim = 0.0f;
+            this.subPanelAnim = 0.0f;
+            return;
+        }
+        if (this.client.player == null) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        float deltaTime = (float)(now - this.lastFrameTime) / 1000.0f;
+        this.lastFrameTime = now;
+        if (deltaTime < 0.001f) {
+            deltaTime = 0.001f;
+        }
+        if (deltaTime > 0.1f) {
+            deltaTime = 0.1f;
+        }
+        float curW = (vertical = ArmorHudManager.isVertical()) ? 18.0f : 78.0f;
+        float curH = vertical ? 78.0f : 18.0f;
+        double currentGuiScale = this.client.getWindow().getScaleFactor();
+        if (currentGuiScale <= 0.0) {
             currentGuiScale = 2.0;
-         }
+        }
+        float scaleModifier = (float)(2.0 / currentGuiScale);
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(this.x, this.y);
+        context.getMatrices().scale(scaleModifier, scaleModifier);
+        context.getMatrices().translate(-this.x, -this.y);
+        ArrayList<ItemStack> armorList = new ArrayList<ItemStack>();
+        boolean hasArmor = false;
+        for (int i = 0; i < 4; ++i) {
+            ItemStack stack = (ItemStack)this.client.player.getInventory().getStack(36 + i);
+            armorList.add(stack);
+            if (stack.isEmpty()) continue;
+            hasArmor = true;
+        }
+        if (isEditing && !hasArmor) {
+            armorList.set(0, new ItemStack((ItemConvertible)Items.DIAMOND_BOOTS));
+            armorList.set(1, new ItemStack((ItemConvertible)Items.DIAMOND_LEGGINGS));
+            ItemStack damagedChest = new ItemStack((ItemConvertible)Items.DIAMOND_CHESTPLATE);
+            damagedChest.setDamage(damagedChest.getMaxDamage() - 10);
+            armorList.set(2, damagedChest);
+            armorList.set(3, new ItemStack((ItemConvertible)Items.DIAMOND_HELMET));
+        }
+        float startX = this.x;
+        float startY = this.y;
+        context.getMatrices().pushMatrix();
+        context.getMatrices().translate(0.0f, 0.0f);
+        for (int i = 3; i >= 0; --i) {
+            float durabilityPercent;
+            ItemStack stack = (ItemStack)armorList.get(i);
+            if (stack.isEmpty()) continue;
+            int index = 3 - i;
+            float drawX = vertical ? startX : startX + (float)(index * 20);
+            float drawY = vertical ? startY + (float)(index * 20) : startY;
+            boolean almostBroken = false;
+            if (warningGlow && stack.isDamageable() && stack.getMaxDamage() > 0 && (durabilityPercent = (float)(stack.getMaxDamage() - stack.getDamage()) / (float)stack.getMaxDamage()) <= 0.15f) {
+                almostBroken = true;
+            }
+            context.getMatrices().pushMatrix();
+            if (almostBroken) {
+                float pulseAlpha = (float)Math.abs(Math.sin((double)System.nanoTime() / 2.0E8));
+                float bounceOffset = pulseAlpha * -3.0f;
+                context.getMatrices().translate(0.0f, bounceOffset);
+                Matrix4f glowMat = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+                for (int j = 0; j < 4; ++j) {
+                    float expand = (float)(j + 1) * 2.0f;
+                    int alpha = (int)(255.0f * (0.3f - (float)j * 0.07f) * (0.4f + 0.6f * pulseAlpha));
+                    if (alpha <= 0) continue;
+                    ((BuiltRectangle)Builder.rectangle().size(new SizeState(16.0f + expand, 16.0f + expand)).radius(new QuadRadiusState(3.5f + expand / 2.0f)).color(new QuadColorState(new Color(255, 40, 40, alpha))).build()).render(glowMat, drawX - expand / 2.0f, drawY - expand / 2.0f);
+                }
+            }
+            context.drawItem(stack, (int)drawX, (int)drawY);
+            context.drawStackOverlay(this.client.textRenderer, stack, (int)drawX, (int)drawY);
+            context.getMatrices().popMatrix();
+        }
+        context.getMatrices().popMatrix();
+        context.getMatrices().popMatrix();
+        Screen activeScreen = this.client.currentScreen;
+        if (activeScreen != this.lastScreen) {
+            this.wasMouseDown = false;
+            this.wasRightMouseDown = false;
+            this.lastScreen = activeScreen;
+        }
+        if (inScreen) {
+            double mouseScaledX = -9999.0;
+            double mouseScaledY = -9999.0;
+            boolean isMouseDown = false;
+            boolean isRightMouseDown = false;
+            long win = this.client.getWindow().getHandle();
+            if (win != 0L) {
+                double[] mx = new double[1];
+                double[] my = new double[1];
+                GLFW.glfwGetCursorPos((long)win, (double[])mx, (double[])my);
+                double screenWidth = this.client.getWindow().getFramebufferWidth();
+                double screenHeight = this.client.getWindow().getFramebufferHeight();
+                float guiWidth = this.client.getWindow().getScaledWidth();
+                float guiHeight = this.client.getWindow().getScaledHeight();
+                if (screenWidth > 0.0 && screenHeight > 0.0) {
+                    mouseScaledX = mx[0] / screenWidth * (double)guiWidth;
+                    mouseScaledY = my[0] / screenHeight * (double)guiHeight;
+                }
+                isMouseDown = GLFW.glfwGetMouseButton((long)win, (int)0) == 1;
+                boolean bl2 = isRightMouseDown = GLFW.glfwGetMouseButton((long)win, (int)1) == 1;
+            }
+            if (isRightMouseDown && !this.wasRightMouseDown && !(this.client.currentScreen instanceof HudEditorScreen)) {
+                float visMinX = this.x;
+                float visMinY = this.y;
+                float visMaxX = this.x + curW * scaleModifier;
+                float visMaxY = this.y + curH * scaleModifier;
+                if (mouseScaledX >= (double)(visMinX - 4.0f) && mouseScaledX <= (double)(visMaxX + 4.0f) && mouseScaledY >= (double)(visMinY - 4.0f) && mouseScaledY <= (double)(visMaxY + 4.0f)) {
+                    boolean bl3 = this.panelOpen = !this.panelOpen;
+                    if (this.panelOpen) {
+                        this.activeSubmenu = SubmenuType.NONE;
+                    }
+                }
+            }
+            Color themeColor = new Color(ThemeManager.getThemedColor(now / 10L));
+            this.drawAnimatedContextPanel(context, this.x, this.y, curW, curH, scaleModifier, this.client.getWindow().getScaledWidth(), this.client.getWindow().getScaledHeight(), themeColor, mouseScaledX, mouseScaledY, isMouseDown, this.wasMouseDown, deltaTime);
+            this.wasMouseDown = isMouseDown;
+            this.wasRightMouseDown = isRightMouseDown;
+        } else {
+            this.panelOpen = false;
+            this.activeSubmenu = SubmenuType.NONE;
+            this.mainPanelAnim = 0.0f;
+            this.subPanelAnim = 0.0f;
+        }
+    }
 
-         float scaleModifier = (float)(2.0 / currentGuiScale);
-         float visMinX = this.x;
-         float visMinY = this.y;
-         float visMaxX = this.x + w * scaleModifier;
-         float visMaxY = this.y + h * scaleModifier;
-         if (this.panelOpen) {
-            float mainW = 110.0F;
-            float mainH = 70.0F;
-            float subW = 95.0F;
-            float subH = 40.0F;
-            boolean hasSub = this.activeSubmenu != ArmorHudManager.SubmenuType.NONE;
+    private void drawAnimatedContextPanel(DrawContext context, float aX, float aY, float aW, float aH, float scaleFactor, float guiWidth, float guiHeight, Color themeColor, double mouseX, double mouseY, boolean isMouseDown, boolean wasMouseDown, float deltaTime) {
+        boolean wgHov;
+        boolean r1Active;
+        Color closeColor;
+        float maxPanelH;
+        float targetMain = this.panelOpen ? 1.0f : 0.0f;
+        this.mainPanelAnim = GuiUtils.animate(this.mainPanelAnim, targetMain, 16.0f, deltaTime);
+        if (!this.panelOpen && this.mainPanelAnim < 0.01f) {
+            this.mainPanelAnim = 0.0f;
+            return;
+        }
+        boolean hasSub = this.activeSubmenu != SubmenuType.NONE;
+        float targetSub = hasSub && this.panelOpen ? 1.0f : 0.0f;
+        this.subPanelAnim = GuiUtils.animate(this.subPanelAnim, targetSub, 16.0f, deltaTime);
+        float mainW = 110.0f;
+        float mainH = 70.0f;
+        float pX = aX;
+        float pY = aY + aH * scaleFactor + 6.0f;
+        float subW = 95.0f;
+        String[] modes = new String[]{"VERTICAL", "HORIZONTAL"};
+        String[] labels = new String[]{"Vertical", "Horizontal"};
+        float subH = (float)modes.length * 16.0f + 8.0f;
+        float f = hasSub ? subW + 5.0f : 0.0f;
+        if (pX + mainW + f > guiWidth - 6.0f) {
+            pX = guiWidth - mainW - (hasSub ? subW + 5.0f : 0.0f) - 6.0f;
+        }
+        if (pX < 6.0f) {
+            pX = 6.0f;
+        }
+        float f2 = maxPanelH = hasSub ? Math.max(mainH, subH) : mainH;
+        if (pY + maxPanelH > guiHeight - 6.0f) {
+            pY = aY - maxPanelH - 6.0f;
+        }
+        if (pY < 6.0f) {
+            pY = 6.0f;
+        }
+        MsdfFont boldFont = (MsdfFont)BOLD_FONT.get();
+        MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
+        MsdfFont spFont = (MsdfFont)SP_FONT.get();
+        MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
+        float mainEase = 1.0f - (float)Math.pow(1.0f - this.mainPanelAnim, 3.0);
+        float mainScale = 0.88f + 0.12f * mainEase;
+        context.getMatrices().pushMatrix();
+        if (mainScale < 0.999f) {
+            float cx = pX + mainW / 2.0f;
+            float cy = pY + mainH / 2.0f;
+            context.getMatrices().translate(cx, cy);
+            context.getMatrices().scale(mainScale, mainScale);
+            context.getMatrices().translate(-cx, -cy);
+        }
+        Matrix4f matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+        for (int i = 6; i >= 0; --i) {
+            float progress = (float)i / 6.0f;
+            float spread = progress * 4.0f;
+            int alpha = (int)(60.0f * (1.0f - progress) * (1.0f - progress) * mainEase);
+            if (alpha <= 0) continue;
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(mainW + spread * 2.0f, mainH + spread * 2.0f)).radius(new QuadRadiusState(8.0f + spread)).color(new QuadColorState(new Color(0, 0, 0, alpha))).build()).render(matrix, pX - spread, pY - spread);
+        }
+        Color bgMain = new Color(0, 0, 0, (int)(255.0f * mainEase));
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(mainW, mainH)).radius(new QuadRadiusState(8.0f)).color(new QuadColorState(bgMain)).build()).render(matrix, pX, pY);
+        if (boldFont != null) {
+            ((BuiltText)Builder.text().font(boldFont).text("Armor HUD").size(7.5f).color(new Color(255, 255, 255, (int)(255.0f * mainEase))).build()).render(matrix, pX + 8.0f, pY + 6.5f);
+        }
+        float closeX = pX + mainW - 14.0f;
+        float closeY = pY + 6.5f;
+        boolean closeHover = mouseX >= (double)(closeX - 2.0f) && mouseX <= (double)(closeX + 10.0f) && mouseY >= (double)(closeY - 2.0f) && mouseY <= (double)(closeY + 10.0f);
+        Color color = closeColor = closeHover ? new Color(255, 80, 80, (int)(255.0f * mainEase)) : new Color(140, 140, 150, (int)(255.0f * mainEase));
+        if (spFont != null) {
+            ((BuiltText)Builder.text().font(spFont).text("A").size(7.0f).color(closeColor).build()).render(matrix, closeX, closeY);
+        }
+        if (closeHover && isMouseDown && !wasMouseDown) {
+            this.panelOpen = false;
+            this.activeSubmenu = SubmenuType.NONE;
+            context.getMatrices().popMatrix();
+            return;
+        }
+        float c1X = pX + 4.0f;
+        float c1Y = pY + 20.0f;
+        float c1W = mainW - 8.0f;
+        float c1H = 20.0f;
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(c1W, c1H)).radius(new QuadRadiusState(6.0f)).color(new QuadColorState(new Color(10, 10, 15, (int)(220.0f * mainEase)))).build()).render(matrix, c1X, c1Y);
+        float r1Y = c1Y + 2.0f;
+        float r1H = 16.0f;
+        boolean r1Hov = mouseX >= (double)c1X && mouseX <= (double)(c1X + c1W) && mouseY >= (double)r1Y && mouseY <= (double)(r1Y + r1H);
+        boolean bl = r1Active = this.activeSubmenu == SubmenuType.LAYOUT;
+        if (r1Hov) {
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(c1W - 4.0f, r1H)).radius(new QuadRadiusState(4.0f)).color(new QuadColorState(new Color(22, 22, 32, (int)(180.0f * mainEase)))).build()).render(matrix, c1X + 2.0f, r1Y);
+        }
+        if (spFont != null) {
+            ((BuiltText)Builder.text().font(spFont).text("B").size(7.5f).color(new Color(170, 170, 190, (int)(255.0f * mainEase))).build()).render(matrix, c1X + 5.0f, r1Y + 4.0f);
+        }
+        if (mediumFont != null) {
+            ((BuiltText)Builder.text().font(mediumFont).text("Layout").size(6.5f).color(new Color(230, 230, 245, (int)(255.0f * mainEase))).build()).render(matrix, c1X + 16.0f, r1Y + 5.5f);
+            String currentLayoutName = (ArmorHudManager.isVertical() ? "Vertical" : "Horizontal") + " >";
+            float layW = mediumFont.getWidth(currentLayoutName, 6.0f);
+            Color layCol = r1Active ? GuiUtils.withAlpha(themeColor, mainEase) : new Color(140, 140, 160, (int)(255.0f * mainEase));
+            ((BuiltText)Builder.text().font(mediumFont).text(currentLayoutName).size(6.0f).color(layCol).build()).render(matrix, c1X + c1W - layW - 5.0f, r1Y + 5.5f);
+        }
+        if (r1Hov && isMouseDown && !wasMouseDown) {
+            this.activeSubmenu = this.activeSubmenu == SubmenuType.LAYOUT ? SubmenuType.NONE : SubmenuType.LAYOUT;
+        }
+        float c2X = pX + 4.0f;
+        float c2Y = pY + 44.0f;
+        float c2W = mainW - 8.0f;
+        float c2H = 22.0f;
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(c2W, c2H)).radius(new QuadRadiusState(6.0f)).color(new QuadColorState(new Color(10, 10, 15, (int)(220.0f * mainEase)))).build()).render(matrix, c2X, c2Y);
+        boolean wgVal = warningGlow;
+        float targetSwitch = wgVal ? 1.0f : 0.0f;
+        this.warningGlowSwitchAnim = GuiUtils.animate(this.warningGlowSwitchAnim, targetSwitch, 16.0f, deltaTime);
+        float wgY = c2Y + 3.0f;
+        float wgH = 16.0f;
+        boolean bl2 = wgHov = mouseX >= (double)c2X && mouseX <= (double)(c2X + c2W) && mouseY >= (double)wgY && mouseY <= (double)(wgY + wgH);
+        if (wgHov) {
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(c2W - 4.0f, wgH)).radius(new QuadRadiusState(4.0f)).color(new QuadColorState(new Color(22, 22, 32, (int)(180.0f * mainEase)))).build()).render(matrix, c2X + 2.0f, wgY);
+        }
+        if (watermarkFont != null) {
+            ((BuiltText)Builder.text().font(watermarkFont).text("G").size(7.5f).color(new Color(180, 180, 200, (int)(255.0f * mainEase))).build()).render(matrix, c2X + 5.0f, wgY + 4.0f);
+        }
+        if (mediumFont != null) {
+            ((BuiltText)Builder.text().font(mediumFont).text("Warning Glow").size(6.5f).color(new Color(230, 230, 245, (int)(255.0f * mainEase))).build()).render(matrix, c2X + 16.0f, wgY + 5.5f);
+        }
+        float swW = 20.0f;
+        float swH = 11.0f;
+        float swX = c2X + c2W - swW - 5.0f;
+        float swY = wgY + 2.5f;
+        Color activeThemeCol = GuiUtils.withAlpha(themeColor, mainEase);
+        Color offThemeCol = new Color(0, 0, 0, (int)(255.0f * mainEase));
+        Color swBg = GuiUtils.interpolateColor(offThemeCol, activeThemeCol, this.warningGlowSwitchAnim);
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(swW, swH)).radius(new QuadRadiusState(swH / 2.0f)).color(new QuadColorState(swBg)).build()).render(matrix, swX, swY);
+        float baseKnobRadius = 3.8f;
+        float offKnobX = swX + baseKnobRadius + 1.8f;
+        float onKnobX = swX + swW - baseKnobRadius - 1.8f;
+        float currentKnobCX = offKnobX + (onKnobX - offKnobX) * this.warningGlowSwitchAnim;
+        float knobCY = swY + swH / 2.0f;
+        float stretch = (float)Math.sin((double)this.warningGlowSwitchAnim * Math.PI) * 3.2f;
+        float knobW = baseKnobRadius * 2.0f + stretch;
+        float knobH = baseKnobRadius * 2.0f - stretch * 0.35f;
+        float knobX0 = currentKnobCX - knobW / 2.0f;
+        float knobY0 = knobCY - knobH / 2.0f;
+        ((BuiltRectangle)Builder.rectangle().size(new SizeState(knobW, knobH)).radius(new QuadRadiusState(knobH / 2.0f)).color(new QuadColorState(new Color(255, 255, 255, (int)(255.0f * mainEase)))).build()).render(matrix, knobX0, knobY0);
+        if (wgHov && isMouseDown && !wasMouseDown) {
+            warningGlow = !warningGlow;
+        }
+        context.getMatrices().popMatrix();
+        if (this.subPanelAnim > 0.005f) {
+            float subEase = 1.0f - (float)Math.pow(1.0f - this.subPanelAnim, 3.0);
+            float subScale = 0.88f + 0.12f * subEase;
+            float sX = pX + mainW + 5.0f;
+            float sY = pY;
+            context.getMatrices().pushMatrix();
+            if (subScale < 0.999f) {
+                float scx = sX + subW / 2.0f;
+                float scy = sY + subH / 2.0f;
+                context.getMatrices().translate(scx, scy);
+                context.getMatrices().scale(subScale, subScale);
+                context.getMatrices().translate(-scx, -scy);
+            }
+            matrix = xyz.angames.astolfoclient.client.render.GuiTransforms.matrix(context.getMatrices());
+            for (int i = 6; i >= 0; --i) {
+                float progress = (float)i / 6.0f;
+                float spread = progress * 4.0f;
+                int alpha = (int)(60.0f * (1.0f - progress) * (1.0f - progress) * subEase);
+                if (alpha <= 0) continue;
+                ((BuiltRectangle)Builder.rectangle().size(new SizeState(subW + spread * 2.0f, subH + spread * 2.0f)).radius(new QuadRadiusState(8.0f + spread)).color(new QuadColorState(new Color(0, 0, 0, alpha))).build()).render(matrix, sX - spread, sY - spread);
+            }
+            Color bgSub = new Color(0, 0, 0, (int)(255.0f * subEase));
+            ((BuiltRectangle)Builder.rectangle().size(new SizeState(subW, subH)).radius(new QuadRadiusState(8.0f)).color(new QuadColorState(bgSub)).build()).render(matrix, sX, sY);
+            if (this.activeSubmenu == SubmenuType.LAYOUT) {
+                float rowH = 16.0f;
+                float listStartY = sY + 4.0f;
+                for (int i = 0; i < modes.length; ++i) {
+                    boolean rHov;
+                    float rY = listStartY + (float)i * rowH;
+                    boolean isSel = layout.equalsIgnoreCase(modes[i]);
+                    boolean bl3 = rHov = mouseX >= (double)(sX + 3.0f) && mouseX <= (double)(sX + subW - 3.0f) && mouseY >= (double)rY && mouseY <= (double)(rY + rowH - 1.0f);
+                    if (rHov) {
+                        ((BuiltRectangle)Builder.rectangle().size(new SizeState(subW - 6.0f, rowH - 1.0f)).radius(new QuadRadiusState(4.0f)).color(new QuadColorState(new Color(25, 25, 36, (int)(220.0f * subEase)))).build()).render(matrix, sX + 3.0f, rY);
+                    }
+                    if (isSel && spFont != null) {
+                        ((BuiltText)Builder.text().font(spFont).text("D").size(6.5f).color(new Color(255, 255, 255, (int)(255.0f * subEase))).build()).render(matrix, sX + 6.0f, rY + 4.5f);
+                    }
+                    if (mediumFont != null) {
+                        Color textCol = isSel ? new Color(255, 255, 255, (int)(255.0f * subEase)) : (rHov ? new Color(200, 200, 220, (int)(255.0f * subEase)) : new Color(130, 130, 150, (int)(255.0f * subEase)));
+                        ((BuiltText)Builder.text().font(mediumFont).text(labels[i]).size(6.5f).color(textCol).build()).render(matrix, sX + 20.0f, rY + 5.5f);
+                    }
+                    if (!rHov || !isMouseDown || wasMouseDown) continue;
+                    layout = modes[i];
+                }
+            }
+            context.getMatrices().popMatrix();
+        }
+    }
+
+    public boolean onMouseClicked(double mouseX, double mouseY, int button) {
+        boolean isEditing = this.client.currentScreen instanceof HudEditorScreen;
+        InterfaceModule interfaceMod = ArmorHudManager.getInterfaceModule();
+        if (interfaceMod == null) {
+            return false;
+        }
+        if (!(isEditing || interfaceMod.isEnabled() && interfaceMod.armorHud.get())) {
+            return false;
+        }
+        float w = this.getWidth();
+        float h = this.getHeight();
+        double currentGuiScale = this.client.getWindow().getScaleFactor();
+        if (currentGuiScale <= 0.0) {
+            currentGuiScale = 2.0;
+        }
+        float scaleModifier = (float)(2.0 / currentGuiScale);
+        float visMinX = this.x;
+        float visMinY = this.y;
+        float visMaxX = this.x + w * scaleModifier;
+        float visMaxY = this.y + h * scaleModifier;
+        if (this.panelOpen) {
+            boolean inSub;
+            float maxPanelH;
+            float mainW = 110.0f;
+            float mainH = 70.0f;
+            float subW = 95.0f;
+            float subH = 40.0f;
+            boolean hasSub = this.activeSubmenu != SubmenuType.NONE;
             float pX = this.x;
-            float pY = this.y + h * scaleModifier + 6.0F;
-            float guiWidth = this.client.method_22683().method_4486();
-            float guiHeight = this.client.method_22683().method_4502();
-            if (pX + mainW + (hasSub ? subW + 5.0F : 0.0F) > guiWidth - 6.0F) {
-               pX = guiWidth - mainW - (hasSub ? subW + 5.0F : 0.0F) - 6.0F;
+            float pY = this.y + h * scaleModifier + 6.0f;
+            float guiWidth = this.client.getWindow().getScaledWidth();
+            float guiHeight = this.client.getWindow().getScaledHeight();
+            float f = hasSub ? subW + 5.0f : 0.0f;
+            if (pX + mainW + f > guiWidth - 6.0f) {
+                pX = guiWidth - mainW - (hasSub ? subW + 5.0f : 0.0f) - 6.0f;
             }
-
-            if (pX < 6.0F) {
-               pX = 6.0F;
+            if (pX < 6.0f) {
+                pX = 6.0f;
             }
-
-            float maxPanelH = hasSub ? Math.max(mainH, subH) : mainH;
-            if (pY + maxPanelH > guiHeight - 6.0F) {
-               pY = this.y - maxPanelH - 6.0F;
+            float f2 = maxPanelH = hasSub ? Math.max(mainH, subH) : mainH;
+            if (pY + maxPanelH > guiHeight - 6.0f) {
+                pY = this.y - maxPanelH - 6.0f;
             }
-
-            if (pY < 6.0F) {
-               pY = 6.0F;
+            if (pY < 6.0f) {
+                pY = 6.0f;
             }
-
-            boolean inMain = mouseX >= pX && mouseX <= pX + mainW && mouseY >= pY && mouseY <= pY + mainH;
-            boolean inSub = hasSub && mouseX >= pX + mainW + 5.0F && mouseX <= pX + mainW + 5.0F + subW && mouseY >= pY && mouseY <= pY + subH;
+            boolean inMain = mouseX >= (double)pX && mouseX <= (double)(pX + mainW) && mouseY >= (double)pY && mouseY <= (double)(pY + mainH);
+            boolean bl = inSub = hasSub && mouseX >= (double)(pX + mainW + 5.0f) && mouseX <= (double)(pX + mainW + 5.0f + subW) && mouseY >= (double)pY && mouseY <= (double)(pY + subH);
             if (inMain || inSub) {
-               return true;
+                return true;
             }
-         }
-
-         if (button == 1 && mouseX >= visMinX - 4.0F && mouseX <= visMaxX + 4.0F && mouseY >= visMinY - 4.0F && mouseY <= visMaxY + 4.0F) {
-            this.panelOpen = !this.panelOpen;
+        }
+        if (button == 1 && mouseX >= (double)(visMinX - 4.0f) && mouseX <= (double)(visMaxX + 4.0f) && mouseY >= (double)(visMinY - 4.0f) && mouseY <= (double)(visMaxY + 4.0f)) {
+            boolean bl = this.panelOpen = !this.panelOpen;
             if (this.panelOpen) {
-               this.activeSubmenu = ArmorHudManager.SubmenuType.NONE;
+                this.activeSubmenu = SubmenuType.NONE;
             }
-
             this.wasRightMouseDown = true;
             return true;
-         } else if (button == 0 && mouseX >= visMinX - 4.0F && mouseX <= visMaxX + 4.0F && mouseY >= visMinY - 4.0F && mouseY <= visMaxY + 4.0F) {
+        }
+        if (button == 0 && mouseX >= (double)(visMinX - 4.0f) && mouseX <= (double)(visMaxX + 4.0f) && mouseY >= (double)(visMinY - 4.0f) && mouseY <= (double)(visMaxY + 4.0f)) {
             this.dragging = true;
-            this.dragOffsetX = (float)(mouseX - this.x);
-            this.dragOffsetY = (float)(mouseY - this.y);
+            this.dragOffsetX = (float)(mouseX - (double)this.x);
+            this.dragOffsetY = (float)(mouseY - (double)this.y);
             return true;
-         } else {
-            return false;
-         }
-      } else {
-         return false;
-      }
-   }
+        }
+        return false;
+    }
 
-   public void onMouseDragged(double mouseX, double mouseY, int button) {
-      if (this.dragging && button == 0) {
-         double currentGuiScale = this.client.method_22683().method_4495();
-         if (currentGuiScale <= 0.0) {
-            currentGuiScale = 2.0;
-         }
+    public void onMouseDragged(double mouseX, double mouseY, int button) {
+        if (this.dragging && button == 0) {
+            double currentGuiScale = this.client.getWindow().getScaleFactor();
+            if (currentGuiScale <= 0.0) {
+                currentGuiScale = 2.0;
+            }
+            float scaleModifier = (float)(2.0 / currentGuiScale);
+            float screenW = this.client.getWindow().getScaledWidth();
+            float screenH = this.client.getWindow().getScaledHeight();
+            float w = this.getWidth();
+            float h = this.getHeight();
+            float targetX = (float)(mouseX - (double)this.dragOffsetX);
+            float targetY = (float)(mouseY - (double)this.dragOffsetY);
+            this.x = Math.max(0.0f, Math.min(Math.max(0.0f, screenW - w * scaleModifier), targetX));
+            this.y = Math.max(0.0f, Math.min(Math.max(0.0f, screenH - h * scaleModifier), targetY));
+        }
+    }
 
-         float scaleModifier = (float)(2.0 / currentGuiScale);
-         float screenW = this.client.method_22683().method_4486();
-         float screenH = this.client.method_22683().method_4502();
-         float w = this.getWidth();
-         float h = this.getHeight();
-         float targetX = (float)(mouseX - this.dragOffsetX);
-         float targetY = (float)(mouseY - this.dragOffsetY);
-         this.x = Math.max(0.0F, Math.min(Math.max(0.0F, screenW - w * scaleModifier), targetX));
-         this.y = Math.max(0.0F, Math.min(Math.max(0.0F, screenH - h * scaleModifier), targetY));
-      }
-   }
+    public void onMouseReleased(int button) {
+        if (this.dragging && button == 0) {
+            this.dragging = false;
+        }
+    }
 
-   public void onMouseReleased(int button) {
-      if (this.dragging && button == 0) {
-         this.dragging = false;
-      }
-   }
+    public void onMouseReleased(double mouseX, double mouseY, int button) {
+        if (this.dragging && button == 0) {
+            this.dragging = false;
+        }
+    }
 
-   public void onMouseReleased(double mouseX, double mouseY, int button) {
-      if (this.dragging && button == 0) {
-         this.dragging = false;
-      }
-   }
+    private static InterfaceModule getInterfaceModule() {
+        if (AstolfoclientClient.moduleManager == null) {
+            return null;
+        }
+        return (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
+    }
 
-   private static InterfaceModule getInterfaceModule() {
-      return AstolfoclientClient.moduleManager == null ? null : (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
-   }
+    public float getX() {
+        return this.x;
+    }
 
-   public float getX() {
-      return this.x;
-   }
+    public float getY() {
+        return this.y;
+    }
 
-   public float getY() {
-      return this.y;
-   }
+    public void setX(float x) {
+        this.x = x;
+    }
 
-   public void setX(float x) {
-      this.x = x;
-   }
+    public void setY(float y) {
+        this.y = y;
+    }
 
-   public void setY(float y) {
-      this.y = y;
-   }
+    @Environment(value=EnvType.CLIENT)
+    private static enum SubmenuType {
+        NONE,
+        LAYOUT;
 
-   @Environment(EnvType.CLIENT)
-   private enum SubmenuType {
-      NONE,
-      LAYOUT;
-   }
+    }
 }
+

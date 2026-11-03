@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "astolfovisuals",
-  "version": "2.0",
+  "version": "2.0-port.3+1.21.11",
   "name": "Astolfo Visuals",
   "description": "Astolfo Visuals it is a mod what adds some unic features to minecratf",
   "authors": [
@@ -13,9 +13,6 @@
   "entrypoints": {
     "client": [
       "xyz.angames.astolfoclient.client.AstolfoclientClient"
-    ],
-    "fabric-datagen": [
-      "xyz.angames.astolfoclient.client.AstolfoclientDataGenerator"
     ]
   },
   "mixins": [
@@ -25,9 +22,10 @@
     }
   ],
   "depends": {
-    "fabricloader": "\u003e\u003d0.19.3",
+    "fabricloader": ">=0.19.3",
     "fabric-api": "*",
-    "minecraft": "1.21.4"
+    "minecraft": "1.21.11",
+    "java": ">=21"
   },
   "suggests": {
     "modmenu": "*"
