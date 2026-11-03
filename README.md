@@ -28,5 +28,3 @@ Whether you want a simple clean HUD or a more colorful PvP style interface, the 
 
 
 `Astolfo Reborn is a client-side mod and does not need to be installed on the server!!!`
-
-<iframe width="560" height="315" src="https://www.youtube-nocookie.com/embed/LXqKeX12H90" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
