@@ -19,7 +19,7 @@ Instead of adding a huge number of complicated features that you may never use, 
 Whether you want a simple clean HUD or a more colorful PvP style interface, the client lets you configure it the way you want.
 
 ## Installation
-1. Install Fabric Loader for Minecraft 1.21.4.
+1. Install Fabric Loader for Minecraft.
 2. Install Fabric API.
 3. Put `AstolfoClient` into your Minecraft `mods` folder.
 4. Start Minecraft using your Fabric profile.
