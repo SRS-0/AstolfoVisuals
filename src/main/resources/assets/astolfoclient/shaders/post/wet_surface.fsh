@@ -1,7 +1,8 @@
-#version 150 core
+#version 330
+#extension GL_ARB_separate_shader_objects : require core
 
-in vec2 vUv;
-out vec4 fragColor;
+layout(location = 0) in vec2 vUv;
+layout(location = 0) out vec4 fragColor;
 
 uniform sampler2D u_SceneTexture;
 uniform sampler2D u_DepthTexture;

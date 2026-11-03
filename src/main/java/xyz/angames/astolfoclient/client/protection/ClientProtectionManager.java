@@ -71,7 +71,7 @@ public class ClientProtectionManager {
 
     public boolean isMaliciousPacket(Packet<?> packet) {
         ClientboundEntityPositionSyncPacket entitySync;
-        PositionMoveRotation values;
+        net.minecraft.world.entity.PositionPath values;
         ClientboundTeleportEntityPacket entityPos;
         ClientboundMoveVehiclePacket vehicleMove;
         Vec3 pos;
@@ -96,19 +96,19 @@ public class ClientProtectionManager {
         }
         if (packet instanceof ClientboundLevelParticlesPacket) {
             ClientboundLevelParticlesPacket particle = (ClientboundLevelParticlesPacket)packet;
-            if (ClientProtectionManager.isInvalidDouble(particle.getX()) || ClientProtectionManager.isInvalidDouble(particle.getY()) || ClientProtectionManager.isInvalidDouble(particle.getZ()) || Math.abs(particle.getX()) > 3.0E7 || Math.abs(particle.getY()) > 3.0E7 || Math.abs(particle.getZ()) > 3.0E7) {
+            if (ClientProtectionManager.isInvalidDouble(particle.x()) || ClientProtectionManager.isInvalidDouble(particle.y()) || ClientProtectionManager.isInvalidDouble(particle.z()) || Math.abs(particle.x()) > 3.0E7 || Math.abs(particle.y()) > 3.0E7 || Math.abs(particle.z()) > 3.0E7) {
                 this.onCrashBlocked("Particle Exploit", "Coordinates out of bounds");
                 return true;
             }
-            if (particle.getCount() > 1000 || particle.getCount() < 0) {
-                this.onCrashBlocked("Particle Exploit", "Invalid count: " + particle.getCount());
+            if (particle.count() > 1000 || particle.count() < 0) {
+                this.onCrashBlocked("Particle Exploit", "Invalid count: " + particle.count());
                 return true;
             }
-            if (Float.isNaN(particle.getMaxSpeed()) || Float.isInfinite(particle.getMaxSpeed()) || Math.abs(particle.getMaxSpeed()) > 1000.0f) {
+            if (Float.isNaN(Math.max(Math.abs(particle.xMaxSpeed()),Math.max(Math.abs(particle.yMaxSpeed()),Math.abs(particle.zMaxSpeed())))) || Float.isInfinite(Math.max(Math.abs(particle.xMaxSpeed()),Math.max(Math.abs(particle.yMaxSpeed()),Math.abs(particle.zMaxSpeed())))) || Math.abs(Math.max(Math.abs(particle.xMaxSpeed()),Math.max(Math.abs(particle.yMaxSpeed()),Math.abs(particle.zMaxSpeed())))) > 1000.0f) {
                 this.onCrashBlocked("Particle Exploit", "Malformed particle speed");
                 return true;
             }
-            if (Float.isNaN(particle.getXDist()) || Float.isNaN(particle.getYDist()) || Float.isNaN(particle.getZDist()) || Math.abs(particle.getXDist()) > 1000.0f || Math.abs(particle.getYDist()) > 1000.0f || Math.abs(particle.getZDist()) > 1000.0f) {
+            if (Float.isNaN(particle.xDist()) || Float.isNaN(particle.yDist()) || Float.isNaN(particle.zDist()) || Math.abs(particle.xDist()) > 1000.0f || Math.abs(particle.yDist()) > 1000.0f || Math.abs(particle.zDist()) > 1000.0f) {
                 this.onCrashBlocked("Particle Exploit", "Malformed particle offset");
                 return true;
             }
@@ -163,7 +163,7 @@ public class ClientProtectionManager {
                 try {
                     Minecraft mc = Minecraft.getInstance();
                     if (mc != null && mc.getConnection() != null) {
-                        mc.getConnection().send((Packet)new ServerboundAcceptTeleportationPacket(teleport.id()));
+                        mc.getConnection().send((Packet)new ServerboundAcceptTeleportationPacket(teleport.id(),mc.player.getX(),mc.player.getY(),mc.player.getZ(),mc.player.getYRot(),mc.player.getXRot()));
                     }
                 }
                 catch (Exception exception) {
@@ -172,7 +172,7 @@ public class ClientProtectionManager {
                 return true;
             }
         }
-        if (packet instanceof ClientboundMoveVehiclePacket && ((pos = (vehicleMove = (ClientboundMoveVehiclePacket)packet).position()) == null || ClientProtectionManager.isInvalidDouble(pos.x) || ClientProtectionManager.isInvalidDouble(pos.y) || ClientProtectionManager.isInvalidDouble(pos.z) || Math.abs(pos.x) > 3.0E7 || Math.abs(pos.y) > 3.0E7 || Math.abs(pos.z) > 3.0E7 || Float.isNaN(vehicleMove.yRot()) || Float.isInfinite(vehicleMove.yRot()) || Float.isNaN(vehicleMove.xRot()) || Float.isInfinite(vehicleMove.xRot()))) {
+        if (packet instanceof ClientboundMoveVehiclePacket && ((pos = (vehicleMove = (ClientboundMoveVehiclePacket)packet).movingTo().position()) == null || ClientProtectionManager.isInvalidDouble(pos.x) || ClientProtectionManager.isInvalidDouble(pos.y) || ClientProtectionManager.isInvalidDouble(pos.z) || Math.abs(pos.x) > 3.0E7 || Math.abs(pos.y) > 3.0E7 || Math.abs(pos.z) > 3.0E7 || Float.isNaN(vehicleMove.movingTo().yRot()) || Float.isInfinite(vehicleMove.movingTo().yRot()) || Float.isNaN(vehicleMove.movingTo().xRot()) || Float.isInfinite(vehicleMove.movingTo().xRot()))) {
             this.onCrashBlocked("Vehicle Crash", "Invalid vehicle coordinates or rotation");
             return true;
         }
@@ -180,7 +180,7 @@ public class ClientProtectionManager {
             this.onCrashBlocked("Entity Position Exploit", "Invalid coordinates for entity");
             return true;
         }
-        if (packet instanceof ClientboundEntityPositionSyncPacket && (values = (entitySync = (ClientboundEntityPositionSyncPacket)packet).values()) != null && ((pos2 = values.position()) == null || ClientProtectionManager.isInvalidDouble(pos2.x) || ClientProtectionManager.isInvalidDouble(pos2.y) || ClientProtectionManager.isInvalidDouble(pos2.z) || Math.abs(pos2.x) > 3.0E7 || Math.abs(pos2.y) > 3.0E7 || Math.abs(pos2.z) > 3.0E7)) {
+        if (packet instanceof ClientboundEntityPositionSyncPacket && (values = (entitySync = (ClientboundEntityPositionSyncPacket)packet).position()) != null && ((pos2 = values.endPosition()) == null || ClientProtectionManager.isInvalidDouble(pos2.x) || ClientProtectionManager.isInvalidDouble(pos2.y) || ClientProtectionManager.isInvalidDouble(pos2.z) || Math.abs(pos2.x) > 3.0E7 || Math.abs(pos2.y) > 3.0E7 || Math.abs(pos2.z) > 3.0E7)) {
             this.onCrashBlocked("Entity Sync Exploit", "Invalid sync coordinates for entity");
             return true;
         }

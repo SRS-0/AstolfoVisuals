@@ -1,24 +1,25 @@
-#version 150
-in vec2 EffectLocal;
-in vec4 Effect0;
-flat out vec4 Effect0Value;
-in vec4 Effect1;
-flat out vec4 Effect1Value;
-in vec4 Effect2;
-flat out vec4 Effect2Value;
+#version 330
+#extension GL_ARB_separate_shader_objects : require
+layout(location = 0) in vec2 EffectLocal;
+layout(location = 1) in vec4 Effect0;
+layout(location = 0) flat out vec4 Effect0Value;
+layout(location = 2) in vec4 Effect1;
+layout(location = 1) flat out vec4 Effect1Value;
+layout(location = 3) in vec4 Effect2;
+layout(location = 2) flat out vec4 Effect2Value;
 
-#moj_import <mre:common.glsl>
+#include <mre:common.glsl>
 
-in vec3 Position; // POSITION_TEXTURE_COLOR vertex attributes
-in vec2 UV0;
-in vec4 Color;
+layout(location = 4) in vec3 Position; // POSITION_TEXTURE_COLOR vertex attributes
+layout(location = 5) in vec2 UV0;
+layout(location = 6) in vec4 Color;
 
-#moj_import <minecraft:dynamictransforms.glsl>
-#moj_import <minecraft:projection.glsl>
+#include <minecraft:dynamictransforms.glsl>
+#include <minecraft:projection.glsl>
 
-out vec2 FragCoord;
-out vec2 TexCoord;
-out vec4 FragColor;
+layout(location = 4) out vec2 FragCoord;
+layout(location = 5) out vec2 TexCoord;
+layout(location = 3) out vec4 FragColor;
 
 void main() {
     Effect0Value = Effect0;

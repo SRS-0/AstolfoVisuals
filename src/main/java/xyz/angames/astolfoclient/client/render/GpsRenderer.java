@@ -22,7 +22,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.manager.GpsManager;
 
@@ -85,7 +85,7 @@ public class GpsRenderer {
         PoseStack matrixStack = context.poseStack();
         matrixStack.pushPose();
         matrixStack.translate(renderX - cameraPos.x, renderYFinal - cameraPos.y, renderZ - cameraPos.z);
-        matrixStack.mulPose(context.gameRenderer().mainCamera().rotation());
+        matrixStack.rotate(context.gameRenderer().mainCamera().rotation());
         matrixStack.scale(1.0f, -1.0f, 1.0f);
         float fixedScale = 0.04f;
         matrixStack.scale(fixedScale, fixedScale, fixedScale);
@@ -98,7 +98,7 @@ public class GpsRenderer {
         matrixStack.pushPose();
         matrixStack.translate(shadowOffset, shadowOffset, 0.05f);
         Matrix4f shadowMatrix = matrixStack.last().pose();
-        BufferBuilder shadowBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder shadowBuffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         shadowBuffer.addVertex(shadowMatrix, -halfSize, -halfSize, 0.0f).setUv(0.0f, 0.0f).setColor(0.0f, 0.0f, 0.0f, 1.0f);
         shadowBuffer.addVertex(shadowMatrix, -halfSize, halfSize, 0.0f).setUv(0.0f, 1.0f).setColor(0.0f, 0.0f, 0.0f, 1.0f);
         shadowBuffer.addVertex(shadowMatrix, halfSize, halfSize, 0.0f).setUv(1.0f, 1.0f).setColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -108,7 +108,7 @@ public class GpsRenderer {
         matrixStack.pushPose();
         matrixStack.translate(0.0f, 0.0f, -0.1f);
         Matrix4f iconMatrix = matrixStack.last().pose();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         buffer.addVertex(iconMatrix, -halfSize, -halfSize, 0.0f).setUv(0.0f, 0.0f).setColor(1.0f, 1.0f, 1.0f, 1.0f);
         buffer.addVertex(iconMatrix, -halfSize, halfSize, 0.0f).setUv(0.0f, 1.0f).setColor(1.0f, 1.0f, 1.0f, 1.0f);
         buffer.addVertex(iconMatrix, halfSize, halfSize, 0.0f).setUv(1.0f, 1.0f).setColor(1.0f, 1.0f, 1.0f, 1.0f);

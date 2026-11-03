@@ -3,7 +3,7 @@ plugins {
     id 'maven-publish'
 }
 
-version = '2.0-port.2+26.2'
+version = '2.0-port.2+26.3'
 group = 'xyz.angames'
 
 repositories { mavenCentral() }
@@ -26,9 +26,9 @@ sourceSets {
 }
 
 dependencies {
-    minecraft 'com.mojang:minecraft:26.2'
+    minecraft 'com.mojang:minecraft:26.3'
     implementation 'net.fabricmc:fabric-loader:0.20.1'
-    implementation 'net.fabricmc.fabric-api:fabric-api:0.161.0+26.2'
+    implementation 'net.fabricmc.fabric-api:fabric-api:0.165.2+26.3'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     shaderCompiler 'org.lwjgl:lwjgl:3.4.3'
     shaderCompiler 'org.lwjgl:lwjgl:3.4.3:natives-windows'

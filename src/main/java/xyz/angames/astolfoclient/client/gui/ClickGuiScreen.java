@@ -175,6 +175,7 @@ extends Screen {
     }
 
     protected void init() {
+        Minecraft.getInstance().textInputManager().startTextInput(this);
         this.initTime = System.currentTimeMillis();
         this.lastFrameTime = System.currentTimeMillis();
         this.openAnimProgress = 0.0f;
@@ -274,6 +275,7 @@ extends Screen {
     }
 
     public void onClose() {
+        Minecraft.getInstance().textInputManager().stopTextInput(this);
         this.settingsModalOpen = false;
         this.colorPickerOpen = false;
         this.soundSettingsOpen = false;
@@ -1438,7 +1440,7 @@ extends Screen {
             }
             return true;
         }
-        return super.keyPressed(new net.minecraft.client.input.KeyEvent(keyCode, scanCode, modifiers));
+        return super.keyPressed(new net.minecraft.client.input.KeyEvent(xyz.angames.astolfoclient.client.util.LegacyInput.nativeKey(keyCode), scanCode, xyz.angames.astolfoclient.client.util.LegacyInput.nativeModifiers(modifiers)));
     }
 
     private void renderHandLogic(GuiGraphicsExtractor ctx, float delta) {
@@ -1491,10 +1493,10 @@ extends Screen {
             this.title = title;
         }
     }
-    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) { return mouseClicked(click.x(), click.y(), click.button()); }
-    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) { return mouseDragged(click.x(), click.y(), click.button(), dx, dy); }
-    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) { return mouseReleased(click.x(), click.y(), click.button()); }
-    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent input) { return keyPressed(input.key(), input.scancode(), input.modifiers()); }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) { return mouseClicked(click.x(), click.y(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(click.button())); }
+    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) { return mouseDragged(click.x(), click.y(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(click.button()), dx, dy); }
+    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) { return mouseReleased(click.x(), click.y(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(click.button())); }
+    @Override public boolean keyPressed(net.minecraft.client.input.KeyEvent input) { return keyPressed(xyz.angames.astolfoclient.client.util.LegacyInput.legacyKey(input.key()), input.keycode(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyModifiers(input.modifiers())); }
     @Override public boolean charTyped(net.minecraft.client.input.CharacterEvent input) { return charTyped((char)input.codepoint(), 0); }
 
 }

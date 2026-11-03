@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import dev.sxmurxy.mre.builders.Builder;
 import dev.sxmurxy.mre.builders.states.QuadColorState;
@@ -49,7 +49,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -242,7 +242,7 @@ public class TrajectoriesRenderer {
             return;
         }
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.disableCull();
         if (drawThroughWalls) {
             RenderSystem.disableDepthTest();
@@ -255,7 +255,7 @@ public class TrajectoriesRenderer {
         if (drawAsLine) {
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
             RenderSystem.lineWidth((float)3.0f);
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
             Matrix4f mx = matrices.last().pose();
             for (Vec3 point : path) {
                 float lx = (float)(point.x - camPos.x);
@@ -268,7 +268,7 @@ public class TrajectoriesRenderer {
         } else {
             RenderSystem.setShaderTexture((int)0, (Identifier)BLOOM_TEXTURE);
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             Vec3 playerPos = this.mc.player != null ? this.mc.player.position() : Vec3.ZERO;
             for (int i = 0; i < path.size() - 1; ++i) {
                 Vec3 p2;
@@ -296,7 +296,7 @@ public class TrajectoriesRenderer {
     private void drawBloomGlow(PoseStack matrices, BufferBuilder buffer, Vec3 pos, Vec3 camPos, Quaternionf cameraRot, float size, float r, float g, float b, float alpha) {
         matrices.pushPose();
         matrices.translate(pos.x - camPos.x, pos.y - camPos.y, pos.z - camPos.z);
-        matrices.mulPose(cameraRot);
+        matrices.rotate(cameraRot);
         Matrix4f mx = matrices.last().pose();
         buffer.addVertex(mx, -size / 2.0f, -size / 2.0f, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, alpha);
         buffer.addVertex(mx, size / 2.0f, -size / 2.0f, 0.0f).setUv(1.0f, 1.0f).setColor(r, g, b, alpha);
@@ -487,10 +487,10 @@ public class TrajectoriesRenderer {
             }
             matrices.pushPose();
             matrices.translate(hX, hY, hZ);
-            matrices.mulPose(blockHit.getDirection().getRotation());
-            matrices.mulPose(Axis.XN.rotationDegrees(-90.0f));
+            matrices.rotate(blockHit.getDirection().getRotation());
+            matrices.rotate(Axis.XN.rotationDegrees(-90.0f));
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+            RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
             RenderSystem.disableCull();
             if (drawThroughWalls) {
                 RenderSystem.disableDepthTest();
@@ -501,7 +501,7 @@ public class TrajectoriesRenderer {
             }
             RenderSystem.setShaderTexture((int)0, (Identifier)HIT_TEXTURE);
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             Matrix4f mx = matrices.last().pose();
             buffer.addVertex(mx, -size / 3.0f, size / 3.0f, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, 1.0f);
             buffer.addVertex(mx, size / 3.0f, size / 3.0f, 0.0f).setUv(1.0f, 1.0f).setColor(r, g, b, 1.0f);
@@ -527,7 +527,7 @@ public class TrajectoriesRenderer {
                 RenderSystem.depthMask((boolean)true);
             }
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
             this.drawBoxLines(buffer, mx, bBox, r, g, b, 1.0f);
             BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
             RenderSystem.enableDepthTest();

@@ -1,5 +1,5 @@
 package xyz.angames.astolfoclient.client.effects;
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.util.List;
 import net.fabricmc.api.EnvType;
@@ -16,7 +16,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -44,14 +44,14 @@ public class HitEspRenderer {
             return;
         }
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask((boolean)false);
         RenderSystem.setShaderTexture((int)0, (Identifier)TEXTURE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
         Tesselator tessellator = Tesselator.getInstance();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         long currentTime = System.currentTimeMillis();
         double tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(true);
         int rgb = ThemeManager.getThemedColor(0L);
@@ -86,8 +86,8 @@ public class HitEspRenderer {
                 if (!((alpha *= a) > 0.01f)) continue;
                 matrixStack.pushPose();
                 matrixStack.translate(effect.position.x - context.gameRenderer().mainCamera().position().x, effect.position.y - context.gameRenderer().mainCamera().position().y, effect.position.z - context.gameRenderer().mainCamera().position().z);
-                matrixStack.mulPose(effect.orientation);
-                matrixStack.mulPose(Axis.ZP.rotation(textureRotation));
+                matrixStack.rotate(effect.orientation);
+                matrixStack.rotate(Axis.ZP.rotation(textureRotation));
                 matrixStack.scale(scale, scale, scale);
                 Matrix4f matrix = matrixStack.last().pose();
                 buffer.addVertex(matrix, -0.5f, -0.5f, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, alpha);
@@ -126,9 +126,9 @@ public class HitEspRenderer {
                 float renderRotZ = (float)Mth.lerp((double)tickDelta, (double)shard.prevRotZ, (double)shard.rotZ);
                 matrixStack.pushPose();
                 matrixStack.translate(renderX - context.gameRenderer().mainCamera().position().x, renderY - context.gameRenderer().mainCamera().position().y, renderZ - context.gameRenderer().mainCamera().position().z);
-                matrixStack.mulPose(Axis.XP.rotationDegrees(renderRotX));
-                matrixStack.mulPose(Axis.YP.rotationDegrees(renderRotY));
-                matrixStack.mulPose(Axis.ZP.rotationDegrees(renderRotZ));
+                matrixStack.rotate(Axis.XP.rotationDegrees(renderRotX));
+                matrixStack.rotate(Axis.YP.rotationDegrees(renderRotY));
+                matrixStack.rotate(Axis.ZP.rotationDegrees(renderRotZ));
                 matrixStack.scale(shardScale, shardScale, shardScale);
                 Matrix4f matrix = matrixStack.last().pose();
                 buffer.addVertex(matrix, -0.5f, -0.5f, 0.0f).setUv(shard.u1, shard.v2).setColor(r, g, b, alpha);

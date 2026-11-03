@@ -29,7 +29,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFW;
+
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
@@ -87,7 +87,8 @@ public class EffectHudManager {
         Color themeColor = new Color(ThemeManager.getThemedColor(themeTime / 10L));
         List<MobEffectInstance> list = isEditing ? this.getPlaceholders() : new ArrayList(effects);
         HashSet<MobEffect> currentActiveEffects = new HashSet<MobEffect>();
-        if (isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing)) {
+        boolean hudVisible = isEditing || isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled());
+        if (hudVisible) {
             for (MobEffectInstance inst : list) {
                 effect = (MobEffect)inst.getEffect().value();
                 currentActiveEffects.add(effect);
@@ -109,7 +110,7 @@ public class EffectHudManager {
             if (isActive || !(state.animProgress < 0.005f) || !(state.heightScale < 0.005f)) continue;
             iterator.remove();
         }
-        boolean shouldShow = !this.cardStateMap.isEmpty() && isSettingEnabled && (interfaceMod == null || interfaceMod.isEnabled() || isEditing);
+        boolean shouldShow = !this.cardStateMap.isEmpty() && hudVisible;
         float targetMasterAlpha = shouldShow ? 1.0f : 0.0f;
         this.masterAlpha += (targetMasterAlpha - this.masterAlpha) * (float)(1.0 - Math.exp(-12.0 * deltaSeconds));
         if (this.masterAlpha < 0.005f && !shouldShow) {
@@ -218,7 +219,7 @@ public class EffectHudManager {
         if (isEditing) {
             double mx = this.getScaledMouseX();
             double my = this.getScaledMouseY();
-            boolean isMouseDown = GLFW.glfwGetMouseButton((long)client.getWindow().handle(), (int)0) == 1;
+            boolean isMouseDown = xyz.angames.astolfoclient.client.util.HudMouseInput.isLeftPressed();
             this.drawConnectedContextPanel(context, scaledWidth, scaledHeight, themeColor, mx, my, isMouseDown, this.wasMouseDown, (float)deltaSeconds);
             this.wasMouseDown = isMouseDown;
         } else {
@@ -232,6 +233,10 @@ public class EffectHudManager {
     }
 
     private void drawConnectedContextPanel(GuiGraphicsExtractor context, float screenW, float screenH, Color themeColor, double mouseX, double mouseY, boolean isMouseDown, boolean wasMouseDown, float deltaTime) {
+        HudPanelLayer.draw(context, () -> this.drawConnectedContextPanelNow(context, screenW, screenH, themeColor, mouseX, mouseY, isMouseDown, wasMouseDown, deltaTime));
+    }
+
+    private void drawConnectedContextPanelNow(GuiGraphicsExtractor context, float screenW, float screenH, Color themeColor, double mouseX, double mouseY, boolean isMouseDown, boolean wasMouseDown, float deltaTime) {
         Color closeColor;
         float mX;
         boolean opensToRight;
@@ -273,6 +278,7 @@ public class EffectHudManager {
         MsdfFont mediumFont = (MsdfFont)MEDIUM_FONT.get();
         MsdfFont spFont = (MsdfFont)LogoRenderer.SP_FONT.get();
         float mainEase = 1.0f - (float)Math.pow(1.0f - this.mainPanelAnim, 3.0);
+        if (this.panelOpen) HudPanelLayer.capture(context, mX, mY, mainW, mainH);
         float mainScale = 0.88f + 0.12f * mainEase;
         context.pose().pushMatrix();
         if (mainScale < 0.999f) {
@@ -342,6 +348,7 @@ public class EffectHudManager {
                 sX = mX - subW - 5.0f;
             }
             float sY = mY;
+            if (this.panelOpen && this.submenuOpen) HudPanelLayer.capture(context, sX, sY, subW, subH);
             context.pose().pushMatrix();
             if (subScale < 0.999f) {
                 float scx = sX + subW / 2.0f;

@@ -19,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ItemLike;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFW;
+
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.gui.HudEditorScreen;
@@ -173,7 +173,7 @@ public class ArmorHudManager {
             if (win != 0L) {
                 double[] mx = new double[1];
                 double[] my = new double[1];
-                GLFW.glfwGetCursorPos((long)win, (double[])mx, (double[])my);
+                mx[0] = Minecraft.getInstance().mouseHandler.xpos(); my[0] = Minecraft.getInstance().mouseHandler.ypos();
                 double screenWidth = this.client.getWindow().getWidth();
                 double screenHeight = this.client.getWindow().getHeight();
                 float guiWidth = this.client.getWindow().getGuiScaledWidth();
@@ -182,8 +182,8 @@ public class ArmorHudManager {
                     mouseScaledX = mx[0] / screenWidth * (double)guiWidth;
                     mouseScaledY = my[0] / screenHeight * (double)guiHeight;
                 }
-                isMouseDown = GLFW.glfwGetMouseButton((long)win, (int)0) == 1;
-                boolean bl2 = isRightMouseDown = GLFW.glfwGetMouseButton((long)win, (int)1) == 1;
+                isMouseDown = xyz.angames.astolfoclient.client.util.HudMouseInput.isLeftPressed();
+                boolean bl2 = isRightMouseDown = xyz.angames.astolfoclient.client.util.HudMouseInput.isRightPressed();
             }
             if (isRightMouseDown && !this.wasRightMouseDown && !(this.client.gui.screen() instanceof HudEditorScreen)) {
                 float visMinX = this.x;
@@ -210,6 +210,10 @@ public class ArmorHudManager {
     }
 
     private void drawAnimatedContextPanel(GuiGraphicsExtractor context, float aX, float aY, float aW, float aH, float scaleFactor, float guiWidth, float guiHeight, Color themeColor, double mouseX, double mouseY, boolean isMouseDown, boolean wasMouseDown, float deltaTime) {
+        HudPanelLayer.draw(context, () -> this.drawAnimatedContextPanelNow(context, aX, aY, aW, aH, scaleFactor, guiWidth, guiHeight, themeColor, mouseX, mouseY, isMouseDown, wasMouseDown, deltaTime));
+    }
+
+    private void drawAnimatedContextPanelNow(GuiGraphicsExtractor context, float aX, float aY, float aW, float aH, float scaleFactor, float guiWidth, float guiHeight, Color themeColor, double mouseX, double mouseY, boolean isMouseDown, boolean wasMouseDown, float deltaTime) {
         boolean wgHov;
         boolean r1Active;
         Color closeColor;
@@ -250,6 +254,7 @@ public class ArmorHudManager {
         MsdfFont spFont = (MsdfFont)SP_FONT.get();
         MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
         float mainEase = 1.0f - (float)Math.pow(1.0f - this.mainPanelAnim, 3.0);
+        if (this.panelOpen) HudPanelLayer.capture(context, pX, pY, mainW, mainH);
         float mainScale = 0.88f + 0.12f * mainEase;
         context.pose().pushMatrix();
         if (mainScale < 0.999f) {
@@ -357,6 +362,7 @@ public class ArmorHudManager {
             float subEase = 1.0f - (float)Math.pow(1.0f - this.subPanelAnim, 3.0);
             float subScale = 0.88f + 0.12f * subEase;
             float sX = pX + mainW + 5.0f;
+            if (this.panelOpen && hasSub) HudPanelLayer.capture(context, sX, pY, subW, subH);
             float sY = pY;
             context.pose().pushMatrix();
             if (subScale < 0.999f) {

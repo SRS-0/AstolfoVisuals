@@ -57,20 +57,20 @@ public abstract class MixinItemEntityRenderer {
         if (isBlock) {
             matrixStack.translate(0.0f, -0.05f, 0.0f);
             if (!isOnGround) {
-                matrixStack.mulPose(Axis.XP.rotationDegrees(age));
-                matrixStack.mulPose(Axis.YP.rotationDegrees(age));
+                matrixStack.rotate(Axis.XP.rotationDegrees(age));
+                matrixStack.rotate(Axis.YP.rotationDegrees(age));
             } else {
-                matrixStack.mulPose(Axis.YP.rotationDegrees((float)itemEntity.getId() * 45.0f));
+                matrixStack.rotate(Axis.YP.rotationDegrees((float)itemEntity.getId() * 45.0f));
             }
         } else {
             matrixStack.translate(0.0f, -0.1f, 0.0f);
             if (!isOnGround) {
-                matrixStack.mulPose(Axis.XP.rotationDegrees(age));
-                matrixStack.mulPose(Axis.YP.rotationDegrees(age));
-                matrixStack.mulPose(Axis.ZP.rotationDegrees(age));
+                matrixStack.rotate(Axis.XP.rotationDegrees(age));
+                matrixStack.rotate(Axis.YP.rotationDegrees(age));
+                matrixStack.rotate(Axis.ZP.rotationDegrees(age));
             } else {
-                matrixStack.mulPose(Axis.XP.rotationDegrees(90.0f));
-                matrixStack.mulPose(Axis.ZP.rotationDegrees((float)itemEntity.getId() * 73.0f));
+                matrixStack.rotate(Axis.XP.rotationDegrees(90.0f));
+                matrixStack.rotate(Axis.ZP.rotationDegrees((float)itemEntity.getId() * 73.0f));
             }
         }
         state.item.submit(matrixStack, vertexConsumerProvider, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);

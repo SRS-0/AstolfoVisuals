@@ -1,12 +1,13 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-flat in vec4 Effect0Value;
+layout(location = 0) flat in vec4 Effect0Value;
 #define SizeData Effect0Value
-flat in vec4 Effect1Value;
+layout(location = 1) flat in vec4 Effect1Value;
 #define RadiusData Effect1Value
-flat in vec4 Effect2Value;
+layout(location = 2) flat in vec4 Effect2Value;
 #define ThicknessData Effect2Value
-flat in vec4 Effect3Value;
+layout(location = 3) flat in vec4 Effect3Value;
 #define SmoothnessData Effect3Value
 #define Size SizeData.xy
 #define Radius RadiusData
@@ -14,17 +15,17 @@ flat in vec4 Effect3Value;
 #define Smoothness SmoothnessData.xy
 
 
-#moj_import <mre:common.glsl>
+#include <mre:common.glsl>
 
-in vec2 FragCoord; // normalized fragment coord relative to the primitive
-in vec4 FragColor;
-
-
+layout(location = 5) in vec2 FragCoord; // normalized fragment coord relative to the primitive
+layout(location = 4) in vec4 FragColor;
 
 
 
 
-out vec4 OutColor;
+
+
+layout(location = 0) out vec4 OutColor;
 
 void main() {
     vec2 center = Size * 0.5;

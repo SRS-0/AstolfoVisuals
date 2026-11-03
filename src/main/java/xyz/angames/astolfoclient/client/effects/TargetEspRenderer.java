@@ -1,13 +1,13 @@
 package xyz.angames.astolfoclient.client.effects;
 
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.BlendFactor;
-import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.math.Axis;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.nio.FloatBuffer;
@@ -168,8 +168,8 @@ pass.draw(mainFbo);}
                   PoseStack matrixStack = context.poseStack();
                   matrixStack.pushPose();
                   matrixStack.translate(lerpX - context.gameRenderer().mainCamera().position().x, centerY - context.gameRenderer().mainCamera().position().y, lerpZ - context.gameRenderer().mainCamera().position().z);
-                  matrixStack.mulPose(context.gameRenderer().mainCamera().rotation());
-                  matrixStack.mulPose(Axis.ZP.rotationDegrees(effect.currentAngle));
+                  matrixStack.rotate(context.gameRenderer().mainCamera().rotation());
+                  matrixStack.rotate(Axis.ZP.rotationDegrees(effect.currentAngle));
                   float scaleProgress = 1.0F;
                   long timeSinceStart = currentTime - effect.startTime;
                   if (timeSinceStart < 200L) {
@@ -184,7 +184,7 @@ pass.draw(mainFbo);}
                   float scale = target.getBbWidth() * 2.5F * scaleProgress;
                   matrixStack.scale(scale, scale, scale);
                   Matrix4f matrix = matrixStack.last().pose();
-                  BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                  BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                   buffer.addVertex(matrix, -0.5F, -0.5F, 0.0F).setUv(0.0F, 0.0F).setColor(r, g, b, alpha);
                   buffer.addVertex(matrix, -0.5F, 0.5F, 0.0F).setUv(0.0F, 1.0F).setColor(r, g, b, alpha);
                   buffer.addVertex(matrix, 0.5F, 0.5F, 0.0F).setUv(1.0F, 1.0F).setColor(r, g, b, alpha);

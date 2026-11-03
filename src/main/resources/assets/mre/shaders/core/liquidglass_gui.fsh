@@ -1,28 +1,29 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
-flat in vec4 Effect0Value;
+layout(location = 0) flat in vec4 Effect0Value;
 #define SizeData Effect0Value
-flat in vec4 Effect1Value;
+layout(location = 3) flat in vec4 Effect1Value;
 #define RadiusData Effect1Value
-flat in vec4 Effect2Value;
+layout(location = 4) flat in vec4 Effect2Value;
 #define SmoothnessData Effect2Value
-flat in vec4 Effect3Value;
+layout(location = 5) flat in vec4 Effect3Value;
 #define CornerSmoothnessData Effect3Value
-flat in vec4 Effect4Value;
+layout(location = 6) flat in vec4 Effect4Value;
 #define GlobalAlphaData Effect4Value
-flat in vec4 Effect5Value;
+layout(location = 7) flat in vec4 Effect5Value;
 #define FresnelPowerData Effect5Value
-flat in vec4 Effect6Value;
+layout(location = 8) flat in vec4 Effect6Value;
 #define FresnelColorData Effect6Value
-flat in vec4 Effect7Value;
+layout(location = 9) flat in vec4 Effect7Value;
 #define FresnelAlphaData Effect7Value
-flat in vec4 Effect8Value;
+layout(location = 10) flat in vec4 Effect8Value;
 #define BaseAlphaData Effect8Value
-flat in vec4 Effect9Value;
+layout(location = 11) flat in vec4 Effect9Value;
 #define FresnelInvertData Effect9Value
-flat in vec4 Effect10Value;
+layout(location = 1) flat in vec4 Effect10Value;
 #define FresnelMixData Effect10Value
-flat in vec4 Effect11Value;
+layout(location = 2) flat in vec4 Effect11Value;
 #define DistortStrengthData Effect11Value
 #define Size SizeData.xy
 #define Radius RadiusData
@@ -38,11 +39,11 @@ flat in vec4 Effect11Value;
 #define DistortStrength DistortStrengthData.x
 
 
-#moj_import <mre:common.glsl>
+#include <mre:common.glsl>
 
-in vec2 FragCoord;
-in vec2 TexCoord;
-in vec4 FragColor;
+layout(location = 13) in vec2 FragCoord;
+layout(location = 14) in vec2 TexCoord;
+layout(location = 12) in vec4 FragColor;
 
 uniform sampler2D Sampler0;
 
@@ -59,7 +60,7 @@ uniform sampler2D Sampler0;
 
 
 
-out vec4 OutColor;
+layout(location = 0) out vec4 OutColor;
 
 float roundedBoxSDF(vec2 p, vec2 b, vec4 r, float smoothness) {
     r.xy = (p.x > 0.0) ? r.xy : r.zw;

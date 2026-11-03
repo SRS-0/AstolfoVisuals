@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 layout(std140) uniform EffectData {
     vec4 ColorModulatorData;
     vec4 uTimeData;
@@ -28,13 +29,11 @@ layout(std140) uniform EffectData {
 #define uFillAlpha uFillAlphaData.x
 #define uMode uModeData.x
 layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
-#moj_import <minecraft:projection.glsl>
+#include <minecraft:projection.glsl>
 
-in vec4 vertexColor;
-in vec2 texCoord0;
-in vec3 worldPos;
-
-
+layout(location = 1) in vec4 vertexColor;
+layout(location = 0) in vec2 texCoord0;
+layout(location = 2) in vec3 worldPos;
 
 
 
@@ -48,7 +47,9 @@ in vec3 worldPos;
 
 
 
-out vec4 fragColor;
+
+
+layout(location = 0) out vec4 fragColor;
 
 // Convert HSV to RGB for Rainbow mode
 vec3 hsv2rgb(vec3 c) {

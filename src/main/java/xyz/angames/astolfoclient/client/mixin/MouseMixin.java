@@ -16,8 +16,11 @@ import xyz.angames.astolfoclient.client.module.Module;
 public class MouseMixin {
     @Inject(method={"onButton"}, at={@At(value="HEAD")})
     private void onMouseButton(long window, net.minecraft.client.input.MouseButtonInfo input, int action, CallbackInfo ci) {
-        int button=input.button(),mods=input.modifiers();
+        int button=xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(input.button()),mods=input.modifiers();
         Minecraft client = Minecraft.getInstance();
+        if (window == client.getWindow().handle()) {
+            xyz.angames.astolfoclient.client.util.HudMouseInput.onButton(client.gui.screen(), client.isWindowActive(), button, action);
+        }
         if (action == 1 && client.gui.screen() == null && AstolfoclientClient.moduleManager != null) {
             int mappedKey = -(button + 100);
             for (Module module : AstolfoclientClient.moduleManager.getModules()) {

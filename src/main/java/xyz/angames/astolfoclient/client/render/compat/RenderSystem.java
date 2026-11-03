@@ -1,8 +1,9 @@
 package xyz.angames.astolfoclient.client.render.compat;
 
-import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
 import com.mojang.blaze3d.platform.*;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.pipeline.*;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
@@ -12,11 +13,12 @@ import org.joml.Matrix4f;
 
 /** Translates legacy effect state into immutable Blaze3D pipeline descriptions. */
 public final class RenderSystem {
+    public static com.mojang.renderpearl.api.textures.GpuTextureView outputColorTextureOverride, outputDepthTextureOverride;
     static boolean blend, depth = true, depthWrite = true, cull = true;
     static CompareOp depthFunction = CompareOp.GREATER_THAN_OR_EQUAL;
     static BlendFunction blendFunction = BlendFunction.TRANSLUCENT;
     static final float[] color = {1,1,1,1};
-    record TextureBinding(GpuTextureView view, com.mojang.blaze3d.textures.GpuSampler sampler) {}
+    record TextureBinding(GpuTextureView view, com.mojang.renderpearl.api.textures.GpuSampler sampler) {}
     static final Map<Integer, TextureBinding> textures = new HashMap<>();
     static com.mojang.blaze3d.pipeline.RenderTarget target;
     static float lineWidth=1;
@@ -37,9 +39,9 @@ public final class RenderSystem {
     public static void depthFunc(int value) { depthFunction=switch(value) {case 512 -> CompareOp.NEVER_PASS; case 513 -> CompareOp.GREATER_THAN; case 514 -> CompareOp.EQUAL; case 516 -> CompareOp.LESS_THAN; case 517 -> CompareOp.NOT_EQUAL; case 518 -> CompareOp.LESS_THAN_OR_EQUAL; case 519 -> CompareOp.ALWAYS_PASS; default -> CompareOp.GREATER_THAN_OR_EQUAL;}; }
     public static void setShaderColor(float r,float g,float b,float a) {color[0]=r;color[1]=g;color[2]=b;color[3]=a;}
     public static ShaderProgram setShader(ShaderProgramKey key) { return program=programs.computeIfAbsent(key,ShaderProgram::new); }
-    public static void setShaderTexture(int slot,Identifier texture) { setShaderTexture(slot,Minecraft.getInstance().getTextureManager().getTexture(texture)); }
+    public static void setShaderTexture(int slot,Identifier texture) { if(WorldPass.isActive()){WorldPass.outside(()->{setShaderTexture(slot,texture);return null;});return;}setShaderTexture(slot,Minecraft.getInstance().getTextureManager().getTexture(texture)); }
     public static void setShaderTexture(int slot,AbstractTexture texture) { textures.put(slot,new TextureBinding(texture.getTextureView(),texture.getSampler())); }
-    public static void setShaderTexture(int slot,GpuTextureView texture,com.mojang.blaze3d.textures.GpuSampler sampler) {textures.put(slot,new TextureBinding(texture,sampler));}
+    public static void setShaderTexture(int slot,GpuTextureView texture,com.mojang.renderpearl.api.textures.GpuSampler sampler) {textures.put(slot,new TextureBinding(texture,sampler));}
     public static void lineWidth(float value) {lineWidth=value;}
     public static boolean isOnRenderThread() {return com.mojang.blaze3d.systems.RenderSystem.isOnRenderThread();}
     public static void assertOnRenderThread() {com.mojang.blaze3d.systems.RenderSystem.assertOnRenderThread();}

@@ -27,7 +27,7 @@ import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix4f;
-import org.lwjgl.glfw.GLFW;
+
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.DiscordRpcManager;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -129,6 +129,10 @@ public class LogoRenderer {
    private static float hotbarYOffsetAnim = 0.0F;
    private static long lastHotbarAnimTime = System.currentTimeMillis();
    private final Map<LogoRenderer.SectionType, Float> renderXMap = new HashMap<>();
+   private final Map<LogoRenderer.SectionType, Float> layoutXMap = new HashMap<>();
+   private final Map<LogoRenderer.SectionType, Float> layoutWidthMap = new HashMap<>();
+   private float layoutScale = 1.0F;
+   private float layoutHeight = 22.0F;
    private final Map<LogoRenderer.SectionType, Float> scaleMap = new HashMap<>();
    private final Map<LogoRenderer.SectionType, Float> glowAlphaMap = new HashMap<>();
    private LogoRenderer.SectionType draggedSection = null;
@@ -229,6 +233,46 @@ public class LogoRenderer {
       return AstolfoclientClient.moduleManager == null ? null : (InterfaceModule)AstolfoclientClient.moduleManager.getModuleByName("Interface");
    }
 
+   public boolean onMouseClicked(double mouseX, double mouseY, int button) {
+      if (button != 0 || this.panelOpen || this.layoutScale <= 0.0F) return false;
+      if (mouseY < this.renderContainerY - 5.0F || mouseY > this.renderContainerY + this.layoutHeight * this.layoutScale + 15.0F) return false;
+      float localX = (float)(mouseX - this.renderContainerX) / this.layoutScale;
+      for (SectionType type : sectionOrder) {
+         if (type == SectionType.BRAND || !isSectionEnabled(type)) continue;
+         float x = this.renderXMap.getOrDefault(type, this.layoutXMap.getOrDefault(type, 0.0F));
+         float width = this.layoutWidthMap.getOrDefault(type, 0.0F);
+         if (localX >= x && localX <= x + width) {
+            this.draggedSection = type;
+            this.dragMouseOffsetX = localX - x;
+            return true;
+         }
+      }
+      return false;
+   }
+
+   public void onMouseDragged(double mouseX) {
+      if (this.draggedSection == null) return;
+      float localX = (float)(mouseX - this.renderContainerX) / this.layoutScale;
+      int current = sectionOrder.indexOf(this.draggedSection);
+      int target = current;
+      for (SectionType other : sectionOrder) {
+         if (other == SectionType.BRAND || other == this.draggedSection || !isSectionEnabled(other)) continue;
+         float center = this.layoutXMap.getOrDefault(other, 0.0F) + this.layoutWidthMap.getOrDefault(other, 0.0F) / 2.0F;
+         int index = sectionOrder.indexOf(other);
+         if (localX < center && index < target) { target = index; break; }
+         if (localX > center && index > target) target = index;
+      }
+      if (target != current && current >= 1 && target >= 1) {
+         sectionOrder.remove(current);
+         sectionOrder.add(target, this.draggedSection);
+      }
+   }
+
+   public void onMouseReleased(double mouseX) {
+      this.onMouseDragged(mouseX);
+      this.draggedSection = null;
+   }
+
    public void render(GuiGraphicsExtractor context) {
       if (this.client.level != null && this.client.player != null) {
          InterfaceModule interfaceMod = this.getInterfaceModule();
@@ -306,7 +350,7 @@ public class LogoRenderer {
                if (win != 0L) {
                   double[] mx = new double[1];
                   double[] my = new double[1];
-                  GLFW.glfwGetCursorPos(win, mx, my);
+                  mx[0] = Minecraft.getInstance().mouseHandler.xpos(); my[0] = Minecraft.getInstance().mouseHandler.ypos();
                   double screenWidth = this.client.getWindow().getWidth();
                   double screenHeight = this.client.getWindow().getHeight();
                   if (screenWidth > 0.0 && screenHeight > 0.0) {
@@ -314,8 +358,8 @@ public class LogoRenderer {
                      mouseScaledY = my[0] / screenHeight * guiHeight;
                   }
 
-                  isMouseDown = GLFW.glfwGetMouseButton(win, 0) == 1;
-                  isRightMouseDown = GLFW.glfwGetMouseButton(win, 1) == 1;
+                  isMouseDown = xyz.angames.astolfoclient.client.util.HudMouseInput.isLeftPressed();
+                  isRightMouseDown = xyz.angames.astolfoclient.client.util.HudMouseInput.isRightPressed();
                }
 
                List<LogoRenderer.SectionType> activeSections = new ArrayList<>();
@@ -401,6 +445,12 @@ public class LogoRenderer {
 
                float x = this.renderContainerX;
                float y = this.renderContainerY;
+               this.layoutXMap.clear();
+               this.layoutXMap.putAll(targetXMap);
+               this.layoutWidthMap.clear();
+               this.layoutWidthMap.putAll(widthMap);
+               this.layoutScale = scaleFactor;
+               this.layoutHeight = totalH;
                float mouseInternalX = (float)((mouseScaledX - x) / scaleFactor);
                float mouseInternalY = (float)((mouseScaledY - y) / scaleFactor);
                if (inChat) {
@@ -844,6 +894,25 @@ public class LogoRenderer {
       boolean wasMouseDown,
       float deltaTime
    ) {
+        HudPanelLayer.draw(context, () -> this.drawAnimatedContextPanelNow(context, wX, wY, wTotalW, wTotalH, scaleFactor, guiWidth, guiHeight, themeColor, mouseX, mouseY, isMouseDown, wasMouseDown, deltaTime));
+    }
+
+    private void drawAnimatedContextPanelNow(
+      GuiGraphicsExtractor context,
+      float wX,
+      float wY,
+      float wTotalW,
+      float wTotalH,
+      float scaleFactor,
+      float guiWidth,
+      float guiHeight,
+      Color themeColor,
+      double mouseX,
+      double mouseY,
+      boolean isMouseDown,
+      boolean wasMouseDown,
+      float deltaTime
+   ) {
       float targetMain = this.panelOpen ? 1.0F : 0.0F;
       this.mainPanelAnim = animate(this.mainPanelAnim, targetMain, 0.22F, deltaTime);
       if (!this.panelOpen && this.mainPanelAnim < 0.01F) {
@@ -892,6 +961,7 @@ public class LogoRenderer {
          MsdfFont spFont = (MsdfFont)SP_FONT.get();
          MsdfFont watermarkFont = (MsdfFont)WATERMARK_FONT.get();
          float mainEase = 1.0F - (float)Math.pow(1.0F - this.mainPanelAnim, 3.0);
+         if (this.panelOpen) HudPanelLayer.capture(context, mX, mY, mainW, mainH);
          float mainScale = 0.88F + 0.12F * mainEase;
          context.pose().pushMatrix();
          if (mainScale < 0.999F) {
@@ -1130,6 +1200,7 @@ public class LogoRenderer {
                float subScale = 0.88F + 0.12F * subEase;
                float sX = mX + mainW + 5.0F;
                float sY = mY;
+               if (this.panelOpen && hasSub) HudPanelLayer.capture(context, sX, sY, subW, subH);
                context.pose().pushMatrix();
                if (subScale < 0.999F) {
                   float scx = sX + subW / 2.0F;

@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.nio.FloatBuffer;
@@ -18,7 +18,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
@@ -136,7 +136,7 @@ public class JumpCircleRenderer {
         float baseRadius = (float)jcm.radius.get();
         Tesselator tessellator = Tesselator.getInstance();
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.disableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc((int)515);
@@ -156,11 +156,11 @@ public class JumpCircleRenderer {
             PoseStack matrixStack = context.poseStack();
             matrixStack.pushPose();
             matrixStack.translate(circle.x - camX, circle.y - camY + 0.02, circle.z - camZ);
-            matrixStack.mulPose(Axis.YP.rotationDegrees(rotationAngle));
-            matrixStack.mulPose(Axis.XP.rotationDegrees(90.0f));
+            matrixStack.rotate(Axis.YP.rotationDegrees(rotationAngle));
+            matrixStack.rotate(Axis.XP.rotationDegrees(90.0f));
             matrixStack.scale(size, size, size);
             Matrix4f matrix = matrixStack.last().pose();
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             buffer.addVertex(matrix, -0.5f, -0.5f, 0.0f).setUv(0.0f, 0.0f).setColor(r, g, b, alpha);
             buffer.addVertex(matrix, -0.5f, 0.5f, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, alpha);
             buffer.addVertex(matrix, 0.5f, 0.5f, 0.0f).setUv(1.0f, 1.0f).setColor(r, g, b, alpha);

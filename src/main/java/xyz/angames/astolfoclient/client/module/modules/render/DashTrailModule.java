@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
 import xyz.angames.astolfoclient.client.module.Module;
@@ -184,7 +184,7 @@ extends Module {
         double camZ = cam.z;
         PoseStack matrices = event.poseStack();
         RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ZERO);
+        RenderSystem.blendFuncSeparate((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ZERO);
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
         RenderSystem.disableCull();
@@ -199,7 +199,7 @@ extends Module {
         }
         if (this.dashDots.get()) {
             RenderSystem.setShaderTexture((int)0, (Identifier)DASH_BLOOM);
-            BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             boolean drew = false;
             for (DashCubic cubic : this.dashCubics) {
                 if (cubic.alphaValue <= 0.05f || cubic.sparks.isEmpty()) continue;
@@ -214,7 +214,7 @@ extends Module {
                     double rz = spark.getRenderPosZ(tickDelta) + cubic.getRenderPosZ(tickDelta) - camZ;
                     matrices.pushPose();
                     matrices.translate(rx, ry, rz);
-                    matrices.mulPose(camera.rotation());
+                    matrices.rotate(camera.rotation());
                     float sz = 0.06f * sparkAPC;
                     Matrix4f matrix = matrices.last().pose();
                     DashTrailModule.addVertex(bb, matrix, -sz, -sz, 0.0f, 0.0f, 1.0f, c);
@@ -320,11 +320,11 @@ extends Module {
                 float timePcOf = Math.max(0.0f, 1.0f - this.getTimePC());
                 stack.pushPose();
                 stack.translate(rx, ry, rz);
-                stack.mulPose(camera.rotation());
+                stack.rotate(camera.rotation());
                 int color1 = DashTrailModule.getOverallColorFrom(this.color, -1, 0.15f);
                 int bloomColor = DashTrailModule.swapAlpha(color1, 55.0f * aPC);
                 RenderSystem.setShaderTexture((int)0, (Identifier)DASH_BLOOM);
-                BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                 Matrix4f matrix = stack.last().pose();
                 float s = extXY / 1.75f * 0.1f;
                 DashTrailModule.addVertex(bb, matrix, -s, -s, 0.0f, 0.0f, 1.0f, bloomColor);
@@ -336,7 +336,7 @@ extends Module {
                     float aMul = aPC * lightingPC;
                     float s2 = (extXY *= 1.0f + 6.0f * timePcOf * aMul) / 2.0f * 0.1f;
                     int glowColor = DashTrailModule.swapAlpha(DashTrailModule.toDark(color1, aMul / 4.0f), 90.0f * aMul);
-                    bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                    bb = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                     DashTrailModule.addVertex(bb, matrix, -s2, -s2, 0.0f, 0.0f, 1.0f, glowColor);
                     DashTrailModule.addVertex(bb, matrix, s2, -s2, 0.0f, 1.0f, 1.0f, glowColor);
                     DashTrailModule.addVertex(bb, matrix, s2, s2, 0.0f, 1.0f, 0.0f, glowColor);
@@ -352,10 +352,10 @@ extends Module {
                 float halfY = extY / 2.0f;
                 stack.pushPose();
                 stack.translate(rx, ry, rz);
-                stack.mulPose(camera.rotation());
+                stack.rotate(camera.rotation());
                 int mainColor = DashTrailModule.toDark(DashTrailModule.getOverallColorFrom(this.color, -1, 0.4f), aPC);
                 RenderSystem.setShaderTexture((int)0, (Identifier)texId);
-                BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                BufferBuilder bb = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                 Matrix4f matrix = stack.last().pose();
                 DashTrailModule.addVertex(bb, matrix, -halfX, -halfY, 0.0f, 0.0f, 1.0f, mainColor);
                 DashTrailModule.addVertex(bb, matrix, halfX, -halfY, 0.0f, 1.0f, 1.0f, mainColor);

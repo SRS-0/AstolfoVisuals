@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
@@ -22,7 +22,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -69,7 +69,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         ((PlayerModel)this.getParentModel()).head.translateAndRotate(matrices);
         matrices.translate(0.0f, -0.4f, 0.0f);
         matrices.scale(1.0f, -1.0f, 1.0f);
-        matrices.mulPose(Axis.YP.rotationDegrees(this.spinAngle));
+        matrices.rotate(Axis.YP.rotationDegrees(this.spinAngle));
         var pose = new Matrix4f(matrices.last().pose());
         xyz.angames.astolfoclient.client.render.compat.EffectSubmit.submit(queue, () -> this.drawHat(pose, now));
         matrices.popPose();
@@ -83,7 +83,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         RenderSystem.disableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)true);
-        RenderSystem.blendFuncSeparate((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ZERO);
+        RenderSystem.blendFuncSeparate((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ZERO);
         ShaderProgram shader = RenderSystem.setShader((ShaderProgramKey)AstolfoclientClient.CHINA_HAT_SHADER);
         if (shader != null) {
             float timeSecs = (float)(System.currentTimeMillis() % 1000000L) / 1000.0f;
@@ -104,7 +104,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         Color cInner = new Color(ThemeManager.getThemedColor((int)(now / 10L)));
         Color cOuter = new Color(ThemeManager.getThemedColor((int)(now / 10L) + 60));
         int optimizedLayers = 16;
-        BufferBuilder bufBody = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder bufBody = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (int layer = 1; layer < optimizedLayers; ++layer) {
             float t0 = (float)(layer - 1) / (float)(optimizedLayers - 1);
             float t1 = (float)layer / (float)(optimizedLayers - 1);
@@ -144,7 +144,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         float innerR = 0.65f - rimW;
         float innerH = 0.28f * (rimW / 0.65f);
         float innerT = (0.65f - rimW) / 0.65f;
-        BufferBuilder bufRim = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder bufRim = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         for (i = 0; i < 40; ++i) {
             double a0 = Math.PI * 2 * (double)i / 40.0;
             double a1 = Math.PI * 2 * (double)(i + 1) / 40.0;
@@ -163,7 +163,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         }
         BufferRenderer.drawWithGlobalProgram((MeshData)bufRim.buildOrThrow());
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.disableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
@@ -171,7 +171,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         float gg = (float)cOuter.getGreen() / 255.0f;
         float gb = (float)cOuter.getBlue() / 255.0f;
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-        BufferBuilder glowRimBuf = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder glowRimBuf = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         float glowInnerR = 0.598f;
         float glowOuterR = 0.68899995f;
         float innerAlpha = 0.7f;
@@ -195,7 +195,7 @@ extends RenderLayer<AvatarRenderState, PlayerModel> {
         BufferRenderer.drawWithGlobalProgram((MeshData)glowRimBuf.buildOrThrow());
         RenderSystem.setShaderTexture((int)0, (Identifier)BLOOM_TEXTURE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-        BufferBuilder bloomBaseBuf = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder bloomBaseBuf = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         float bSize = 0.663f;
         bloomBaseBuf.addVertex(matrix, -bSize, 0.005f, bSize).setUv(0.0f, 1.0f).setColor(gr, gg, gb, 0.4f);
         bloomBaseBuf.addVertex(matrix, bSize, 0.005f, bSize).setUv(1.0f, 1.0f).setColor(gr, gg, gb, 0.4f);

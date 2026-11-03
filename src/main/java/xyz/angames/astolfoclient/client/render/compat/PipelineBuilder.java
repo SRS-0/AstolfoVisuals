@@ -1,10 +1,11 @@
 package xyz.angames.astolfoclient.client.render.compat;
 
-import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.blaze3d.pipeline.*;
-import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.shaders.UniformType;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.pipeline.*;
+import com.mojang.renderpearl.api.pipeline.CompareOp;
+import com.mojang.renderpearl.api.pipeline.UniformType;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import net.minecraft.resources.Identifier;
 
 /** Builds 26.2 pipeline layouts with an explicit color and depth attachment contract. */
@@ -20,7 +21,7 @@ public final class PipelineBuilder {
     public PipelineBuilder withFragmentShader(Identifier id){builder.withFragmentShader(id);return this;}
     public PipelineBuilder withVertexFormat(VertexFormat format,PrimitiveTopology topology){builder.withVertexBinding(0,format).withPrimitiveTopology(topology);return this;}
     public PipelineBuilder withUniform(String name,UniformType type){layout.withUniform(name,type);hasBindings=true;return this;}
-    public PipelineBuilder withSampler(String name){layout.withSampler(name);hasBindings=true;return this;}
+    public PipelineBuilder withSampler(String name){layout.withUniform(name,UniformType.COMBINED_IMAGE_SAMPLER);hasBindings=true;return this;}
     public PipelineBuilder withBlend(BlendFunction value){blend=value;return this;}
     public PipelineBuilder withoutBlend(){blend=null;return this;}
     public PipelineBuilder withCull(boolean value){builder.withCull(value);return this;}

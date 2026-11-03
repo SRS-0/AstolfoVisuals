@@ -4,8 +4,8 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormatElement;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormatElement;
 import net.minecraft.client.Minecraft;
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
@@ -14,10 +14,10 @@ import org.joml.Vector4f;
 final class WideLines {
     static boolean draw(MeshData source) {
         var state=source.drawState();
-        boolean strip=state.primitiveTopology()==com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP;
-        if(!strip&&state.primitiveTopology()!=com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES)return false;
+        boolean strip=state.primitiveTopology()==com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP;
+        if(!strip&&state.primitiveTopology()!=com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINES)return false;
         try(source;var allocator=new ByteBufferBuilder(Math.max(256,state.vertexCount()*56))) {
-            var builder=new BufferBuilder(allocator,com.mojang.blaze3d.PrimitiveTopology.QUADS,DefaultVertexFormat.POSITION_COLOR);
+            var builder=new BufferBuilder(allocator,com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS,DefaultVertexFormat.POSITION_COLOR);
             var format=state.format();var bytes=source.vertexBuffer().order(java.nio.ByteOrder.nativeOrder());
             int stride=format.getVertexSize(),position=format.getElement("Position").offset(),color=format.getElement("Color").offset();
             var transform=new Matrix4f(RenderSystem.getProjectionMatrix()).mul(RenderSystem.getModelViewMatrixCopy());

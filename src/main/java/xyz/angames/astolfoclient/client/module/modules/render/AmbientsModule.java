@@ -247,7 +247,7 @@ extends Module {
  float t=(System.currentTimeMillis()%100000L)/1000f;var color=new Color(ThemeManager.getThemedColor(0));float r=color.getRed()/255f,g=color.getGreen()/255f,b=color.getBlue()/255f,a=skyboxStrength.getFloat();
  pass.uniform("time",t).uniform("Time",t).uniform("themeColor",r,g,b).uniform("Accent",r,g,b).uniform("alpha",a).uniform("ColorModulator",1,1,1,a).uniform("themeSync",themeSync.get()?1:0);
  boolean textured=name.equals("ambient_textured");
- if(textured) {int index=switch(skyboxMode.get()){case "Lake"->2;case "Cloud Space"->3;case "Clear Evening"->4;case "Underwater"->5;default->1;};var texture=Minecraft.getInstance().getTextureManager().getTexture(Identifier.fromNamespaceAndPath("astolfoclient","sky/"+index+".png"));pass.texture(0,texture.getTextureView(),true);}
+ if(textured) {int index=switch(skyboxMode.get()){case "Lake"->2;case "Cloud Space"->3;case "Clear Evening"->4;case "Underwater"->5;default->1;};var texture=xyz.angames.astolfoclient.client.render.compat.WorldPass.outside(()->Minecraft.getInstance().getTextureManager().getTexture(Identifier.fromNamespaceAndPath("astolfoclient","sky/"+index+".png")));pass.texture(0,texture.getTextureView(),true);}
  drawSky(pass,textured,false);
 }
 
@@ -419,8 +419,8 @@ extends Module {
  return vertices;}
  private void drawSky(xyz.angames.astolfoclient.client.render.compat.ScreenPass pass,boolean textured,boolean greater) {
  float[] vertices=textured?texturedVertices():new float[]{-1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f, 1.0f, 1.0f, -1.0f, 1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f};int stride=textured?5:3;
- var builder=xyz.angames.astolfoclient.client.render.compat.Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES,textured?com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX:com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION);
+ var builder=xyz.angames.astolfoclient.client.render.compat.Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLES,textured?com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION_TEX:com.mojang.blaze3d.vertex.DefaultVertexFormat.POSITION);
  for(int i=0;i<vertices.length;i+=stride){var vertex=builder.addVertex(vertices[i],vertices[i+1],vertices[i+2]);if(textured)vertex.setUv(vertices[i+3],vertices[i+4]);}
- pass.drawMesh(builder.buildOrThrow(),Minecraft.getInstance().gameRenderer.mainRenderTarget(),true,greater?com.mojang.blaze3d.platform.CompareOp.LESS_THAN:com.mojang.blaze3d.platform.CompareOp.GREATER_THAN_OR_EQUAL,true);
+ pass.drawMesh(builder.buildOrThrow(),Minecraft.getInstance().gameRenderer.mainRenderTarget(),true,greater?com.mojang.renderpearl.api.pipeline.CompareOp.LESS_THAN:com.mojang.renderpearl.api.pipeline.CompareOp.GREATER_THAN_OR_EQUAL,true);
  }
 }

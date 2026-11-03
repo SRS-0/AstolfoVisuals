@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.ArrayList;
@@ -20,7 +20,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -74,13 +74,13 @@ public class TrailsRenderer {
         RenderSystem.disableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
         Tesselator tessellator = Tesselator.getInstance();
         PoseStack matrices = context.poseStack();
         Matrix4f matrix = matrices.last().pose();
         Vec3 cameraPos = context.gameRenderer().mainCamera().position();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         int index = 0;
         for (TrailPoint point : this.points) {
             age = currentTime - point.timeCreated;
@@ -105,7 +105,7 @@ public class TrailsRenderer {
         }
         BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
         RenderSystem.lineWidth((float)2.5f);
-        buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         index = 0;
         for (TrailPoint point : this.points) {
             age = currentTime - point.timeCreated;
@@ -123,7 +123,7 @@ public class TrailsRenderer {
             ++index;
         }
         BufferRenderer.drawWithGlobalProgram((MeshData)buffer.buildOrThrow());
-        buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         index = 0;
         for (TrailPoint point : this.points) {
             age = currentTime - point.timeCreated;

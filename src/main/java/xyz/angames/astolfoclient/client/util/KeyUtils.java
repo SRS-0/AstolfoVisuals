@@ -35,7 +35,7 @@ public class KeyUtils {
         }
         for (i = 0; i < 350; ++i) {
             try {
-                InputConstants.Key key = InputConstants.Type.KEYSYM.getOrCreate(i);
+                InputConstants.Key key = InputConstants.Type.KEYBOARD.getOrCreate(LegacyInput.nativeKey(i));
                 String name = key.getName();
                 if (name == null || name.isEmpty() || name.contains("unknown")) continue;
                 String simpleName = name.replace("key.keyboard.", "").toUpperCase();

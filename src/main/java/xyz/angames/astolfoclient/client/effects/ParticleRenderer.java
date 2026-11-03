@@ -1,5 +1,5 @@
 package xyz.angames.astolfoclient.client.effects;
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.List;
@@ -17,7 +17,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
@@ -54,7 +54,7 @@ public class ParticleRenderer {
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
         Tesselator tessellator = Tesselator.getInstance();
         for (ParticlesModule.ParticleType type : ParticlesModule.ParticleType.values()) {
@@ -67,7 +67,7 @@ public class ParticleRenderer {
                 if (!bound) {
                     RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
                     RenderSystem.setShaderTexture((int)0, (Identifier)this.getTextureForType(type));
-                    buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                    buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                     bound = true;
                 }
                 float alpha = (progress = (float)age / (float)particle.lifespan) > 0.6f ? 1.0f - (progress - 0.6f) / 0.4f : 1.0f;
@@ -81,10 +81,10 @@ public class ParticleRenderer {
                 PoseStack matrixStack = context.poseStack();
                 matrixStack.pushPose();
                 matrixStack.translate(x - context.gameRenderer().mainCamera().position().x, y - context.gameRenderer().mainCamera().position().y, z - context.gameRenderer().mainCamera().position().z);
-                matrixStack.mulPose(context.gameRenderer().mainCamera().rotation());
+                matrixStack.rotate(context.gameRenderer().mainCamera().rotation());
                 float finalScale = particle.scale / 2.5f;
                 matrixStack.scale(finalScale, finalScale, finalScale);
-                matrixStack.mulPose(Axis.ZP.rotationDegrees(particle.rotation + (float)age * 0.1f));
+                matrixStack.rotate(Axis.ZP.rotationDegrees(particle.rotation + (float)age * 0.1f));
                 Matrix4f matrix = matrixStack.last().pose();
                 buffer.addVertex(matrix, -0.5f, -0.5f, 0.0f).setUv(0.0f, 1.0f).setColor(r, g, b, alpha);
                 buffer.addVertex(matrix, 0.5f, -0.5f, 0.0f).setUv(1.0f, 1.0f).setColor(r, g, b, alpha);

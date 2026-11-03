@@ -78,7 +78,7 @@ extends Module {
         Minecraft mc = Minecraft.getInstance();
         boolean isKeyDown = false;
         if (mc != null && mc.gui.screen() == null && this.zoomKey.getKey() != -1 && this.zoomKey.getKey() != 0) {
-            isKeyDown = InputConstants.isKeyDown(mc.getWindow(), (int)this.zoomKey.getKey());
+            isKeyDown = xyz.angames.astolfoclient.client.util.LegacyInput.isKeyDown(this.zoomKey.getKey());
         }
         if (this.smoothMouse.get() && mc != null && mc.options != null) {
             if (isKeyDown && !this.zoomActive) {

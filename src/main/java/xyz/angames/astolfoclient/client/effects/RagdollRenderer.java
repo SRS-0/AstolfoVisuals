@@ -26,7 +26,7 @@ import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -157,7 +157,7 @@ public class RagdollRenderer {
         RenderSystem.enableCull();
         matrices.pushPose();
         matrices.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
-        BufferBuilder[] bufferHolder = new BufferBuilder[]{tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR)};
+        BufferBuilder[] bufferHolder = new BufferBuilder[]{tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR)};
         Matrix4f m = matrices.last().pose();
         for (Ragdoll ragdoll : active) {
             long age = now - ragdoll.spawnTime;
@@ -226,7 +226,7 @@ public class RagdollRenderer {
                 // empty catch block
             }
             if (ragdoll == active.get(active.size() - 1)) continue;
-            bufferHolder[0] = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            bufferHolder[0] = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         }
         matrices.popPose();
         RenderSystem.enableDepthTest();
@@ -275,6 +275,8 @@ public class RagdollRenderer {
             this.currentVertex.v = v;
             return this;
         }
+
+        public VertexConsumer setUv3(float u, float v) { return this; }
 
         public VertexConsumer setUv1(int u, int v) {
             return this;

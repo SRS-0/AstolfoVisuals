@@ -9,6 +9,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(GameRenderer.class)
 public class GuiExtractionMixin {
+    @Inject(method="extract", at=@At("HEAD"))
+    private void astolfo$beginInputFrame(CallbackInfo ci) {
+        var client = net.minecraft.client.Minecraft.getInstance();
+        xyz.angames.astolfoclient.client.util.HudMouseInput.beginFrame(client.gui.screen(), client.isWindowActive());
+    }
+
     @Inject(method="extract", at=@At("RETURN"))
     private void astolfo$endExtraction(CallbackInfo ci) { GuiContext.endExtraction(); }
 }

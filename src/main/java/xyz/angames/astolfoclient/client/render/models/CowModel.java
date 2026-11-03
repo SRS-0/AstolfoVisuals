@@ -48,11 +48,11 @@ public class CowModel {
         VertexConsumer buffer = vertexConsumers.getBuffer(RenderTypes.entityTranslucent((Identifier)TEXTURE_LOCATION));
         matrixStack.pushPose();
         matrixStack.translate(0.0, (double)bob, 0.0);
-        matrixStack.mulPose(Axis.YP.rotationDegrees(state.bodyRot));
+        matrixStack.rotate(Axis.YP.rotationDegrees(state.bodyRot));
         matrixStack.scale(0.48f, 0.48f, 0.48f);
         matrixStack.translate(this.centerX, this.bodyPivotY, this.centerZ);
-        matrixStack.mulPose(Axis.ZP.rotationDegrees(sway));
-        matrixStack.mulPose(Axis.XP.rotationDegrees(pitch));
+        matrixStack.rotate(Axis.ZP.rotationDegrees(sway));
+        matrixStack.rotate(Axis.XP.rotationDegrees(pitch));
         matrixStack.translate(-this.centerX, -this.bodyPivotY, -this.centerZ);
         matrixStack.translate(-this.centerX, -this.minY, -this.centerZ);
         this.renderTriangles(matrixStack, buffer, light);

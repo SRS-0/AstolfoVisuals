@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 layout(std140) uniform EffectData {
     vec4 uAlphaData;
     vec4 ColorModulatorData;
@@ -20,7 +21,7 @@ layout(std140) uniform EffectData {
 #define uDistortion uDistortionData.x
 #define uShape uShapeData.x
 layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
-#moj_import <minecraft:projection.glsl>
+#include <minecraft:projection.glsl>
 
 uniform sampler2D Sampler0;
 uniform sampler2D Sampler1;
@@ -30,9 +31,9 @@ uniform sampler2D Sampler1;
 
 
 
-in vec2 texCoord;
-in vec2 vCenterScreen;
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+layout(location = 2) in vec2 vCenterScreen;
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     vec4 circleTex = texture(Sampler1, texCoord);

@@ -1,12 +1,12 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.platform.BlendFactor;
-import com.mojang.blaze3d.platform.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
+import com.mojang.renderpearl.api.pipeline.BlendFactor;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import net.fabricmc.api.EnvType;
@@ -63,7 +63,7 @@ public class KillEffectRenderer {
                      RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
                      float zapAlpha = 1.0F - (float)age / 800.0F;
                      if (zapAlpha > 0.0F) {
-                        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+                        BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
 
                         for (int i = 0; i < effect.zapPoints.size() - 1; i++) {
                            Vec3 p1 = effect.zapPoints.get(i);
@@ -78,7 +78,7 @@ public class KillEffectRenderer {
                               float bz = (float)(p1.z + (p2.z - p1.z) * lerp);
                               matrices.pushPose();
                               matrices.translate(bx, by, bz);
-                              matrices.mulPose(context.gameRenderer().mainCamera().rotation());
+                              matrices.rotate(context.gameRenderer().mainCamera().rotation());
                               float scale = 0.6F;
                               matrices.scale(scale, scale, scale);
                               this.drawBatchedGlowingDot(matrices.last().pose(), buffer, r, g, b, zapAlpha);
@@ -108,12 +108,12 @@ public class KillEffectRenderer {
 
                         if (!(pAlpha <= 0.05F)) {
                            if (buffer == null) {
-                              buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                              buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
                            }
 
                            matrices.pushPose();
                            matrices.translate(p.startX, currentY, p.startZ);
-                           matrices.mulPose(cameraRot);
+                           matrices.rotate(cameraRot);
                            float pScale = 0.18F;
                            matrices.scale(pScale, pScale, pScale);
                            Matrix4f pMatrix = matrices.last().pose();

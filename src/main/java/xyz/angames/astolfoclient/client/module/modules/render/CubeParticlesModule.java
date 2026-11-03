@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.ArrayList;
@@ -22,7 +22,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -138,14 +138,14 @@ extends Module {
         boolean renderCore = this.internalCore.get();
         if (renderBloom) {
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+            RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask((boolean)false);
             RenderSystem.disableCull();
             var bloomTexture = mc.getTextureManager().getTexture(BLOOM_TEXTURE);
-            RenderSystem.setShaderTexture(0, bloomTexture.getTextureView(), com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR));
+            RenderSystem.setShaderTexture(0, bloomTexture.getTextureView(), com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR));
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-            BufferBuilder bloomBuffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder bloomBuffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             for (CubeParticle p : this.particles) {
                 alpha = p.getAlpha(now);
                 scaleFactor = p.getScaleFactor(now);
@@ -159,7 +159,7 @@ extends Module {
                 int color = this.withAlpha(particleColor2, alpha * 0.45f);
                 ms.pushPose();
                 ms.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
-                ms.mulPose(camera.rotation());
+                ms.rotate(camera.rotation());
                 this.drawBillboardQuad(ms, bloomBuffer, -quadSize * 0.5f, -quadSize * 0.5f, quadSize, quadSize, color);
                 ms.popPose();
             }
@@ -170,12 +170,12 @@ extends Module {
         }
         if (renderFaces) {
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA);
+            RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_SRC_ALPHA);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask((boolean)false);
             RenderSystem.disableCull();
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder faceBuffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder faceBuffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
             for (CubeParticle p : this.particles) {
                 alpha = p.getAlpha(now);
                 scaleFactor = p.getScaleFactor(now);
@@ -191,7 +191,7 @@ extends Module {
                 float effectiveAlpha = alpha * faceAlphaVal;
                 ms.pushPose();
                 ms.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
-                ms.mulPose(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
+                ms.rotate(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
                 ms.scale(particleSize, particleSize, particleSize);
                 this.renderUnitCubeFaces(ms, faceBuffer, particleColor, effectiveAlpha);
                 ms.popPose();
@@ -203,13 +203,13 @@ extends Module {
         }
         if (renderWire || renderCore) {
             RenderSystem.enableBlend();
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+            RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
             RenderSystem.enableDepthTest();
             RenderSystem.depthMask((boolean)false);
             RenderSystem.disableCull();
             RenderSystem.lineWidth((float)2.0f);
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder lineBuffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder lineBuffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
             for (CubeParticle p : this.particles) {
                 alpha = p.getAlpha(now);
                 scaleFactor = p.getScaleFactor(now);
@@ -224,7 +224,7 @@ extends Module {
                 particleColor = this.getColor(p.creationTime);
                 ms.pushPose();
                 ms.translate(x - cameraPos.x, y - cameraPos.y, z - cameraPos.z);
-                ms.mulPose(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
+                ms.rotate(new Quaternionf().rotationXYZ((float)rotX, (float)rotY, (float)rotZ));
                 ms.scale(particleSize, particleSize, particleSize);
                 if (renderCore) {
                     int diagColor = this.withAlpha(particleColor, alpha * 0.35f);

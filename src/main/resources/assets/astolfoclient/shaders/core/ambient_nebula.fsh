@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 layout(std140) uniform EffectData {
     mat4 uModelViewMat;
     mat4 uProjMat;
@@ -9,14 +10,14 @@ layout(std140) uniform EffectData {
 };
 
 
-in vec3 Direction;
-in vec4 vColor;
+layout(location = 0) in vec3 Direction;
+layout(location = 1) in vec4 vColor;
 
 
 
 
 
-out vec4 OutColor;
+layout(location = 0) out vec4 OutColor;
 
 float hash13(vec3 p) {
     p = fract(p * vec3(443.8975, 397.2973, 491.1871));

@@ -1,5 +1,5 @@
 package xyz.angames.astolfoclient.client.effects;
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.List;
@@ -17,7 +17,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -35,7 +35,7 @@ public class CircleEspGhostRenderer {
         RenderSystem.enableDepthTest();
         RenderSystem.depthFunc((int)515);
         RenderSystem.depthMask((boolean)false);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         Tesselator tessellator = Tesselator.getInstance();
         long currentTime = System.currentTimeMillis();
         PoseStack matrices = context.poseStack();
@@ -62,7 +62,7 @@ public class CircleEspGhostRenderer {
             }
             float speedY = 3.5f;
             RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
             float mainY = (float)((Math.sin(animTime * speedY) + 1.0) / 2.0) * height;
             Color headColor = new Color(ThemeManager.getThemedColor(0L));
             float rH = (float)headColor.getRed() / 255.0f;
@@ -74,7 +74,7 @@ public class CircleEspGhostRenderer {
                 float pZ = (float)Math.sin(rad) * radius;
                 matrices.pushPose();
                 matrices.translate(tX + (double)pX, tY + (double)mainY, tZ + (double)pZ);
-                matrices.mulPose(cameraRot);
+                matrices.rotate(cameraRot);
                 float scale = 0.12f;
                 matrices.scale(scale, scale, scale);
                 this.drawBatchedGlowingDot(matrices.last().pose(), buffer, rH, gH, bH, baseAlpha);
@@ -99,7 +99,7 @@ public class CircleEspGhostRenderer {
                     float pZ = (float)Math.sin(rad) * tailRadius;
                     matrices.pushPose();
                     matrices.translate(tX + (double)pX, tY + (double)histY, tZ + (double)pZ);
-                    matrices.mulPose(cameraRot);
+                    matrices.rotate(cameraRot);
                     float scale = 0.12f * (1.0f - tailProgress * 0.5f);
                     matrices.scale(scale, scale, scale);
                     this.drawBatchedGlowingDot(matrices.last().pose(), buffer, rT, gT, bT, tailAlpha);

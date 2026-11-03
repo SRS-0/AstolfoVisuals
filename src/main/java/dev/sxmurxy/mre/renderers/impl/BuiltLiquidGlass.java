@@ -20,7 +20,7 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import dev.sxmurxy.mre.renderers.GpuEffect;
 import dev.sxmurxy.mre.renderers.GpuSceneCopy;
 import org.joml.Vector4f;
@@ -115,7 +115,7 @@ public record BuiltLiquidGlass(SizeState size, QuadRadiusState radius, QuadColor
                 shader.getUniform("DistortStrength").set(this.distortStrength);
             }
         }
-        BufferBuilder builder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder builder = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         builder.addVertex(matrix, x, y, z).setUv(u0, v0).setColor(this.color.color1());
         builder.addVertex(matrix, x, y + height, z).setUv(u1, v1).setColor(this.color.color2());
         builder.addVertex(matrix, x + width, y + height, z).setUv(u2, v2).setColor(this.color.color3());
@@ -123,7 +123,7 @@ public record BuiltLiquidGlass(SizeState size, QuadRadiusState radius, QuadColor
         try {
             MeshData data = builder.buildOrThrow();
             if (data != null) {
-                LIQUID_GLASS_SHADER_KEY.draw(data, shader, this.useBackground ? scene.getColorTextureView() : this.textureId.getTextureView(), this.useBackground ? RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR) : this.textureId.getSampler());
+                LIQUID_GLASS_SHADER_KEY.draw(data, shader, this.useBackground ? scene.getColorTextureView() : this.textureId.getTextureView(), this.useBackground ? RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR) : this.textureId.getSampler());
             }
         }
         catch (Exception e) {

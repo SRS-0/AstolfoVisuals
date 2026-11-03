@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.nio.FloatBuffer;
@@ -25,7 +25,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Quaternionf;
@@ -274,14 +274,14 @@ extends Module {
 
     private void renderParticles(LevelRenderContext context, long time) {
         RenderSystem.enableBlend();
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         RenderSystem.disableCull();
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask((boolean)false);
         RenderSystem.setShaderTexture((int)0, (Identifier)BLOOM_TEXTURE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
         Tesselator tessellator = Tesselator.getInstance();
-        BufferBuilder particleBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder particleBuffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         PoseStack matrices = context.poseStack();
         Vec3 camPos = context.gameRenderer().mainCamera().position();
         Quaternionf camRot = context.gameRenderer().mainCamera().rotation();
@@ -296,7 +296,7 @@ extends Module {
             float scale = p.baseScale * (0.6f + 0.6f * (float)Math.sin((double)lifePC * Math.PI));
             matrices.pushPose();
             matrices.translate(px, py, pz);
-            matrices.mulPose(camRot);
+            matrices.rotate(camRot);
             Matrix4f matrix = matrices.last().pose();
             if (!isGlowDot) {
                 float auraScale = scale * 1.5f;

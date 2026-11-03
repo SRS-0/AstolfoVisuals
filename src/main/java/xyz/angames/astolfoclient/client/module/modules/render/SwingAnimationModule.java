@@ -9,14 +9,14 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.item.AxeItem;
+
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.CrossbowItem;
@@ -27,7 +27,7 @@ import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.MapItem;
 import net.minecraft.world.item.ShearsItem;
-import net.minecraft.world.item.ShovelItem;
+
 import net.minecraft.world.item.TridentItem;
 import net.minecraft.world.level.block.AbstractSkullBlock;
 import net.minecraft.world.level.block.Block;
@@ -163,13 +163,13 @@ extends Module {
             float[] rot = isMainHand ? handPos.getMainHandRot() : handPos.getOffHandRot();
             float[] fArray = scale = isMainHand ? handPos.getMainHandScale() : handPos.getOffHandScale();
             if (rot[0] != 0.0f) {
-                matrices.mulPose(Axis.XP.rotationDegrees(rot[0]));
+                matrices.rotate(Axis.XP.rotationDegrees(rot[0]));
             }
             if (rot[1] != 0.0f) {
-                matrices.mulPose(Axis.YP.rotationDegrees(rot[1]));
+                matrices.rotate(Axis.YP.rotationDegrees(rot[1]));
             }
             if (rot[2] != 0.0f) {
-                matrices.mulPose(Axis.ZP.rotationDegrees(rot[2]));
+                matrices.rotate(Axis.ZP.rotationDegrees(rot[2]));
             }
             if (scale[0] != 1.0f || scale[1] != 1.0f || scale[2] != 1.0f) {
                 matrices.scale(scale[0], scale[1], scale[2]);
@@ -198,24 +198,24 @@ extends Module {
             this.applySwingOffset(matrices, arm, swingProgress);
         } else if (currentMode.contains("2")) {
             matrices.translate(isLeft * -0.1f, 0.15f, -0.1f);
-            matrices.mulPose(Axis.YP.rotationDegrees(isLeft * -60.0f));
-            matrices.mulPose(Axis.XP.rotationDegrees(50.0f));
-            matrices.mulPose(Axis.ZP.rotationDegrees(isLeft * (110.0f + str * g)));
+            matrices.rotate(Axis.YP.rotationDegrees(isLeft * -60.0f));
+            matrices.rotate(Axis.XP.rotationDegrees(50.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(isLeft * (110.0f + str * g)));
         } else if (currentMode.contains("3")) {
             matrices.translate(isLeft * -0.1f, 0.15f, 0.0f);
-            matrices.mulPose(Axis.XP.rotationDegrees(50.0f));
-            matrices.mulPose(Axis.YP.rotationDegrees(isLeft * (-30.0f + str * g)));
-            matrices.mulPose(Axis.ZP.rotationDegrees(isLeft * 110.0f));
+            matrices.rotate(Axis.XP.rotationDegrees(50.0f));
+            matrices.rotate(Axis.YP.rotationDegrees(isLeft * (-30.0f + str * g)));
+            matrices.rotate(Axis.ZP.rotationDegrees(isLeft * 110.0f));
         } else if (currentMode.contains("4")) {
             matrices.translate(isLeft * -0.15f, 0.2f, 0.0f);
-            matrices.mulPose(Axis.YP.rotationDegrees(isLeft * 90.0f));
-            matrices.mulPose(Axis.ZP.rotationDegrees(isLeft * -30.0f));
-            matrices.mulPose(Axis.XP.rotationDegrees(-90.0f - str * anim + 10.0f));
+            matrices.rotate(Axis.YP.rotationDegrees(isLeft * 90.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(isLeft * -30.0f));
+            matrices.rotate(Axis.XP.rotationDegrees(-90.0f - str * anim + 10.0f));
         } else if (currentMode.contains("5")) {
             this.applySwingOffset(matrices, arm, swingProgress);
             float spinAngle = swingProgress * 360.0f;
             matrices.translate(0.0f, 0.0f, 0.0f);
-            matrices.mulPose(Axis.XP.rotationDegrees(-isLeft * spinAngle));
+            matrices.rotate(Axis.XP.rotationDegrees(-isLeft * spinAngle));
             matrices.translate(0.0f, 0.0f, 0.0f);
         }
     }
@@ -256,9 +256,9 @@ extends Module {
                     if (player.isUsingItem() && player.getUseItemRemainingTicks() > 0 && player.getUsedItemHand() == hand) {
                         this.applyEquipOffset(matrices, arm, equipProgress);
                         matrices.translate((float)i * -0.4785682f, -0.094387f, 0.05731531f);
-                        matrices.mulPose(Axis.XP.rotationDegrees(-11.935f));
-                        matrices.mulPose(Axis.YP.rotationDegrees((float)i * 65.3f));
-                        matrices.mulPose(Axis.ZP.rotationDegrees((float)i * -9.785f));
+                        matrices.rotate(Axis.XP.rotationDegrees(-11.935f));
+                        matrices.rotate(Axis.YP.rotationDegrees((float)i * 65.3f));
+                        matrices.rotate(Axis.ZP.rotationDegrees((float)i * -9.785f));
                         float f = (float)item.getUseDuration((LivingEntity)mc.player) - ((float)mc.player.getUseItemRemainingTicks() - tickDelta + 1.0f);
                         float g = f / (float)CrossbowItem.getChargeDuration((ItemStack)item, (LivingEntity)mc.player);
                         if (g > 1.0f) {
@@ -272,7 +272,7 @@ extends Module {
                         }
                         matrices.translate(g * 0.0f, g * 0.0f, g * 0.04f);
                         matrices.scale(1.0f, 1.0f, 1.0f + g * 0.2f);
-                        matrices.mulPose(Axis.YN.rotationDegrees((float)i * 45.0f));
+                        matrices.rotate(Axis.YN.rotationDegrees((float)i * 45.0f));
                     } else {
                         float fx = -0.4f * Mth.sin((float)(Mth.sqrt((float)swingProgress) * (float)Math.PI));
                         float gx = 0.2f * Mth.sin((float)(Mth.sqrt((float)swingProgress) * ((float)Math.PI * 2)));
@@ -282,7 +282,7 @@ extends Module {
                         this.applySwingOffset(matrices, arm, swingProgress);
                         if (isCharged && swingProgress < 0.001f && isMainHand) {
                             matrices.translate((float)i * -0.641864f, 0.0f, 0.0f);
-                            matrices.mulPose(Axis.YP.rotationDegrees((float)i * 10.0f));
+                            matrices.rotate(Axis.YP.rotationDegrees((float)i * 10.0f));
                         }
                     }
                     this.applyHandPositionItem(matrices, arm);
@@ -305,9 +305,9 @@ extends Module {
                             case BOW: {
                                 this.applyEquipOffset(matrices, arm, equipProgress);
                                 matrices.translate((float)l * -0.2785682f, 0.18344387f, 0.15731531f);
-                                matrices.mulPose(Axis.XP.rotationDegrees(-13.935f));
-                                matrices.mulPose(Axis.YP.rotationDegrees((float)l * 35.3f));
-                                matrices.mulPose(Axis.ZP.rotationDegrees((float)l * -9.785f));
+                                matrices.rotate(Axis.XP.rotationDegrees(-13.935f));
+                                matrices.rotate(Axis.YP.rotationDegrees((float)l * 35.3f));
+                                matrices.rotate(Axis.ZP.rotationDegrees((float)l * -9.785f));
                                 float mx = (float)item.getUseDuration((LivingEntity)mc.player) - ((float)mc.player.getUseItemRemainingTicks() - tickDelta + 1.0f);
                                 float fxx = mx / 20.0f;
                                 fxx = (fxx * fxx + fxx * 2.0f) / 3.0f;
@@ -322,15 +322,15 @@ extends Module {
                                 }
                                 matrices.translate(fxx * 0.0f, fxx * 0.0f, fxx * 0.04f);
                                 matrices.scale(1.0f, 1.0f, 1.0f + fxx * 0.2f);
-                                matrices.mulPose(Axis.YN.rotationDegrees((float)l * 45.0f));
+                                matrices.rotate(Axis.YN.rotationDegrees((float)l * 45.0f));
                                 break;
                             }
                             case SPEAR: {
                                 this.applyEquipOffset(matrices, arm, equipProgress);
                                 matrices.translate((float)l * -0.5f, 0.7f, 0.1f);
-                                matrices.mulPose(Axis.XP.rotationDegrees(-55.0f));
-                                matrices.mulPose(Axis.YP.rotationDegrees((float)l * 35.3f));
-                                matrices.mulPose(Axis.ZP.rotationDegrees((float)l * -9.785f));
+                                matrices.rotate(Axis.XP.rotationDegrees(-55.0f));
+                                matrices.rotate(Axis.YP.rotationDegrees((float)l * 35.3f));
+                                matrices.rotate(Axis.ZP.rotationDegrees((float)l * -9.785f));
                                 float m = (float)item.getUseDuration((LivingEntity)mc.player) - ((float)mc.player.getUseItemRemainingTicks() - tickDelta + 1.0f);
                                 float fx = m / 10.0f;
                                 if (fx > 1.0f) {
@@ -344,7 +344,7 @@ extends Module {
                                 }
                                 matrices.translate(0.0f, 0.0f, fx * 0.2f);
                                 matrices.scale(1.0f, 1.0f, 1.0f + fx * 0.2f);
-                                matrices.mulPose(Axis.YN.rotationDegrees((float)l * 45.0f));
+                                matrices.rotate(Axis.YN.rotationDegrees((float)l * 45.0f));
                                 break;
                             }
                             case BRUSH: {
@@ -355,8 +355,8 @@ extends Module {
                         this.applyEquipOffset(matrices, arm, equipProgress);
                         int l = isRightArm ? 1 : -1;
                         matrices.translate((float)l * -0.4f, 0.8f, 0.3f);
-                        matrices.mulPose(Axis.YP.rotationDegrees((float)l * 65.0f));
-                        matrices.mulPose(Axis.ZP.rotationDegrees((float)l * -85.0f));
+                        matrices.rotate(Axis.YP.rotationDegrees((float)l * 65.0f));
+                        matrices.rotate(Axis.ZP.rotationDegrees((float)l * -85.0f));
                     } else if (arm == mc.options.mainHand().get() && this.isEnabled()) {
                         this.handleSwordAnim(matrices, swingProgress, equipProgress, arm);
                     } else {
@@ -388,16 +388,16 @@ extends Module {
         float n = -15.0f + 75.0f * Mth.cos((float)(h * 2.0f * (float)Math.PI));
         if (arm != HumanoidArm.RIGHT) {
             matrices.translate(0.1, 0.83, 0.35);
-            matrices.mulPose(Axis.XP.rotationDegrees(-80.0f));
-            matrices.mulPose(Axis.YP.rotationDegrees(-90.0f));
-            matrices.mulPose(Axis.XP.rotationDegrees(n));
+            matrices.rotate(Axis.XP.rotationDegrees(-80.0f));
+            matrices.rotate(Axis.YP.rotationDegrees(-90.0f));
+            matrices.rotate(Axis.XP.rotationDegrees(n));
             matrices.translate(-0.3, 0.22, 0.35);
         } else {
             matrices.translate(-0.25, 0.22, 0.35);
-            matrices.mulPose(Axis.XP.rotationDegrees(-80.0f));
-            matrices.mulPose(Axis.YP.rotationDegrees(90.0f));
-            matrices.mulPose(Axis.ZP.rotationDegrees(0.0f));
-            matrices.mulPose(Axis.XP.rotationDegrees(n));
+            matrices.rotate(Axis.XP.rotationDegrees(-80.0f));
+            matrices.rotate(Axis.YP.rotationDegrees(90.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(0.0f));
+            matrices.rotate(Axis.XP.rotationDegrees(n));
         }
     }
 
@@ -413,9 +413,9 @@ extends Module {
         h = 1.0f - (float)Math.pow(g, 27.0);
         int i = arm == HumanoidArm.RIGHT ? 1 : -1;
         matrices.translate(h * 0.6f * (float)i, h * -0.5f, h * 0.0f);
-        matrices.mulPose(Axis.YP.rotationDegrees((float)i * h * 90.0f));
-        matrices.mulPose(Axis.XP.rotationDegrees(h * 10.0f));
-        matrices.mulPose(Axis.ZP.rotationDegrees((float)i * h * 30.0f));
+        matrices.rotate(Axis.YP.rotationDegrees((float)i * h * 90.0f));
+        matrices.rotate(Axis.XP.rotationDegrees(h * 10.0f));
+        matrices.rotate(Axis.ZP.rotationDegrees((float)i * h * 30.0f));
     }
 
     private void applyEquipOffset(PoseStack matrices, HumanoidArm arm, float equipProgress) {
@@ -427,13 +427,13 @@ extends Module {
         int i = arm == HumanoidArm.RIGHT ? 1 : -1;
         float f = Mth.sin((float)(swingProgress * swingProgress * (float)Math.PI));
         float g = Mth.sin((float)(Mth.sqrt((float)swingProgress) * (float)Math.PI));
-        matrices.mulPose(Axis.YP.rotationDegrees((float)i * (45.0f + f * -20.0f)));
-        matrices.mulPose(Axis.ZP.rotationDegrees((float)i * g * -20.0f));
-        matrices.mulPose(Axis.XP.rotationDegrees(g * -80.0f));
-        matrices.mulPose(Axis.YP.rotationDegrees((float)i * -45.0f));
+        matrices.rotate(Axis.YP.rotationDegrees((float)i * (45.0f + f * -20.0f)));
+        matrices.rotate(Axis.ZP.rotationDegrees((float)i * g * -20.0f));
+        matrices.rotate(Axis.XP.rotationDegrees(g * -80.0f));
+        matrices.rotate(Axis.YP.rotationDegrees((float)i * -45.0f));
     }
 
-    public void renderItem(LivingEntity entity,ItemStack stack,ItemDisplayContext renderMode,boolean leftHanded,PoseStack matrices,SubmitNodeCollector vertexConsumers,int light) {if(!stack.isEmpty())Minecraft.getInstance().gameRenderer.itemInHandRenderer.renderItem(entity,stack,renderMode,matrices,vertexConsumers,light);}
+    public void renderItem(LivingEntity entity,ItemStack stack,ItemDisplayContext renderMode,boolean leftHanded,PoseStack matrices,SubmitNodeCollector vertexConsumers,int light) {if(!stack.isEmpty()){var state=new net.minecraft.client.renderer.item.ItemStackRenderState();Minecraft.getInstance().getItemModelResolver().updateForLiving(state,stack,renderMode,entity);state.submit(matrices,vertexConsumers,light,net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY,0);}}
 
     public boolean auraCheck() {
         return true;
@@ -478,7 +478,7 @@ extends Module {
         this.holdMyItemsDeltaTime = Math.min(0.05, Math.max(0.0, currentTime - this.holdMyItemsPrevFrameTime));
         this.holdMyItemsPrevFrameTime = currentTime;
         this.holdMyItemsPhysicsUpdatedThisFrame = false;
-        float f = player.getAttackAnim(tickDelta);
+        float f = player.getSwingAnimation(tickDelta);
         if (f > 0.0f && this.holdMyItemsPrevSwingProgress == 0.0f) {
             this.holdMyItemsLeft = !this.holdMyItemsLeft;
         }
@@ -552,7 +552,7 @@ extends Module {
     }
 
     private boolean isHoldMyItemsWeapon(ItemStack stack) {
-        return stack.is(net.minecraft.tags.ItemTags.SWORDS) || stack.getItem() instanceof AxeItem;
+        return stack.is(net.minecraft.tags.ItemTags.SWORDS) || stack.is(net.minecraft.tags.ItemTags.AXES);
     }
 
     private boolean isHoldMyItemsTool(ItemStack stack) {
@@ -560,7 +560,7 @@ extends Module {
     }
 
     private boolean isHoldMyItemsShovel(ItemStack stack) {
-        return stack.getItem() instanceof ShovelItem;
+        return stack.is(net.minecraft.tags.ItemTags.SHOVELS);
     }
 
     private boolean isHoldMyItemsLantern(ItemStack stack) {
@@ -606,11 +606,11 @@ extends Module {
         int direction = arm == HumanoidArm.RIGHT ? 1 : -1;
         float swingSin = Mth.sin((float)(swingProgress * (float)Math.PI));
         matrices.translate((double)direction, (double)(-equippedProgress) * 0.3, 0.3);
-        matrices.mulPose(Axis.YP.rotationDegrees(45.0f * (float)direction));
-        matrices.mulPose(Axis.ZP.rotationDegrees(-40.0f * (float)direction));
-        matrices.mulPose(Axis.XP.rotationDegrees(30.0f));
-        matrices.mulPose(Axis.YP.rotationDegrees((float)direction * (45.0f + swingSin * 0.0f)));
-        matrices.mulPose(Axis.YP.rotationDegrees((float)direction * -45.0f));
+        matrices.rotate(Axis.YP.rotationDegrees(45.0f * (float)direction));
+        matrices.rotate(Axis.ZP.rotationDegrees(-40.0f * (float)direction));
+        matrices.rotate(Axis.XP.rotationDegrees(30.0f));
+        matrices.rotate(Axis.YP.rotationDegrees((float)direction * (45.0f + swingSin * 0.0f)));
+        matrices.rotate(Axis.YP.rotationDegrees((float)direction * -45.0f));
         matrices.scale(0.9f, 0.9f, 0.9f);
     }
 
@@ -619,7 +619,7 @@ extends Module {
         int n = direction = arm == HumanoidArm.RIGHT ? 1 : -1;
         if (this.isHoldMyItemsLantern(stack)) {
             matrices.translate(0.1 * (double)direction, 0.0, -0.1);
-            matrices.mulPose(Axis.XP.rotationDegrees(10.0f));
+            matrices.rotate(Axis.XP.rotationDegrees(10.0f));
             return;
         }
         if (stack.getUseAnimation() == ItemUseAnimation.BLOCK) {
@@ -704,7 +704,7 @@ extends Module {
                 this.holdMyItemsClimbBlend = 1.0f;
             }
             if (!this.isHoldMyItemsLantern(stack)) {
-                matrices.mulPose(Axis.XP.rotationDegrees(-20.0f * this.holdMyItemsClimbBlend));
+                matrices.rotate(Axis.XP.rotationDegrees(-20.0f * this.holdMyItemsClimbBlend));
             }
         } else {
             this.holdMyItemsClimbBlend = (float)((double)this.holdMyItemsClimbBlend * Math.pow(0.88, tt));
@@ -712,7 +712,7 @@ extends Module {
         if (swingProgress == 0.0f) {
             float pitch = player.getXRot();
             matrices.translate(handDirection > 0.0f ? pitch / 650.0f * this.holdMyItemsClimbBlend * -1.0f : pitch / 650.0f * this.holdMyItemsClimbBlend, 0.0f, 0.0f);
-            matrices.mulPose(Axis.XP.rotationDegrees(pitch * this.holdMyItemsClimbBlend));
+            matrices.rotate(Axis.XP.rotationDegrees(pitch * this.holdMyItemsClimbBlend));
         }
         if (!this.isHoldMyItemsLantern(stack)) {
             matrices.translate(0.0, 0.0, (double)(player.getXRot() / 120.0f * this.holdMyItemsClimbBlend));
@@ -723,10 +723,10 @@ extends Module {
             matrices.translate(0.0, 0.1, -0.2);
         }
         matrices.translate(0.0, 0.02 * (double)this.holdMyItemsInWaterCounter, 0.0);
-        matrices.mulPose(Axis.ZP.rotationDegrees(8.0f * handDirection * this.holdMyItemsInWaterCounter));
+        matrices.rotate(Axis.ZP.rotationDegrees(8.0f * handDirection * this.holdMyItemsInWaterCounter));
         matrices.translate(0.0, (double)(-this.holdMyItemsVertAngleY), 0.0);
         matrices.translate(0.0, Math.sin((double)player.tickCount * 0.1) * 0.007 * (double)armDirection, 0.0);
-        matrices.mulPose(Axis.YP.rotationDegrees(0.15f * (float)Math.sin((float)player.tickCount * 0.15f) * (float)armDirection));
+        matrices.rotate(Axis.YP.rotationDegrees(0.15f * (float)Math.sin((float)player.tickCount * 0.15f) * (float)armDirection));
         if ((!stack.isEmpty() || crawling || climbing || player.isUnderWater()) && stack.getUseAnimation() != ItemUseAnimation.BLOCK) {
             matrices.translate(0.0, -0.1, 0.1);
         }
@@ -740,7 +740,7 @@ extends Module {
             double distance = (double)((float)player.tickCount + partialTicks) * 0.2;
             double handRotation = Math.sin(distance) * 1.5;
             double smoothRotation = handRotation * 0.8 + this.holdMyItemsPreviousRotation * 0.2;
-            matrices.mulPose(Axis.YP.rotationDegrees((float)(handIn == InteractionHand.MAIN_HAND ? smoothRotation : -smoothRotation)));
+            matrices.rotate(Axis.YP.rotationDegrees((float)(handIn == InteractionHand.MAIN_HAND ? smoothRotation : -smoothRotation)));
             matrices.translate(0.0, 0.0, smoothRotation * 0.2);
             this.holdMyItemsPreviousRotation = smoothRotation;
         }
@@ -752,8 +752,8 @@ extends Module {
                 upAndDown *= 0.14f;
             }
             matrices.translate(0.2 * (double)crawlProgress, 0.3 * (double)crawlProgress * (double)armDirection, -0.2 * (double)crawlProgress * (double)armDirection * (double)pitchFactor);
-            matrices.mulPose(Axis.YP.rotationDegrees(25.0f * crawlProgress));
-            matrices.mulPose(Axis.XP.rotationDegrees(Mth.clamp((float)(20.0f * upAndDown * (float)armDirection), (float)0.0f, (float)20.0f)));
+            matrices.rotate(Axis.YP.rotationDegrees(25.0f * crawlProgress));
+            matrices.rotate(Axis.XP.rotationDegrees(Mth.clamp((float)(20.0f * upAndDown * (float)armDirection), (float)0.0f, (float)20.0f)));
         }
     }
 
@@ -777,9 +777,9 @@ extends Module {
             this.holdMyItemsSwingVelocityY += (float)((Math.random() < 0.5 ? -5.5 : 5.5) * currentSpeed * (double)dt);
         }
         matrices.translate(0.0, 0.0, -0.1);
-        matrices.mulPose(Axis.YN.rotationDegrees(35.0f * (float)direction + this.holdMyItemsSwingAngleY));
-        matrices.mulPose(Axis.XP.rotationDegrees(15.0f + this.holdMyItemsSwingAngleX));
-        matrices.mulPose(Axis.ZP.rotationDegrees(75.0f * (float)direction + this.holdMyItemsSwingVelocityZ));
+        matrices.rotate(Axis.YN.rotationDegrees(35.0f * (float)direction + this.holdMyItemsSwingAngleY));
+        matrices.rotate(Axis.XP.rotationDegrees(15.0f + this.holdMyItemsSwingAngleX));
+        matrices.rotate(Axis.ZP.rotationDegrees(75.0f * (float)direction + this.holdMyItemsSwingVelocityZ));
         matrices.translate(0.3 * (double)direction, -0.35, 0.0);
         matrices.translate(0.0, 0.0, 0.1);
         matrices.scale(1.5f, 1.5f, 1.5f);
@@ -793,71 +793,71 @@ extends Module {
             mainHand = !mainHand;
         }
         matrices.translate(-0.3 * (double)direction, 0.65, -0.1);
-        matrices.mulPose(Axis.YP.rotationDegrees(-65.0f * (float)direction));
-        matrices.mulPose(Axis.XP.rotationDegrees(10.0f));
+        matrices.rotate(Axis.YP.rotationDegrees(-65.0f * (float)direction));
+        matrices.rotate(Axis.XP.rotationDegrees(10.0f));
         if (stack.getItem() instanceof BlockItem && !(stack.getItem() instanceof BucketItem) && stack.getUseAnimation() != ItemUseAnimation.EAT) {
             Block block = ((BlockItem)stack.getItem()).getBlock();
             if (block instanceof AbstractSkullBlock) {
                 matrices.translate(0.1 * (double)direction, 0.15, 0.1);
                 matrices.scale(0.7f, 0.7f, 0.7f);
-                matrices.mulPose(Axis.YP.rotationDegrees(245.0f * (float)direction));
-                matrices.mulPose(Axis.XP.rotationDegrees(25.0f));
-                matrices.mulPose(Axis.ZP.rotationDegrees(-15.0f * (float)direction));
+                matrices.rotate(Axis.YP.rotationDegrees(245.0f * (float)direction));
+                matrices.rotate(Axis.XP.rotationDegrees(25.0f));
+                matrices.rotate(Axis.ZP.rotationDegrees(-15.0f * (float)direction));
                 return;
             }
             if (this.isHoldMyItemsTorch(stack)) {
                 matrices.scale(1.5f, 1.5f, 1.5f);
-                matrices.mulPose(Axis.YN.rotationDegrees(25.0f * (float)direction));
-                matrices.mulPose(Axis.XP.rotationDegrees(5.0f));
-                matrices.mulPose(Axis.ZP.rotationDegrees(75.0f * (float)direction));
+                matrices.rotate(Axis.YN.rotationDegrees(25.0f * (float)direction));
+                matrices.rotate(Axis.XP.rotationDegrees(5.0f));
+                matrices.rotate(Axis.ZP.rotationDegrees(75.0f * (float)direction));
                 matrices.translate(0.2 * (double)direction, 0.2, 0.05);
                 return;
             }
             if (this.isHoldMyItemsThinBlock(stack)) {
                 matrices.translate(0.0, 0.0, -0.1);
-                matrices.mulPose(Axis.YN.rotationDegrees(5.0f * (float)direction));
-                matrices.mulPose(Axis.XP.rotationDegrees(15.0f));
-                matrices.mulPose(Axis.ZP.rotationDegrees(75.0f * (float)direction));
+                matrices.rotate(Axis.YN.rotationDegrees(5.0f * (float)direction));
+                matrices.rotate(Axis.XP.rotationDegrees(15.0f));
+                matrices.rotate(Axis.ZP.rotationDegrees(75.0f * (float)direction));
                 return;
             }
             if (this.isHoldMyItemsLantern(stack)) {
                 this.applyHoldMyItemsLanternPose(matrices, player, arm, swingProgress);
                 return;
             }
-            matrices.mulPose(Axis.YN.rotationDegrees(25.0f * (float)direction));
-            matrices.mulPose(Axis.XP.rotationDegrees(5.0f));
-            matrices.mulPose(Axis.ZP.rotationDegrees(75.0f * (float)direction));
+            matrices.rotate(Axis.YN.rotationDegrees(25.0f * (float)direction));
+            matrices.rotate(Axis.XP.rotationDegrees(5.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(75.0f * (float)direction));
             matrices.translate(0.2 * (double)direction, 0.2, 0.05);
             return;
         }
         if (this.isHoldMyItemsSmallItem(stack) && this.getHoldMyItemsAttackDamage(stack) == 0.0f) {
-            matrices.mulPose(Axis.YN.rotationDegrees(5.0f * (float)direction));
-            matrices.mulPose(Axis.XP.rotationDegrees(15.0f));
-            matrices.mulPose(Axis.ZP.rotationDegrees(75.0f * (float)direction));
+            matrices.rotate(Axis.YN.rotationDegrees(5.0f * (float)direction));
+            matrices.rotate(Axis.XP.rotationDegrees(15.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(75.0f * (float)direction));
             matrices.translate(0.0, -0.05, -0.1);
             matrices.scale(0.7f, 0.7f, 0.7f);
             return;
         }
         if (stack.getUseAnimation() == ItemUseAnimation.BLOCK && stack.getUseAnimation() != ItemUseAnimation.SPEAR) {
-            matrices.mulPose(Axis.ZP.rotationDegrees(160.0f * (float)direction));
-            matrices.mulPose(Axis.YP.rotationDegrees(-60.0f * (float)direction));
-            matrices.mulPose(Axis.XP.rotationDegrees(-70.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(160.0f * (float)direction));
+            matrices.rotate(Axis.YP.rotationDegrees(-60.0f * (float)direction));
+            matrices.rotate(Axis.XP.rotationDegrees(-70.0f));
             matrices.scale(0.75f, 0.75f, 0.75f);
             matrices.translate(0.15 * (double)direction, mainHand ? 0.35 : 0.45, mainHand ? -0.15 : -0.1);
             matrices.translate(0.17 * (double)direction, 0.0, 0.3);
-            matrices.mulPose(Axis.YP.rotationDegrees(-90.0f * (float)direction));
+            matrices.rotate(Axis.YP.rotationDegrees(-90.0f * (float)direction));
             return;
         }
         if (stack.getUseAnimation() == ItemUseAnimation.SPEAR) {
-            matrices.mulPose(Axis.YN.rotationDegrees(75.0f * (float)direction));
-            matrices.mulPose(Axis.XP.rotationDegrees(90.0f));
-            matrices.mulPose(Axis.ZP.rotationDegrees(45.0f * (float)direction));
+            matrices.rotate(Axis.YN.rotationDegrees(75.0f * (float)direction));
+            matrices.rotate(Axis.XP.rotationDegrees(90.0f));
+            matrices.rotate(Axis.ZP.rotationDegrees(45.0f * (float)direction));
             matrices.translate(-0.3 * (double)direction, 0.0, 0.0);
             return;
         }
-        matrices.mulPose(Axis.YN.rotationDegrees(75.0f * (float)direction));
-        matrices.mulPose(Axis.XP.rotationDegrees(70.0f));
-        matrices.mulPose(Axis.ZP.rotationDegrees(45.0f * (float)direction));
+        matrices.rotate(Axis.YN.rotationDegrees(75.0f * (float)direction));
+        matrices.rotate(Axis.XP.rotationDegrees(70.0f));
+        matrices.rotate(Axis.ZP.rotationDegrees(45.0f * (float)direction));
         if (stack.getUseAnimation() != ItemUseAnimation.BLOCK) {
             matrices.scale(1.2f, 1.2f, 1.2f);
         }
@@ -868,10 +868,10 @@ extends Module {
 
     private void applyHoldMyItemsGenericSwing(PoseStack matrices, float direction, float swingRot, float swing) {
         matrices.translate(0.1 * (double)direction * (double)swingRot, 0.1 * (double)swingRot, -0.1 * (double)swing);
-        matrices.mulPose(Axis.XN.rotationDegrees(-30.0f * swingRot));
-        matrices.mulPose(Axis.ZP.rotationDegrees(-10.0f * swingRot * direction));
-        matrices.mulPose(Axis.XN.rotationDegrees(40.0f * swing));
-        matrices.mulPose(Axis.YP.rotationDegrees(10.0f * swing * direction));
+        matrices.rotate(Axis.XN.rotationDegrees(-30.0f * swingRot));
+        matrices.rotate(Axis.ZP.rotationDegrees(-10.0f * swingRot * direction));
+        matrices.rotate(Axis.XN.rotationDegrees(40.0f * swing));
+        matrices.rotate(Axis.YP.rotationDegrees(10.0f * swing * direction));
     }
 
     private void applyHoldMyItemsSwing(PoseStack matrices, AbstractClientPlayer player, InteractionHand handIn, ItemStack stack, float swingProgress) {
@@ -892,75 +892,75 @@ extends Module {
         if (stack.is(net.minecraft.tags.ItemTags.SWORDS) && forwardHandsAttack) {
             matrices.translate(0.12 * (double)ll * (double)swingRot, 0.04 * (double)swingRot, -0.95 * (double)swing);
             matrices.translate(0.02 * (double)ll * (double)swing, 0.1 * (double)swing, -0.1 * (double)swingRot);
-            matrices.mulPose(Axis.YP.rotationDegrees(8.0f * swingRot * ll));
-            matrices.mulPose(Axis.XN.rotationDegrees(-14.0f * swingRot));
-            matrices.mulPose(Axis.ZP.rotationDegrees(-18.0f * swingRot * ll));
-            matrices.mulPose(Axis.XN.rotationDegrees(32.0f * swing));
+            matrices.rotate(Axis.YP.rotationDegrees(8.0f * swingRot * ll));
+            matrices.rotate(Axis.XN.rotationDegrees(-14.0f * swingRot));
+            matrices.rotate(Axis.ZP.rotationDegrees(-18.0f * swingRot * ll));
+            matrices.rotate(Axis.XN.rotationDegrees(32.0f * swing));
             return;
         }
         if (stack.is(net.minecraft.tags.ItemTags.SWORDS) && normalHandsAttack) {
             this.applyHoldMyItemsGenericSwing(matrices, ll, swingRot, swing);
             return;
         }
-        if ((this.holdMyItemsLeft || stack.getItem() instanceof AxeItem || stack.getUseAnimation() == ItemUseAnimation.SPEAR || stack.getUseAnimation() == ItemUseAnimation.BLOCK) && !this.isHoldMyItemsShovel(stack)) {
+        if ((this.holdMyItemsLeft || stack.is(net.minecraft.tags.ItemTags.AXES) || stack.getUseAnimation() == ItemUseAnimation.SPEAR || stack.getUseAnimation() == ItemUseAnimation.BLOCK) && !this.isHoldMyItemsShovel(stack)) {
             if (this.isHoldMyItemsWeapon(stack)) {
                 matrices.translate(0.8 * (double)ll * (double)swingRot, 0.3 * (double)swingRot, -0.5 * (double)swing);
-                matrices.mulPose(Axis.YP.rotationDegrees(15.0f * swingRot * ll));
-                matrices.mulPose(Axis.XN.rotationDegrees(-20.0f * swingRot));
-                matrices.mulPose(Axis.ZP.rotationDegrees(-70.0f * swingRot * ll));
-                matrices.mulPose(Axis.XN.rotationDegrees((stack.is(net.minecraft.tags.ItemTags.SWORDS) ? 40.0f : 30.0f) * swing));
+                matrices.rotate(Axis.YP.rotationDegrees(15.0f * swingRot * ll));
+                matrices.rotate(Axis.XN.rotationDegrees(-20.0f * swingRot));
+                matrices.rotate(Axis.ZP.rotationDegrees(-70.0f * swingRot * ll));
+                matrices.rotate(Axis.XN.rotationDegrees((stack.is(net.minecraft.tags.ItemTags.SWORDS) ? 40.0f : 30.0f) * swing));
                 return;
             }
             if (stack.getUseAnimation() == ItemUseAnimation.SPEAR) {
                 matrices.translate(0.0, 0.0, 0.45 * (double)swingRot);
                 matrices.translate(-0.25 * (double)handDirection * (double)swing, -0.35 * (double)swingRot, -0.6 * (double)swing);
                 matrices.translate(0.0, 0.1 * (double)swing, 0.0);
-                matrices.mulPose(Axis.YP.rotationDegrees(15.0f * swingRot * ll));
-                matrices.mulPose(Axis.ZP.rotationDegrees(30.0f * swingRot * ll));
+                matrices.rotate(Axis.YP.rotationDegrees(15.0f * swingRot * ll));
+                matrices.rotate(Axis.ZP.rotationDegrees(30.0f * swingRot * ll));
                 return;
             }
             if (this.isHoldMyItemsTool(stack) && stack.getUseAnimation() != ItemUseAnimation.BLOCK) {
                 matrices.translate(0.1 * (double)ll * (double)swingRot, 0.1 * (double)swingRot, -0.5 * (double)swing);
-                matrices.mulPose(Axis.XN.rotationDegrees(-30.0f * swingRot));
-                matrices.mulPose(Axis.ZP.rotationDegrees(-20.0f * swingRot * ll));
-                matrices.mulPose(Axis.XN.rotationDegrees(40.0f * swing));
+                matrices.rotate(Axis.XN.rotationDegrees(-30.0f * swingRot));
+                matrices.rotate(Axis.ZP.rotationDegrees(-20.0f * swingRot * ll));
+                matrices.rotate(Axis.XN.rotationDegrees(40.0f * swing));
                 return;
             }
             if (stack.getUseAnimation() != ItemUseAnimation.BLOCK) {
                 matrices.translate(0.1 * (double)ll * (double)swingRot, 0.1 * (double)swingRot, -0.1 * (double)swing);
-                matrices.mulPose(Axis.XN.rotationDegrees(-30.0f * swingRot));
-                matrices.mulPose(Axis.ZP.rotationDegrees(-10.0f * swingRot * ll));
-                matrices.mulPose(Axis.XN.rotationDegrees(40.0f * swing));
-                matrices.mulPose(Axis.YP.rotationDegrees(10.0f * swing * ll));
+                matrices.rotate(Axis.XN.rotationDegrees(-30.0f * swingRot));
+                matrices.rotate(Axis.ZP.rotationDegrees(-10.0f * swingRot * ll));
+                matrices.rotate(Axis.XN.rotationDegrees(40.0f * swing));
+                matrices.rotate(Axis.YP.rotationDegrees(10.0f * swing * ll));
                 return;
             }
             matrices.translate(0.1 * (double)ll * (double)swingRot, 0.1 * (double)swingRot, -0.2 * (double)swing);
-            matrices.mulPose(Axis.XN.rotationDegrees(-10.0f * swingRot));
-            matrices.mulPose(Axis.ZP.rotationDegrees(-10.0f * swingRot * ll));
-            matrices.mulPose(Axis.XN.rotationDegrees(20.0f * swing));
+            matrices.rotate(Axis.XN.rotationDegrees(-10.0f * swingRot));
+            matrices.rotate(Axis.ZP.rotationDegrees(-10.0f * swingRot * ll));
+            matrices.rotate(Axis.XN.rotationDegrees(20.0f * swing));
             return;
         }
         if (this.isHoldMyItemsShovel(stack)) {
             matrices.translate(0.0, 0.15 * (double)swingRot, -0.25 * (double)swingRot);
             matrices.translate(0.0, 0.0, -0.2 * (double)swing);
-            matrices.mulPose(Axis.YP.rotationDegrees(15.0f * swingRot));
-            matrices.mulPose(Axis.XP.rotationDegrees(-35.0f * swingRot));
-            matrices.mulPose(Axis.XP.rotationDegrees(30.0f * swing));
+            matrices.rotate(Axis.YP.rotationDegrees(15.0f * swingRot));
+            matrices.rotate(Axis.XP.rotationDegrees(-35.0f * swingRot));
+            matrices.rotate(Axis.XP.rotationDegrees(30.0f * swing));
             return;
         }
         if (stack.is(net.minecraft.tags.ItemTags.SWORDS)) {
             matrices.translate(-0.55 * (double)ll * (double)swingRot, -0.8 * (double)swingRot, -0.77 * (double)swing);
-            matrices.mulPose(Axis.YP.rotationDegrees(5.0f * swingRot * ll));
-            matrices.mulPose(Axis.XN.rotationDegrees(-30.0f * swingRot));
-            matrices.mulPose(Axis.ZP.rotationDegrees(70.0f * swingRot * ll));
-            matrices.mulPose(Axis.XN.rotationDegrees(50.0f * swing));
+            matrices.rotate(Axis.YP.rotationDegrees(5.0f * swingRot * ll));
+            matrices.rotate(Axis.XN.rotationDegrees(-30.0f * swingRot));
+            matrices.rotate(Axis.ZP.rotationDegrees(70.0f * swingRot * ll));
+            matrices.rotate(Axis.XN.rotationDegrees(50.0f * swing));
             return;
         }
         if (this.isHoldMyItemsTool(stack)) {
             matrices.translate(0.1 * (double)ll * (double)swingRot, 0.1 * (double)swingRot, -0.5 * (double)swing);
-            matrices.mulPose(Axis.XN.rotationDegrees(-30.0f * swingRot));
-            matrices.mulPose(Axis.ZP.rotationDegrees(-20.0f * swingRot * ll));
-            matrices.mulPose(Axis.XN.rotationDegrees(40.0f * swing));
+            matrices.rotate(Axis.XN.rotationDegrees(-30.0f * swingRot));
+            matrices.rotate(Axis.ZP.rotationDegrees(-20.0f * swingRot * ll));
+            matrices.rotate(Axis.XN.rotationDegrees(40.0f * swing));
             return;
         }
         this.applyHoldMyItemsGenericSwing(matrices, ll, swingRot, swing);
@@ -974,9 +974,9 @@ extends Module {
         float time = (float)(System.currentTimeMillis() % 1200L) / 1200.0f;
         float pulse = Mth.sin((float)(time * ((float)Math.PI * 2))) * progress;
         matrices.translate(0.04 * (double)progress, -0.03 * (double)progress + 0.01 * (double)pulse, -0.12 * (double)progress);
-        matrices.mulPose(Axis.YN.rotationDegrees(12.0f * progress));
-        matrices.mulPose(Axis.XP.rotationDegrees(8.0f * progress + 2.5f * pulse));
-        matrices.mulPose(Axis.ZP.rotationDegrees(-4.0f * progress));
+        matrices.rotate(Axis.YN.rotationDegrees(12.0f * progress));
+        matrices.rotate(Axis.XP.rotationDegrees(8.0f * progress + 2.5f * pulse));
+        matrices.rotate(Axis.ZP.rotationDegrees(-4.0f * progress));
     }
 
     private void applyHoldMyItemsUseJitter(PoseStack matrices, float useTicks, float progress) {
@@ -1001,33 +1001,33 @@ extends Module {
         matrices.pushPose();
         this.applyHoldMyItemsUseJitter(matrices, useTicks, drawLinear);
         matrices.translate(rightHand ? -0.1 : 0.1, 0.0, (double)drawLinear * 0.15);
-        ItemInHandRenderer heldItemRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer();
+        FirstPersonHandsAndItemsRenderer heldItemRenderer = Minecraft.getInstance().gameRenderer.firstPersonHandsAndItemsRenderer;
         if (heldItemRenderer instanceof HeldItemRendererAccessor) {
-            ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equippedProgress, swingProgress, arm);
+            ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equippedProgress, swingProgress, arm, Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.playerRenderState);
         }
         matrices.popPose();
         matrices.pushPose();
         matrices.translate(rightHand ? -0.5 : 0.5, -0.45, 0.1);
-        matrices.mulPose(Axis.XP.rotation(0.3f));
+        matrices.rotate(Axis.XP.rotation(0.3f));
         if (rightHand) {
-            matrices.mulPose(Axis.ZN.rotation(-0.3f));
-            matrices.mulPose(Axis.YN.rotation(1.0f));
+            matrices.rotate(Axis.ZN.rotation(-0.3f));
+            matrices.rotate(Axis.YN.rotation(1.0f));
             if (heldItemRenderer instanceof HeldItemRendererAccessor) {
-                ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equippedProgress, swingProgress, arm.getOpposite());
+                ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equippedProgress, swingProgress, arm.getOpposite(), Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.playerRenderState);
             }
-            matrices.mulPose(Axis.YN.rotation(2.5f));
+            matrices.rotate(Axis.YN.rotation(2.5f));
         } else {
-            matrices.mulPose(Axis.ZP.rotation(-0.3f));
-            matrices.mulPose(Axis.YP.rotation(1.0f));
+            matrices.rotate(Axis.ZP.rotation(-0.3f));
+            matrices.rotate(Axis.YP.rotation(1.0f));
             if (heldItemRenderer instanceof HeldItemRendererAccessor) {
-                ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equippedProgress, swingProgress, arm.getOpposite());
+                ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, equippedProgress, swingProgress, arm.getOpposite(), Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.playerRenderState);
             }
-            matrices.mulPose(Axis.YP.rotation(2.5f));
+            matrices.rotate(Axis.YP.rotation(2.5f));
         }
         matrices.translate(rightHand ? -0.65 : 0.65, -0.35, 0.27);
         matrices.popPose();
-        matrices.mulPose(Axis.XN.rotationDegrees(75.0f));
-        matrices.mulPose(Axis.ZN.rotationDegrees(-15.0f * (float)handDirection));
+        matrices.rotate(Axis.XN.rotationDegrees(75.0f));
+        matrices.rotate(Axis.ZN.rotationDegrees(-15.0f * (float)handDirection));
         matrices.translate(0.8 * (double)handDirection, (double)(-equippedProgress) * 0.3, -0.1);
         this.applyHoldMyItemsUseJitter(matrices, useTicks, drawLinear);
         this.applyHoldMyItemsItemPose(matrices, player, handIn, arm, stack, swingProgress);
@@ -1051,14 +1051,14 @@ extends Module {
         matrices.translate(0.2 * (double)direction * (double)progress, -0.7 * (double)progress, -0.2 * (double)progress);
         matrices.translate(0.0, -0.2 * (double)wobble, -0.2 * (double)wobble);
         matrices.translate(0.0, 0.1 * (double)this.holdMyItemsEase(Mth.sin((float)(progress * (float)Math.PI))), 0.0);
-        matrices.mulPose(Axis.YP.rotationDegrees(45.0f * (float)direction));
-        matrices.mulPose(Axis.ZP.rotationDegrees(-40.0f * (float)direction));
-        matrices.mulPose(Axis.XP.rotationDegrees(30.0f));
+        matrices.rotate(Axis.YP.rotationDegrees(45.0f * (float)direction));
+        matrices.rotate(Axis.ZP.rotationDegrees(-40.0f * (float)direction));
+        matrices.rotate(Axis.XP.rotationDegrees(30.0f));
         matrices.scale(0.9f, 0.9f, 0.9f);
-        matrices.mulPose(Axis.YP.rotationDegrees(45.0f * progress * (float)direction));
-        ItemInHandRenderer heldItemRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer();
+        matrices.rotate(Axis.YP.rotationDegrees(45.0f * progress * (float)direction));
+        FirstPersonHandsAndItemsRenderer heldItemRenderer = Minecraft.getInstance().gameRenderer.firstPersonHandsAndItemsRenderer;
         if (heldItemRenderer instanceof HeldItemRendererAccessor) {
-            ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, 0.0f, swingProgress, arm);
+            ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, 0.0f, swingProgress, arm, Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.playerRenderState);
         }
         this.applyHoldMyItemsItemPose(matrices, player, handIn, arm, consumeStack, swingProgress);
         this.applyHandPositionItem(matrices, arm);
@@ -1078,9 +1078,9 @@ extends Module {
         this.applyHoldMyItemsEnvironment(matrices, player, hand, arm, item, swingProgress, tickDelta);
         this.applyHoldMyItemsArmPrePose(matrices, item, arm);
         this.applyHoldMyItemsBaseHandPose(matrices, arm, equipProgress, swingProgress);
-        ItemInHandRenderer heldItemRenderer = Minecraft.getInstance().getEntityRenderDispatcher().getItemInHandRenderer();
+        FirstPersonHandsAndItemsRenderer heldItemRenderer = Minecraft.getInstance().gameRenderer.firstPersonHandsAndItemsRenderer;
         if (heldItemRenderer instanceof HeldItemRendererAccessor) {
-            ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, 0.0f, 0.0f, arm);
+            ((HeldItemRendererAccessor)heldItemRenderer).invokeRenderArmHoldingItem(matrices, vertexConsumers, light, 0.0f, 0.0f, arm, Minecraft.getInstance().gameRenderer.gameRenderState().levelRenderState.playerRenderState);
         }
         this.applyHoldMyItemsItemPose(matrices, player, hand, arm, item, swingProgress);
         this.applyHandPositionItem(matrices, arm);

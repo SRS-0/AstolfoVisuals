@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.effects;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.awt.Color;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -62,7 +62,7 @@ public class LineGlyphsRenderer {
         PoseStack stack = context.poseStack();
         Vec3 cam = context.gameRenderer().mainCamera().position();
         RenderSystem.enableBlend();
-        RenderSystem.blendFuncSeparate((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)(glowing ? com.mojang.blaze3d.platform.BlendFactor.ONE : com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA), (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ZERO);
+        RenderSystem.blendFuncSeparate((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)(glowing ? com.mojang.renderpearl.api.pipeline.BlendFactor.ONE : com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_SRC_ALPHA), (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ZERO);
         RenderSystem.disableCull();
         RenderSystem.enableDepthTest();
         RenderSystem.depthMask((boolean)false);
@@ -97,7 +97,7 @@ public class LineGlyphsRenderer {
         float lineWidth = this.calcLineWidth(gen, cam);
         RenderSystem.lineWidth((float)Math.min(lineWidth * widthMul + widthAdd, 15.0f));
         Matrix4f mat = stack.last().pose();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         List<Vec3> vecs = gen.getPosVectors(pTicks);
         float alphaPC = gen.getAlphaPC();
         if (widthAdd == 4.0f) {

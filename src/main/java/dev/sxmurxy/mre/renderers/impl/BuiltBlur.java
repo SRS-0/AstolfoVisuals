@@ -15,7 +15,7 @@ import org.joml.Matrix4f;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import dev.sxmurxy.mre.renderers.GpuEffect;
 import dev.sxmurxy.mre.renderers.GpuSceneCopy;
 
@@ -34,12 +34,12 @@ public record BuiltBlur(SizeState size, QuadRadiusState radius, QuadColorState c
         shader.getUniform("Radius").set(this.radius.radius1(), this.radius.radius2(), this.radius.radius3(), this.radius.radius4());
         shader.getUniform("Smoothness").set(this.smoothness);
         shader.getUniform("BlurRadius").set(this.blurRadius);
-        BufferBuilder builder = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder builder = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         builder.addVertex(matrix, x, y, z).setColor(this.color.color1());
         builder.addVertex(matrix, x, y + height, z).setColor(this.color.color2());
         builder.addVertex(matrix, x + width, y + height, z).setColor(this.color.color3());
         builder.addVertex(matrix, x + width, y, z).setColor(this.color.color4());
-        BLUR_SHADER_KEY.draw(builder.buildOrThrow(), shader, fbo.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR));
+        BLUR_SHADER_KEY.draw(builder.buildOrThrow(), shader, fbo.getColorTextureView(), RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR));
 
 
 

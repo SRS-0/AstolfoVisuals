@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 
 layout(std140) uniform EffectData {
     vec4 SizeData;
@@ -12,17 +13,17 @@ layout(std140) uniform EffectData {
 #define Smoothness SmoothnessData.xy
 
 
-#moj_import <mre:common.glsl>
+#include <mre:common.glsl>
 
-in vec2 FragCoord; // normalized fragment coord relative to the primitive
-in vec4 FragColor;
-
-
+layout(location = 1) in vec2 FragCoord; // normalized fragment coord relative to the primitive
+layout(location = 0) in vec4 FragColor;
 
 
 
 
-out vec4 OutColor;
+
+
+layout(location = 0) out vec4 OutColor;
 
 void main() {
     vec2 center = Size * 0.5;

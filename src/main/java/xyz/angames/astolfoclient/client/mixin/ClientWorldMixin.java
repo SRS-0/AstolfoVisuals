@@ -28,18 +28,7 @@ public class ClientWorldMixin {
         AmbientsModule ambients = (AmbientsModule)AstolfoclientClient.moduleManager.getModuleByName("Ambients");
         if (ambients != null && ambients.isEnabled() && ambients.customSkybox.get() && (strength = (float)ambients.skyboxStrength.get()) > 0.0f) {
             Color themeColor = new Color(ThemeManager.getThemedColor(0L));
-            int originalColor = state.skyColor;
-            int origR = originalColor >> 16 & 0xFF;
-            int origG = originalColor >> 8 & 0xFF;
-            int origB = originalColor & 0xFF;
-            int themeR = themeColor.getRed();
-            int themeG = themeColor.getGreen();
-            int themeB = themeColor.getBlue();
-            int finalR = (int)((float)origR * (1.0f - strength) + (float)themeR * strength);
-            int finalG = (int)((float)origG * (1.0f - strength) + (float)themeG * strength);
-            int finalB = (int)((float)origB * (1.0f - strength) + (float)themeB * strength);
-            int finalColor = finalR << 16 | finalG << 8 | finalB;
-            state.skyColor = finalColor;
+            state.skyColor = new org.joml.Vector3f(state.skyColor).lerp(new org.joml.Vector3f(themeColor.getRed()/255f,themeColor.getGreen()/255f,themeColor.getBlue()/255f),strength);
         }
     }
 }

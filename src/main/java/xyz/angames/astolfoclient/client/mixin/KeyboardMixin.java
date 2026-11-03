@@ -19,7 +19,7 @@ import xyz.angames.astolfoclient.client.module.Module;
 public class KeyboardMixin {
     @Inject(method={"keyPress"}, at={@At(value="HEAD")}, cancellable=true)
     private void onKey(long window, int action, net.minecraft.client.input.KeyEvent input, CallbackInfo ci) {
-        int key=input.key(),scancode=input.scancode(),modifiers=input.modifiers();
+        int key=xyz.angames.astolfoclient.client.util.LegacyInput.legacyKey(input.key()),scancode=input.keycode(),modifiers=input.modifiers();
         if (key == -1 || key <= 0) {
             return;
         }

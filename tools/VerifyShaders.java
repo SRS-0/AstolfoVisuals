@@ -13,7 +13,7 @@ public class VerifyShaders {
         return match.find()?match.group(1).replaceAll("/\\*.*?\\*/|//[^\\r\\n]*", "").replaceAll("\\s+", ""):"";
     }
     static String expand(String source) throws Exception {
-        var pattern = Pattern.compile("#moj_import <([^>]+)>");
+        var pattern = Pattern.compile("#include <([^>]+)>");
         var matches = pattern.matcher(source);
         var expanded = new StringBuffer();
         while (matches.find()) {
@@ -63,7 +63,7 @@ public class VerifyShaders {
                     long result = 0;
                     try {
                         shaderc_compile_options_set_auto_bind_uniforms(options, true);
-                        shaderc_compile_options_set_auto_map_locations(options, true);
+                        shaderc_compile_options_set_auto_map_locations(options, false);
                         shaderc_compile_options_set_target_env(options, shaderc_target_env_opengl, shaderc_env_version_opengl_4_5);
                         int kind = path.toString().endsWith(".vsh") ? shaderc_vertex_shader : shaderc_fragment_shader;
                         // OpenGL SPIR-V requires GLSL 330; shipped OpenGL sources remain GLSL 150.

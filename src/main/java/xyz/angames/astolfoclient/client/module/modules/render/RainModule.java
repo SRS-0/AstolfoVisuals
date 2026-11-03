@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -567,8 +567,8 @@ extends Module {
         float tickDelta = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
         if (this.wetGround.get()) {
             PoseStack viewStack = new PoseStack();
-            viewStack.mulPose(Axis.XP.rotationDegrees(camera.xRot()));
-            viewStack.mulPose(Axis.YP.rotationDegrees(camera.yRot() + 180.0f));
+            viewStack.rotate(Axis.XP.rotationDegrees(camera.xRot()));
+            viewStack.rotate(Axis.YP.rotationDegrees(camera.yRot() + 180.0f));
             Matrix4f viewMatrix = viewStack.last().pose();
             Matrix4f projectionMatrix = RenderSystem.getProjectionMatrix();
             this.renderWetSurfaceFrame(camera, viewMatrix, projectionMatrix, tickDelta);
@@ -600,7 +600,7 @@ extends Module {
         RenderSystem.depthMask((boolean)false);
         RenderSystem.disableCull();
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_SRC_ALPHA);
         if (this.groundMist.get()) {
             this.drawMist(matrices, camera, cam, rgb, alphaMul);
         }
@@ -608,7 +608,7 @@ extends Module {
         if (this.splashes.get()) {
             this.drawRipples(matrices, cam, rgb, alphaMul);
         }
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         this.drawStreaks(matrices, camera, cam, rgb, alphaMul, true);
         if (this.splashes.get()) {
             this.drawCrowns(matrices, camera, cam, rgb, alphaMul);
@@ -626,7 +626,7 @@ extends Module {
         if (this.drops.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         float sizeMul = (float)this.dropSize.get();
         float r = (float)this.radius.get();
         float fadeStart = r * 0.62f;
@@ -658,8 +658,8 @@ extends Module {
             tilt = Mth.clamp((float)tilt, (float)-55.0f, (float)55.0f);
             ms.pushPose();
             ms.translate(dx, dy, dz);
-            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
-            ms.mulPose(Axis.ZP.rotationDegrees(-tilt));
+            ms.rotate(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            ms.rotate(Axis.ZP.rotationDegrees(-tilt));
             Matrix4f m = ms.last().pose();
             float half = width * 0.5f;
             float top = length * 0.5f;
@@ -699,7 +699,7 @@ extends Module {
         if (this.splashList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         int size = this.splashList.size();
         for (int i = 0; i < size; ++i) {
             Splash s = this.splashList.get(i);
@@ -743,7 +743,7 @@ extends Module {
         if (this.splashList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         int size = this.splashList.size();
         for (int i = 0; i < size; ++i) {
             Splash s = this.splashList.get(i);
@@ -755,7 +755,7 @@ extends Module {
             if (alpha <= 0.01f || height <= 0.005f) continue;
             ms.pushPose();
             ms.translate(s.x - cam.x, s.y - cam.y + 0.02, s.z - cam.z);
-            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            ms.rotate(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
             Matrix4f m = ms.last().pose();
             float base = s.scale * 0.16f;
             buffer.addVertex(m, -base * 0.25f, height, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
@@ -774,7 +774,7 @@ extends Module {
         if (this.dropletList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         float sizeMul = (float)this.dropSize.get();
         int size = this.dropletList.size();
         for (int i = 0; i < size; ++i) {
@@ -790,8 +790,8 @@ extends Module {
             float tilt = (float)Math.toDegrees(Math.atan2(horizontal, -d.vy + 1.0E-4));
             ms.pushPose();
             ms.translate(d.x - cam.x, d.y - cam.y, d.z - cam.z);
-            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
-            ms.mulPose(Axis.ZP.rotationDegrees(-tilt));
+            ms.rotate(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            ms.rotate(Axis.ZP.rotationDegrees(-tilt));
             Matrix4f m = ms.last().pose();
             buffer.addVertex(m, -width * 0.4f, length * 0.5f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
             buffer.addVertex(m, width * 0.4f, length * 0.5f, 0.0f).setColor(rgb[0], rgb[1], rgb[2], 0.0f);
@@ -809,7 +809,7 @@ extends Module {
         if (this.mistList.isEmpty()) {
             return;
         }
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         int size = this.mistList.size();
         for (int i = 0; i < size; ++i) {
             Mist mist = this.mistList.get(i);
@@ -819,7 +819,7 @@ extends Module {
             if (alpha <= 0.004f) continue;
             ms.pushPose();
             ms.translate(mist.x - cam.x, mist.y - cam.y, mist.z - cam.z);
-            ms.mulPose(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
+            ms.rotate(Axis.YP.rotationDegrees(180.0f - camera.yRot()));
             Matrix4f m = ms.last().pose();
             float half = mist.size * 0.5f;
             float top = mist.size * 0.42f;

@@ -1,9 +1,9 @@
 package xyz.angames.astolfoclient.client.render.compat;
 
-import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.renderpearl.api.pipeline.PrimitiveTopology;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 
 /** Scratch mesh storage for extracted geometry; MeshData owns each allocation until closed. */
 public final class Tesselator {

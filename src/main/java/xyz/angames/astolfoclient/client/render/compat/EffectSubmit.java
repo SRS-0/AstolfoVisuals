@@ -13,13 +13,13 @@ public record EffectSubmit(Runnable draw) implements SubmitNode {
     public static void register() {
         FeatureRendererRegistry.register(TYPE, () -> new FeatureRenderer<EffectSubmit>() {
             public void prepareGroup(FeatureFrameContext context, List<EffectSubmit> submits, boolean outline) {}
-            public void executeGroup(FeatureFrameContext context, int group, List<EffectSubmit> submits, boolean outline) {
-                if (!outline) submits.forEach(submit -> submit.draw.run());
+            public void executeGroup(FeatureFrameContext context, net.minecraft.client.renderer.oit.OitStage oit, com.mojang.renderpearl.api.commands.RenderPass pass, int group, List<EffectSubmit> submits, boolean outline) {
+                if (!outline) {var previous=BufferRenderer.currentPass;BufferRenderer.currentPass=pass;try{WorldPass.outside(()->{submits.forEach(submit -> submit.draw.run());return null;});}finally{BufferRenderer.currentPass=previous;}}
             }
         });
     }
     public static void submit(SubmitNodeCollector queue, Runnable draw) {
-        queue.submitCustom(SubmitRenderPhases.TRANSLUCENT_CUSTOM_GEOMETRY, new EffectSubmit(draw));
+        queue.submitCustom(SubmitRenderPhases.SOLID, new EffectSubmit(draw));
     }
     @Override public FeatureRendererType<EffectSubmit> featureType() { return TYPE; }
 }

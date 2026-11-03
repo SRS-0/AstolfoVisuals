@@ -24,7 +24,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.AstolfoclientClient;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -159,7 +159,7 @@ public class BlockOutlineRenderer {
                     shader.getUniform("uMode").set(modeIdx);
                 }
             }
-            BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+            BufferBuilder buffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
             this.drawBoxFaces(matrices, buffer, this.currentBox, r, g, b, 1.0f);
             MeshData builtBuffer = buffer.build();
             if (builtBuffer != null) {
@@ -171,7 +171,7 @@ public class BlockOutlineRenderer {
             RenderSystem.lineWidth((float)((float)module.lineWidth.get()));
             float finalOutlineAlpha = (float)module.outlineAlpha.get() * this.fadeAlpha;
             if (finalOutlineAlpha > 0.01f) {
-                BufferBuilder lineBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+                BufferBuilder lineBuffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
                 this.drawBoxOutline(matrices, lineBuffer, this.currentBox, r, g, b, finalOutlineAlpha);
                 MeshData builtLines = lineBuffer.build();
                 if (builtLines != null) {

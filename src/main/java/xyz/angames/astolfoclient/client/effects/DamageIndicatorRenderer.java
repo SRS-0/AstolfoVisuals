@@ -66,8 +66,8 @@ public class DamageIndicatorRenderer {
             color = color & 0xFFFFFF | alphaHex;
             matrices.pushPose();
             matrices.translate(p.x - camX, p.y - camY, p.z - camZ);
-            matrices.mulPose(Axis.YP.rotationDegrees(-camera.yRot()));
-            matrices.mulPose(Axis.XP.rotationDegrees(camera.xRot()));
+            matrices.rotate(Axis.YP.rotationDegrees(-camera.yRot()));
+            matrices.rotate(Axis.XP.rotationDegrees(camera.xRot()));
             float currentScale = baseScale * (p.isCrit ? 1.3f : 1.0f) * popScale;
             matrices.scale(-currentScale, -currentScale, currentScale);
             Matrix4f positionMatrix = matrices.last().pose();

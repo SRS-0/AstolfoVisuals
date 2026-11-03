@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 layout(std140) uniform EffectData {
     mat4 uInvViewProjMat;
     mat4 uViewProjMat;
@@ -13,8 +14,8 @@ layout(std140) uniform EffectData {
     float uDepthZeroToOne;
 };
 
-in vec2 vTexCoord;
-out vec4 fragColor;
+layout(location = 0) in vec2 vTexCoord;
+layout(location = 0) out vec4 fragColor;
 
 uniform sampler2D uColorTexture;
 uniform sampler2D uDepthTexture;

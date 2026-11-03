@@ -54,7 +54,6 @@
     "ScreenMixin",
     "SoundSystemMixin",
     "TextDisplayEntityMixin",
-    "UtilOperatingSystemMixin",
     "WindowMixin",
     "ExperienceBarMixin",
     "BufferBuilderGpuAccessor",
@@ -62,7 +61,10 @@
     "GuiRendererGpuMixin",
     "AspectProjectionMixin",
     "HandRenderTargetMixin",
-    "GuiExtractionMixin"
+    "GuiExtractionMixin",
+    "ItemActivationMixin",
+    "ClockInstanceMixin",
+    "WorldPassMixin"
   ],
   "injectors": {
     "defaultRequire": 1

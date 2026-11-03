@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 layout(std140) uniform EffectData {
     float alpha;
     int doBlur;
@@ -20,8 +21,8 @@ uniform sampler2D bgTexture;
 
 
 
-in vec2 texCoord;
-out vec4 fragColor;
+layout(location = 0) in vec2 texCoord;
+layout(location = 0) out vec4 fragColor;
 
 float wave(float x, float y, float time) {
     return sin(10.0*x + 10.0*y + time) / 5.0 +

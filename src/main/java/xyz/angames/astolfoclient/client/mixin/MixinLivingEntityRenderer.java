@@ -86,12 +86,12 @@ public abstract class MixinLivingEntityRenderer {
         }
         matrices.pushPose();
         matrices.translate(0.0, (double)playerState.boundingBoxHeight / 2.0, 0.0);
-        matrices.mulPose(Axis.YP.rotationDegrees(180.0f - playerState.bodyRot));
+        matrices.rotate(Axis.YP.rotationDegrees(180.0f - playerState.bodyRot));
         String mode = modelsModule.mode.get();
         if (mode.equals("Amogus") || mode.equals("Rabbit") || mode.equals("Cow")) {
-            matrices.mulPose(new Quaternionf().rotationX((float)Math.PI));
+            matrices.rotate(new Quaternionf().rotationX((float)Math.PI));
             if (modelsModule.changeZ.get()) {
-                matrices.mulPose(new Quaternionf().rotationY((float)Math.PI));
+                matrices.rotate(new Quaternionf().rotationY((float)Math.PI));
             }
         }
         matrices.translate(0.0, (double)(-playerState.boundingBoxHeight) / 2.0, 0.0);

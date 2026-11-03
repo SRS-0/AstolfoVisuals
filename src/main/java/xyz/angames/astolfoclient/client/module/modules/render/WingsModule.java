@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -20,7 +20,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import com.mojang.math.Axis;
 import org.joml.Matrix4f;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -82,7 +82,7 @@ extends Module {
             RenderSystem.depthMask((boolean)true);
             RenderSystem.enableCull();
             RenderSystem.disableBlend();
-            RenderSystem.blendFuncSeparate((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ZERO);
+            RenderSystem.blendFuncSeparate((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ZERO);
             RenderSystem.setShaderColor((float)1.0f, (float)1.0f, (float)1.0f, (float)1.0f);
             stack.popPose();
         });
@@ -122,15 +122,15 @@ extends Module {
         if (isBaby) {
             stack.scale(0.5f, 0.5f, 0.5f);
         }
-        stack.mulPose(Axis.YP.rotationDegrees(180.0f - bodyYaw));
+        stack.rotate(Axis.YP.rotationDegrees(180.0f - bodyYaw));
         if (pose.preTranslateY != 0.0f || pose.preTranslateZ != 0.0f) {
             stack.translate(0.0f, pose.preTranslateY, pose.preTranslateZ);
         }
         if (pose.pitchRotation != 0.0f) {
-            stack.mulPose(Axis.XP.rotationDegrees(pose.pitchRotation));
+            stack.rotate(Axis.XP.rotationDegrees(pose.pitchRotation));
         }
         if (pose.rollRotation != 0.0f) {
-            stack.mulPose(Axis.ZP.rotationDegrees(pose.rollRotation));
+            stack.rotate(Axis.ZP.rotationDegrees(pose.rollRotation));
         }
         stack.translate(0.0f, pose.anchorY, pose.anchorZ);
         stack.scale(wingScale, wingScale, wingScale);
@@ -142,15 +142,15 @@ extends Module {
     private void renderWingSide(PoseStack stack, float side, float open, int baseColor, int glowColor, int coreColor, WingPose pose) {
         stack.pushPose();
         stack.translate(side * pose.sideOffset, pose.sideYOffset, pose.sideZOffset);
-        stack.mulPose(Axis.YP.rotationDegrees(side * open));
-        stack.mulPose(Axis.ZP.rotationDegrees(side * pose.sideRoll));
-        stack.mulPose(Axis.XP.rotationDegrees(pose.sidePitch));
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        stack.rotate(Axis.YP.rotationDegrees(side * open));
+        stack.rotate(Axis.ZP.rotationDegrees(side * pose.sideRoll));
+        stack.rotate(Axis.XP.rotationDegrees(pose.sidePitch));
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         this.drawWingLayer(stack, side, 1.22f, WingsModule.setAlpha(glowColor, 48), WingsModule.setAlpha(glowColor, 0));
         this.drawWingLayer(stack, side, 0.84f, WingsModule.setAlpha(coreColor, 57), WingsModule.setAlpha(coreColor, 0));
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE_MINUS_SRC_ALPHA);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE_MINUS_SRC_ALPHA);
         this.drawWingLayer(stack, side, 1.0f, WingsModule.setAlpha(baseColor, 220), WingsModule.setAlpha(baseColor, 10));
-        RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+        RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         this.drawWingOutline(stack, side, 1.0f, WingsModule.setAlpha(baseColor, 136));
         this.drawWingRibs(stack, side, 0.96f, WingsModule.setAlpha(glowColor, 44));
         stack.popPose();
@@ -158,7 +158,7 @@ extends Module {
 
     private void drawWingLayer(PoseStack stack, float side, float scale, int rootColor, int edgeColor) {
         Matrix4f matrix = stack.last().pose();
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_COLOR);
         for (int i = 0; i < SHAPE.length; ++i) {
             WingPoint cur = SHAPE[i];
             WingPoint next = SHAPE[(i + 1) % SHAPE.length];
@@ -172,7 +172,7 @@ extends Module {
     private void drawWingOutline(PoseStack stack, float side, float scale, int color) {
         Matrix4f matrix = stack.last().pose();
         RenderSystem.lineWidth((float)1.35f);
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
         for (WingPoint point : SHAPE) {
             this.vertex(buffer, matrix, side * point.x * scale, point.y * scale, 0.0f, color);
         }
@@ -184,7 +184,7 @@ extends Module {
         Matrix4f matrix = stack.last().pose();
         int[] ribIndices = new int[]{2, 4, 7, 9, 11};
         RenderSystem.lineWidth((float)0.9f);
-        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder buffer = Tesselator.getInstance().begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINES, DefaultVertexFormat.POSITION_COLOR);
         for (int idx : ribIndices) {
             WingPoint point = SHAPE[idx];
             this.vertex(buffer, matrix, 0.0f, 0.0f, 0.0f, WingsModule.setAlpha(color, Math.max(8, (int)((float)WingsModule.alpha(color) * 0.75f))));

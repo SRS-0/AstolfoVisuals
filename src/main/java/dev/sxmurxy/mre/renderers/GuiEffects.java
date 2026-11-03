@@ -1,17 +1,19 @@
 package dev.sxmurxy.mre.renderers;
 
 import com.mojang.blaze3d.pipeline.*;
-import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.renderpearl.api.pipeline.*;
+import com.mojang.renderpearl.api.pipeline.CompareOp;
+import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.blaze3d.vertex.*;
+import com.mojang.renderpearl.api.vertex.*;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
 import net.minecraft.resources.Identifier;
-import com.mojang.blaze3d.textures.GpuSampler;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import org.lwjgl.system.MemoryUtil;
 import xyz.angames.astolfoclient.client.mixin.BufferBuilderGpuAccessor;
 
@@ -21,13 +23,13 @@ public final class GuiEffects {
     private GuiEffects() {}
     private static RenderPipeline pipeline(String name,boolean textured,int count){
         return PIPELINES.computeIfAbsent(name,key->{
-            var format=VertexFormat.builder(0).addAttribute("Position",com.mojang.blaze3d.GpuFormat.RGB32_FLOAT).addAttribute("Color",com.mojang.blaze3d.GpuFormat.RGBA8_UNORM);
-            if(textured)format.addAttribute("UV0",com.mojang.blaze3d.GpuFormat.RG32_FLOAT);
-            format.addAttribute("EffectLocal",com.mojang.blaze3d.GpuFormat.RG32_FLOAT);
-            for(int i=0;i<count;i++)format.addAttribute("Effect"+i,com.mojang.blaze3d.GpuFormat.RGBA32_FLOAT);
+            var format=VertexFormat.builder(0).addAttribute("Position",com.mojang.renderpearl.api.GpuFormat.RGB32_FLOAT).addAttribute("Color",com.mojang.renderpearl.api.GpuFormat.RGBA8_UNORM);
+            if(textured)format.addAttribute("UV0",com.mojang.renderpearl.api.GpuFormat.RG32_FLOAT);
+            format.addAttribute("EffectLocal",com.mojang.renderpearl.api.GpuFormat.RG32_FLOAT);
+            for(int i=0;i<count;i++)format.addAttribute("Effect"+i,com.mojang.renderpearl.api.GpuFormat.RGBA32_FLOAT);
             var builder=xyz.angames.astolfoclient.client.render.compat.PipelineBuilder.builder().withLocation(Identifier.fromNamespaceAndPath("mre","pipeline/"+name+"_gui"))
                     .withVertexShader(Identifier.fromNamespaceAndPath("mre","core/"+name+"_gui")).withFragmentShader(Identifier.fromNamespaceAndPath("mre","core/"+name+"_gui"))
-                    .withVertexFormat(format.build(),com.mojang.blaze3d.PrimitiveTopology.QUADS)
+                    .withVertexFormat(format.build(),com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS)
                     .withUniform("Projection",UniformType.UNIFORM_BUFFER).withUniform("DynamicTransforms",UniformType.UNIFORM_BUFFER)
                     .withBlend(BlendFunction.TRANSLUCENT).withCull(false).withDepthWrite(false).withDepthTestFunction(CompareOp.ALWAYS_PASS);
             if(!name.equals("rectangle")&&!name.equals("border"))builder.withSampler("Sampler0");

@@ -1,15 +1,15 @@
 package dev.sxmurxy.mre.renderers;
 
-import com.mojang.blaze3d.buffers.GpuBuffer;
-import com.mojang.blaze3d.pipeline.BlendFunction;
-import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.CompareOp;
-import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.renderpearl.api.buffers.GpuBuffer;
+import com.mojang.renderpearl.api.pipeline.BlendFunction;
+import com.mojang.renderpearl.api.pipeline.RenderPipeline;
+import com.mojang.renderpearl.api.pipeline.CompareOp;
+import com.mojang.renderpearl.api.pipeline.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.GpuSampler;
-import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.renderpearl.api.textures.GpuSampler;
+import com.mojang.renderpearl.api.textures.GpuTextureView;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.OptionalInt;
@@ -43,7 +43,7 @@ public final class GpuEffect {
                 .withLocation(Identifier.fromNamespaceAndPath("mre", "pipeline/" + name))
                 .withVertexShader(Identifier.fromNamespaceAndPath("mre", "core/" + name))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("mre", "core/" + name))
-                .withVertexFormat(format, com.mojang.blaze3d.PrimitiveTopology.QUADS)
+                .withVertexFormat(format, com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS)
                 .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                 .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
                 .withUniform("EffectData", UniformType.UNIFORM_BUFFER)
@@ -75,10 +75,11 @@ public final class GpuEffect {
 
     public void draw(MeshData mesh, Uniforms uniforms, AbstractTexture texture) {
         draw(mesh, uniforms, texture == null ? null : texture.getTextureView(), texture == null ? null :
-                linearSampling ? RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR) : texture.getSampler());
+                linearSampling ? RenderSystem.getSamplerCache().getClampToEdge(com.mojang.renderpearl.api.textures.FilterMode.LINEAR) : texture.getSampler());
     }
 
     public void draw(MeshData mesh, Uniforms uniforms, GpuTextureView texture, GpuSampler sampler) {
+        if(xyz.angames.astolfoclient.client.render.compat.WorldPass.isActive()){xyz.angames.astolfoclient.client.render.compat.WorldPass.outside(()->{draw(mesh,uniforms,texture,sampler);return null;});return;}
         RenderSystem.assertOnRenderThread();
         if(GuiEffects.enqueue(name,mesh,uniforms.values,texture,sampler))return;
         ByteBuffer data = MemoryUtil.memAlloc(uniforms.values.length * Float.BYTES);
@@ -88,19 +89,19 @@ public final class GpuEffect {
             try (GpuBuffer parameters = device.createBuffer(() -> "Astolfo effect parameters", GpuBuffer.USAGE_UNIFORM, data);
                  GpuBuffer vertices = device.createBuffer(() -> "Astolfo effect vertices", GpuBuffer.USAGE_VERTEX, mesh.vertexBuffer())) {
                 var state = mesh.drawState();
-                var indices = RenderSystem.getSequentialBuffer(com.mojang.blaze3d.PrimitiveTopology.QUADS);
+                var indices = RenderSystem.getSequentialBuffer(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS);
                 var indexBuffer = indices.getBuffer(state.indexCount());
                 var transforms = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy(), new Vector4f(1), new Vector3f(), new Matrix4f());
                 var target = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-                var color = RenderSystem.outputColorTextureOverride != null ? RenderSystem.outputColorTextureOverride : target.getColorTextureView();
+                var color = xyz.angames.astolfoclient.client.render.compat.RenderSystem.outputColorTextureOverride != null ? xyz.angames.astolfoclient.client.render.compat.RenderSystem.outputColorTextureOverride : target.getColorTextureView();
                 try (var pass = device.createCommandEncoder().createRenderPass(() -> "Astolfo GUI effect", color, java.util.Optional.empty())) {
-                    pass.setPipeline(pipeline);
+                    pass.setPipeline(com.mojang.blaze3d.systems.RenderSystem.getCompiledPipeline(pipeline));
                     RenderSystem.bindDefaultUniforms(pass);
                     pass.setUniform("DynamicTransforms", transforms);
                     pass.setUniform("EffectData", parameters);
-                    if (!com.mojang.blaze3d.pipeline.BindGroupLayout.flattenSamplers(pipeline.getBindGroupLayouts()).isEmpty()) {
+                    if (!name.equals("rectangle") && !name.equals("border")) {
                         if (texture == null || sampler == null) throw new IllegalStateException("Textured effect needs a texture and sampler");
-                        pass.bindTexture("Sampler0", texture, sampler);
+                        pass.setUniform("Sampler0", texture, sampler);
                     }
                     pass.setVertexBuffer(0,vertices.slice());
                     pass.setIndexBuffer(indexBuffer, indices.type());

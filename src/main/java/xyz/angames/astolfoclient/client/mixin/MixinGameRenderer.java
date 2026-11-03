@@ -14,14 +14,6 @@ import xyz.angames.astolfoclient.client.module.modules.render.NoRenderModule;
 @Environment(value=EnvType.CLIENT)
 @Mixin(value={GameRenderer.class})
 public class MixinGameRenderer {
-    @Inject(method={"displayItemActivation"}, at={@At(value="HEAD")}, cancellable=true)
-    private void onShowFloatingItem(ItemStack floatingItem, CallbackInfo ci) {
-        NoRenderModule noRender = NoRenderModule.getInstance();
-        if (noRender != null && noRender.isEnabled() && noRender.totem.get()) {
-            ci.cancel();
-        }
-    }
-
     @Inject(method={"bobHurt"}, at={@At(value="HEAD")}, cancellable=true)
     private void onTiltViewWhenHurt(net.minecraft.client.renderer.state.level.CameraRenderState camera, PoseStack matrices, CallbackInfo ci) {
         NoRenderModule noRender = NoRenderModule.getInstance();

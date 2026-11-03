@@ -1,6 +1,6 @@
 package xyz.angames.astolfoclient.client.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.renderpearl.backend.opengl.GlStateManager;
 import xyz.angames.astolfoclient.client.render.compat.RenderSystem;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +21,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import xyz.angames.astolfoclient.client.render.compat.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.renderpearl.api.vertex.VertexFormat;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import xyz.angames.astolfoclient.client.config.ThemeManager;
@@ -113,11 +113,11 @@ extends Module {
         if (this.darkImprint.get()) {
             RenderSystem.defaultBlendFunc();
         } else {
-            RenderSystem.blendFunc((com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.SRC_ALPHA, (com.mojang.blaze3d.platform.BlendFactor)com.mojang.blaze3d.platform.BlendFactor.ONE);
+            RenderSystem.blendFunc((com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.SRC_ALPHA, (com.mojang.renderpearl.api.pipeline.BlendFactor)com.mojang.renderpearl.api.pipeline.BlendFactor.ONE);
         }
         Tesselator tessellator = Tesselator.getInstance();
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_COLOR);
-        BufferBuilder sparkBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
+        BufferBuilder sparkBuffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_COLOR);
         boolean hasSparks = false;
         for (FirePart part : this.partList) {
             partAlpha = part.getAlphaPC();
@@ -128,7 +128,7 @@ extends Module {
                 double sparkZ = spark.prevPosZ + (spark.posZ - spark.prevPosZ) * (double)tickDelta - cameraPos.z;
                 matrixStack.pushPose();
                 matrixStack.translate(sparkX, sparkY, sparkZ);
-                matrixStack.mulPose(cameraRot);
+                matrixStack.rotate(cameraRot);
                 float sparkSize = 0.02f;
                 matrixStack.scale(sparkSize, sparkSize, sparkSize);
                 Matrix4f sm = matrixStack.last().pose();
@@ -150,7 +150,7 @@ extends Module {
             double dist = cameraPos.distanceTo(part.posVec);
             float width = 1.0E-5f + 8.0f * Mth.clamp((float)(1.0f - ((float)dist - 3.0f) / 20.0f), (float)0.0f, (float)1.0f);
             RenderSystem.lineWidth((float)width);
-            BufferBuilder lineBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
+            BufferBuilder lineBuffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.DEBUG_LINE_STRIP, DefaultVertexFormat.POSITION_COLOR);
             matrixStack.pushPose();
             matrixStack.translate(-cameraPos.x, -cameraPos.y, -cameraPos.z);
             Matrix4f lm = matrixStack.last().pose();
@@ -169,7 +169,7 @@ extends Module {
         RenderSystem.lineWidth((float)1.0f);
         RenderSystem.setShaderTexture((int)0, (Identifier)ICON_TEXTURE);
         RenderSystem.setShader((ShaderProgramKey)ShaderProgramKeys.POSITION_TEX_COLOR);
-        BufferBuilder textureBuffer = tessellator.begin(com.mojang.blaze3d.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+        BufferBuilder textureBuffer = tessellator.begin(com.mojang.renderpearl.api.pipeline.PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
         boolean hasTexture = false;
         for (FirePart part : this.partList) {
             float partAlpha2 = part.getAlphaPC();
@@ -178,7 +178,7 @@ extends Module {
             double z = part.prevPos.z + (part.posVec.z - part.prevPos.z) * (double)tickDelta - cameraPos.z;
             matrixStack.pushPose();
             matrixStack.translate(x, y, z);
-            matrixStack.mulPose(cameraRot);
+            matrixStack.rotate(cameraRot);
             float scale = 0.08f;
             matrixStack.scale(scale, scale, scale);
             Matrix4f m = matrixStack.last().pose();

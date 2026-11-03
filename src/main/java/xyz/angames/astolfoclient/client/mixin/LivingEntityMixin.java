@@ -70,7 +70,7 @@ public class LivingEntityMixin {
         }
     }
 
-    @Inject(method={"getCurrentSwingDuration"}, at={@At(value="HEAD")}, cancellable=true)
+    @Inject(method={"getModifiedSwingDuration"}, at={@At(value="HEAD")}, cancellable=true)
     private void onGetHandSwingDuration(CallbackInfoReturnable<Integer> cir) {
         SwingAnimationModule swing;
         LivingEntity entity = (LivingEntity)(Object)this;

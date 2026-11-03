@@ -17,11 +17,12 @@ public final class GpuSceneCopy {
     private static TextureTarget target() {
         RenderSystem.assertOnRenderThread();
         var source = Minecraft.getInstance().gameRenderer.mainRenderTarget();
-        if (copy == null) copy = new TextureTarget("Astolfo scene copy", source.width, source.height, false, source.getColorTexture().getFormat());
+        if (copy == null) copy = new TextureTarget("Astolfo scene copy", source.width, source.height, source.getColorTexture().getFormat(), null);
         else if (copy.width != source.width || copy.height != source.height) copy.resize(source.width, source.height);
         return copy;
     }
     public static TextureTarget capture() {
+        if(xyz.angames.astolfoclient.client.render.compat.WorldPass.isActive())return xyz.angames.astolfoclient.client.render.compat.WorldPass.outside(GpuSceneCopy::capture);
         var result = target();
         var source = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         RenderSystem.getDevice().createCommandEncoder().copyTextureToTexture(source.getColorTexture(), result.getColorTexture(), 0, 0, 0, 0, 0, source.width, source.height);

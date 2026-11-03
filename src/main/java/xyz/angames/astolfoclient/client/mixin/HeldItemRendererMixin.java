@@ -6,7 +6,7 @@ import net.fabricmc.api.Environment;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.client.renderer.ItemInHandRenderer;
+import net.minecraft.client.renderer.FirstPersonHandsAndItemsRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.HumanoidArm;
@@ -23,26 +23,15 @@ import xyz.angames.astolfoclient.client.module.modules.render.ShaderHand;
 import xyz.angames.astolfoclient.client.module.modules.render.SwingAnimationModule;
 
 @Environment(value=EnvType.CLIENT)
-@Mixin(value={ItemInHandRenderer.class})
+@Mixin(value={FirstPersonHandsAndItemsRenderer.class})
 public abstract class HeldItemRendererMixin {
-    @Inject(method={"submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"}, at={@At(value="HEAD")})
-    private void onRenderFirstPersonItemsHead(float tickDelta, PoseStack matrices, SubmitNodeCollector vertexConsumers, LocalPlayer player, int light, CallbackInfo ci) {
-        ShaderHand mod;
-        SwingAnimationModule swingAnim = (SwingAnimationModule)ModuleManager.getModule(SwingAnimationModule.class);
-        if (swingAnim != null) {
-            swingAnim.updatePhysics(player, tickDelta);
-        }
-        if ((mod = ShaderHand.getInstance()) != null && mod.shouldRender()) {
-            mod.beginRender();
-            ShaderHand.rendering = true;
-        }
-    }
-
-    @Shadow
-    protected abstract void renderPlayerArm(PoseStack var1, SubmitNodeCollector var2, int var3, float var4, float var5, HumanoidArm var6);
+    @Inject(method="submitHandsWithItems",at=@At("HEAD"))
+    private void astolfo$physics(CallbackInfo ci) {var player=Minecraft.getInstance().player;var mod=(SwingAnimationModule)ModuleManager.getModule(SwingAnimationModule.class);if(mod!=null&&player!=null)mod.updatePhysics(player,Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false));}
 
     @Inject(method={"submitArmWithItem"}, at={@At(value="HEAD")}, cancellable=true)
-    private void onRenderFirstPersonItem(AbstractClientPlayer player, float tickDelta, float pitch, InteractionHand hand, float swingProgress, ItemStack item, float equipProgress, PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, CallbackInfo ci) {
+    private void onRenderFirstPersonItem(net.minecraft.client.renderer.state.level.PlayerRenderState playerState, net.minecraft.client.renderer.state.level.FirstPersonHandsAndItemsRenderState handState, float tickDelta, float pitch, InteractionHand hand, float swingProgress, ItemStack item, float equipProgress, PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, CallbackInfo ci) {
+        var player=Minecraft.getInstance().player;
+        if(player==null)return;
         boolean handEnabled;
         SwingAnimationModule swingMod = (SwingAnimationModule)ModuleManager.getModule(SwingAnimationModule.class);
         HandPositionModule handMod = (HandPositionModule)ModuleManager.getModule(HandPositionModule.class);
@@ -57,7 +46,7 @@ public abstract class HeldItemRendererMixin {
     }
 
     @Inject(method={"renderPlayerArm"}, at={@At(value="HEAD")})
-    private void onRenderArmHoldingItemHead(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, float equipProgress, float swingProgress, HumanoidArm arm, CallbackInfo ci) {
+    private void onRenderArmHoldingItemHead(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, float equipProgress, float swingProgress, HumanoidArm arm, net.minecraft.client.renderer.state.level.PlayerRenderState playerState, CallbackInfo ci) {
         if (!SwingAnimationModule.renderingCustomItem) {
             HandPositionModule handMod = (HandPositionModule)ModuleManager.getModule(HandPositionModule.class);
             if (handMod != null && handMod.isEnabled()) {
@@ -69,34 +58,16 @@ public abstract class HeldItemRendererMixin {
         }
     }
 
-    @Inject(method={"submitHandsWithItems(FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;Lnet/minecraft/client/player/LocalPlayer;I)V"}, at={@At(value="TAIL")})
-    private void onRenderFirstPersonItemsTail(float tickDelta, PoseStack matrices, SubmitNodeCollector vertexConsumers, LocalPlayer player, int light, CallbackInfo ci) {
-        ShaderHand mod = ShaderHand.getInstance();
-        if (mod != null && ShaderHand.rendering) {
-            // Held items are queued in 1.21.11. Execute them while the hand target is active.
-            Minecraft client = Minecraft.getInstance();
-            try {
-                client.gameRenderer.featureRenderDispatcher().renderAllFeatures((net.minecraft.client.renderer.SubmitNodeStorage)vertexConsumers);
-    
-            } finally {
-                mod.restoreTarget();
-                ShaderHand.rendering = false;
-            }
-            ShaderHand.rendering = false;
-            mod.draw();
-        }
-    }
-
-    @Inject(method={"renderPlayerArm"}, at={@At(value="INVOKE", target="Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;renderRightHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;Z)V")})
-    private void onRenderRightArm(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, float equipProgress, float swingProgress, HumanoidArm arm, CallbackInfo ci) {
+    @Inject(method={"renderPlayerHand"}, at={@At(value="INVOKE", target="Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;renderRightHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;Z)V")})
+    private void onRenderRightArm(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, HumanoidArm arm, net.minecraft.client.renderer.state.level.PlayerRenderState playerState, CallbackInfo ci) {
         SwingAnimationModule mod = (SwingAnimationModule)ModuleManager.getModule(SwingAnimationModule.class);
         if (mod != null && mod.isHoldMyItemsEnabled()) {
             matrices.translate(mod.getRightX(), mod.getRightZ(), mod.getRightY());
         }
     }
 
-    @Inject(method={"renderPlayerArm"}, at={@At(value="INVOKE", target="Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;renderLeftHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;Z)V")})
-    private void onRenderLeftArm(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, float equipProgress, float swingProgress, HumanoidArm arm, CallbackInfo ci) {
+    @Inject(method={"renderPlayerHand"}, at={@At(value="INVOKE", target="Lnet/minecraft/client/renderer/entity/player/AvatarRenderer;renderLeftHand(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;ILnet/minecraft/resources/Identifier;Z)V")})
+    private void onRenderLeftArm(PoseStack matrices, SubmitNodeCollector vertexConsumers, int light, HumanoidArm arm, net.minecraft.client.renderer.state.level.PlayerRenderState playerState, CallbackInfo ci) {
         SwingAnimationModule mod = (SwingAnimationModule)ModuleManager.getModule(SwingAnimationModule.class);
         if (mod != null && mod.isHoldMyItemsEnabled()) {
             matrices.translate(mod.getLeftX(), mod.getLeftZ(), mod.getLeftY());

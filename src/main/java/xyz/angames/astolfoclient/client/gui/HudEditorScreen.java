@@ -35,6 +35,7 @@ extends Screen {
 
     protected void init() {
         super.init();
+        xyz.angames.astolfoclient.client.hud.HudPanelLayer.clear();
         this.clampAllElements();
     }
 
@@ -91,6 +92,7 @@ extends Screen {
     }
 
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        xyz.angames.astolfoclient.client.hud.HudPanelLayer.begin(context);
         if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             float gridSpacing = 10.0f;
             int gridColor = 0xDFFFFFF;
@@ -146,6 +148,7 @@ extends Screen {
         AstolfoclientClient.testHudManager.render(context, delta);
         AstolfoclientClient.musicHudManager.render(context, delta);
         AstolfoclientClient.infoHudManager.render(context, delta);
+        xyz.angames.astolfoclient.client.hud.HudPanelLayer.flush(context);
         if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             int guideColor = -65281;
             if (activeVLine) {
@@ -159,6 +162,11 @@ extends Screen {
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         this.currentlyDraggedManager = null;
+        if (xyz.angames.astolfoclient.client.hud.HudPanelLayer.contains(mouseX, mouseY)) return true;
+        if (AstolfoclientClient.hudRenderer != null && AstolfoclientClient.hudRenderer.getLogoRenderer().onMouseClicked(mouseX, mouseY, button)) {
+            this.currentlyDraggedManager = AstolfoclientClient.hudRenderer.getLogoRenderer();
+            return true;
+        }
         if (AstolfoclientClient.infoHudManager != null && AstolfoclientClient.infoHudManager.onMouseClicked(mouseX, mouseY, button)) {
             this.currentlyDraggedManager = AstolfoclientClient.infoHudManager;
             return true;
@@ -199,6 +207,10 @@ extends Screen {
     }
 
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (this.currentlyDraggedManager instanceof xyz.angames.astolfoclient.client.hud.LogoRenderer logo) {
+            logo.onMouseDragged(mouseX);
+            return true;
+        }
         if (this.currentlyDraggedManager == AstolfoclientClient.infoHudManager && AstolfoclientClient.infoHudManager != null) {
             AstolfoclientClient.infoHudManager.onMouseDragged(mouseX, mouseY, button);
         } else if (this.currentlyDraggedManager == AstolfoclientClient.musicHudManager && AstolfoclientClient.musicHudManager != null) {
@@ -269,6 +281,9 @@ extends Screen {
     }
 
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0 && this.currentlyDraggedManager instanceof xyz.angames.astolfoclient.client.hud.LogoRenderer logo) {
+            logo.onMouseReleased(mouseX);
+        }
         activeVLine = false;
         activeHLine = false;
         if (AstolfoclientClient.targetHudManager != null) {
@@ -730,8 +745,8 @@ extends Screen {
         private ElementRect() {
         }
     }
-    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) { return mouseClicked(click.x(), click.y(), click.button()); }
-    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) { return mouseDragged(click.x(), click.y(), click.button(), dx, dy); }
-    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) { return mouseReleased(click.x(), click.y(), click.button()); }
+    @Override public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) { return mouseClicked(click.x(), click.y(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(click.button())); }
+    @Override public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double dx, double dy) { return mouseDragged(click.x(), click.y(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(click.button()), dx, dy); }
+    @Override public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) { return mouseReleased(click.x(), click.y(), xyz.angames.astolfoclient.client.util.LegacyInput.legacyButton(click.button())); }
 
 }

@@ -1,4 +1,5 @@
-#version 150
+#version 330
+#extension GL_ARB_separate_shader_objects : require
 layout(std140) uniform EffectData {
     vec4 ColorModulatorData;
     vec4 uResolutionData;
@@ -16,20 +17,20 @@ layout(std140) uniform EffectData {
 #define uBlockCenter uBlockCenterData.xyz
 #define uAlphaMode uAlphaModeData.x
 layout(std140) uniform DynamicTransforms { mat4 ModelViewMat; };
-#moj_import <minecraft:projection.glsl>
+#include <minecraft:projection.glsl>
 
-in vec4 vertexColor;
-in vec2 texCoord0;
-in vec3 worldPos;
-
-
+layout(location = 1) in vec4 vertexColor;
+layout(location = 0) in vec2 texCoord0;
+layout(location = 2) in vec3 worldPos;
 
 
 
 
 
 
-out vec4 fragColor;
+
+
+layout(location = 0) out vec4 fragColor;
 
 void main() {
     // Wrap time to avoid float precision issues over long runs (infinite loop safety)
