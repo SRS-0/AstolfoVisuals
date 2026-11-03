@@ -1,7 +1,7 @@
 # Astolfo Reborn
 
 
-AstolfoClient is a lightweight PvP and visual client for Minecraft 1.21.4. It focuses on making the game look cleaner, giving you more control over your HUD, and adding visual effects without changing the way vanilla Minecraft feels.
+Astolfo Visuals is a lightweight PvP and visual client for Minecraft. It focuses on making the game look cleaner, giving you more control over your HUD, and adding visual effects without changing the way vanilla Minecraft feels.
 
 The client comes with a custom ClickGUI, HUD editor, themes, visual effects, ESP options, custom animations, and several small quality-of-life features.
 There are multiple particle types available, including stars, bubbles, hearts, snowflakes, and dollar symbols.
